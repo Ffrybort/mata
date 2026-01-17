@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ostream>
 
-#include "nfta.hh"
+#include "mata/nfta/nfta.hh"
 namespace mata::nfta
 {
     void Nfta::print(std::ostream& os) const

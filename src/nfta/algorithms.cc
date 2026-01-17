@@ -1,4 +1,4 @@
-#include "algorithms.hh"
+#include "mata/nfta/algorithms.hh"
 
 namespace mata::nfta
 {

@@ -29,23 +29,28 @@ namespace mata::nfta
         Alphabet* alphabet;
         ArityMap arities;
 
-        Delta<Transition_top_down> delta;
+        Delta delta;
 
     public:
         explicit Nfta(
-            const utils::SparseSet<State>& init_states = {},
-            const utils::SparseSet<State>& init_final_states = {},
-            const Delta<Transition_top_down>& init_delta = {},
-            Alphabet* init_alphabet = nullptr,
-            ArityMap init_arities = {}
+            const utils::SparseSet<State>& states = {},
+            const utils::SparseSet<State>& initial_states = {},
+            const Delta& delta = {},
+            Alphabet* alphabet = nullptr,
+            ArityMap arities = {}
         )
-            : states(init_states),
-              initial_states(init_final_states),
-              alphabet(init_alphabet),
-              arities(std::move(init_arities)),
-              delta(init_delta)
+            : states(states),
+              initial_states(initial_states),
+              alphabet(alphabet),
+              arities(std::move(arities)),
+              delta(delta)
         {
         }
+        Nfta(const Nfta&) = delete; // todo implement moving
+        Nfta& operator=(const Nfta&) = delete;
+
+        Nfta(Nfta&&) noexcept = default;
+        Nfta& operator=(Nfta&&) noexcept = default;
 
         /**
          * @brief Add a state to the automaton. Ignore duplicates.
@@ -64,16 +69,16 @@ namespace mata::nfta
         void add_states(std::initializer_list<State> list) { states.insert(list); }
 
         /**
-         * @brief Add a state to both final states and states. Ignores duplicates.
+         * @brief Add a state to both initial states and states. Ignores duplicates.
          */
-        void add_final_state(const State& state)
+        void add_initial_state(const State& state)
         {
             initial_states.insert(state);
             states.insert(state);
         }
 
         /**
-         * @brief Add multiple final states from an iterable structure.
+         * @brief Add multiple initial states from an iterable structure.
          */
         template <typename Iterable>
         void add_initial_states(const Iterable& initial_states)
@@ -83,7 +88,7 @@ namespace mata::nfta
         }
 
         /**
-         * @brief Add multiple final states from an initializer list.
+         * @brief Add multiple initial states from an initializer list.
          */
         void add_initial_states(const std::initializer_list<State> list)
         {
@@ -94,14 +99,14 @@ namespace mata::nfta
         /**
          * @brief Adds a transition to the automaton. Ignores duplicates.
          */
-        void add_transition(const Transition_top_down& transition) { delta.add(transition); }
+        void add_transition(const Transition& transition) { delta.add(transition); }
 
         /**
          * @brief Adds a transition given its source states, symbol and target states.
          */
         void add_transition(const Symbol symbol, State source, const std::vector<State>& targets)
         {
-            const Transition_top_down transition(symbol, source, targets);
+            const Transition transition(symbol, source, targets);
             delta.add(transition);
         }
 
@@ -111,9 +116,9 @@ namespace mata::nfta
         [[nodiscard]] bool contains_state(const State& state) const { return states.contains(state); }
 
         /**
-         * @brief Checks whether a state is final.
+         * @brief Checks whether a state is initial.
          */
-        [[nodiscard]] bool is_state_final(const State& state) const { return initial_states.contains(state); }
+        [[nodiscard]] bool is_state_initial(const State& state) const { return initial_states.contains(state); }
 
         /**
          * @brief Prints the automaton in a textual form.
@@ -122,7 +127,7 @@ namespace mata::nfta
 
         [[nodiscard]] const utils::SparseSet<State>& get_states() const { return states; }
         [[nodiscard]] const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
-        [[nodiscard]] std::set<Transition_top_down> get_transitions() const { return delta.get_transitions(); }
+        [[nodiscard]] std::set<Transition> get_transitions() const { return delta.get_transitions(); }
     };
 }
 #endif
