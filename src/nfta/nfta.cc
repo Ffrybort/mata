@@ -7,13 +7,14 @@ namespace mata::nfta
     void Nfta::print(std::ostream& os) const
     {
         os << "Bottom up NFTA" << std::endl;
-        os << "States: ";
-        for (const auto& state : states) { os << state << " "; }
+        os << "States: " << num_of_states << std::endl;
 
-        os << std::endl << "Symbols: ";
-        for (Symbol s : alphabet->get_alphabet_symbols()) {
-            os << alphabet->reverse_translate_symbol(s)
-               << ":" << arities.get_arity(s) << " ";
+        os << "Symbols: ";
+        if (alphabet) {
+            for (Symbol s : alphabet->get_alphabet_symbols()) {
+                os << alphabet->reverse_translate_symbol(s)
+                   << ":" << arities.get_arity(s) << " ";
+            }
         }
 
         os << std::endl << "Final States: ";
@@ -32,12 +33,13 @@ namespace mata::nfta
                 bool is_first = true;
                 for (const auto& source : transition.targets)
                 {
-                    if (!is_first) { os << ","; }
+                    if (!is_first) { os << ", "; }
                     is_first = false;
                     os << source;
                 }
                 os << ") ";
             }
+            os << std::endl;
         }
     }
 }

@@ -53,7 +53,7 @@ namespace mata::nfta
         Nfta& operator=(Nfta&&) noexcept = default;
 
         /**
-         * @brief Add a state to the automaton. Ignore duplicates.
+         * @brief Add a state to the automaton.
          */
         State add_state() { num_of_states++; return num_of_states - 1;  }
 
@@ -117,7 +117,7 @@ namespace mata::nfta
          */
         void print(std::ostream& os) const;
 
-        const unsigned get_num_of_states() const { return num_of_states; }
+        unsigned get_num_of_states() const { return num_of_states; }
         const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
         std::set<Transition> get_transitions() const { return delta.get_transitions(); }
     };
