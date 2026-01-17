@@ -55,7 +55,7 @@ namespace mata::nfta
         /**
          * @brief Add a state to the automaton. Ignore duplicates.
          */
-        State add_state(const State& state) { num_of_states++; return num_of_states - 1;  }
+        State add_state() { num_of_states++; return num_of_states - 1;  }
 
         /**
          * @brief Add a state to initial states. Ignores duplicates.
