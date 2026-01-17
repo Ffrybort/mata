@@ -23,7 +23,7 @@ namespace mata::nfta
 {
     class Nfta
     {
-        utils::SparseSet<State> states;
+        unsigned num_of_states;
         utils::SparseSet<State> initial_states;
 
         Alphabet* alphabet;
@@ -33,13 +33,13 @@ namespace mata::nfta
 
     public:
         explicit Nfta(
-            const utils::SparseSet<State>& states = {},
+            const unsigned num_of_states = 0,
             const utils::SparseSet<State>& initial_states = {},
             const Delta& delta = {},
             Alphabet* alphabet = nullptr,
             ArityMap arities = {}
         )
-            : states(states),
+            : num_of_states(num_of_states),
               initial_states(initial_states),
               alphabet(alphabet),
               arities(std::move(arities)),
@@ -55,45 +55,37 @@ namespace mata::nfta
         /**
          * @brief Add a state to the automaton. Ignore duplicates.
          */
-        void add_state(const State& state) { states.insert(state); }
+        State add_state(const State& state) { num_of_states++; return num_of_states - 1;  }
 
         /**
-         * @brief Add multiple states from an iterable structure.
-         */
-        template <typename Iterable>
-        void add_states(const Iterable& new_states) { states.insert(new_states); }
-
-        /**
-         * @brief Add multiple states from an initializer list.
-         */
-        void add_states(std::initializer_list<State> list) { states.insert(list); }
-
-        /**
-         * @brief Add a state to both initial states and states. Ignores duplicates.
+         * @brief Add a state to initial states. Ignores duplicates.
+         *
+         * todo keep consistency
          */
         void add_initial_state(const State& state)
         {
             initial_states.insert(state);
-            states.insert(state);
         }
 
         /**
          * @brief Add multiple initial states from an iterable structure.
+   	     *
+         * todo consistency
          */
         template <typename Iterable>
         void add_initial_states(const Iterable& initial_states)
         {
-            initial_states.insert(states);
-            states.insert(initial_states);
+            initial_states.insert(initial_states);
         }
 
         /**
          * @brief Add multiple initial states from an initializer list.
+         *
+         * todo consistency
          */
         void add_initial_states(const std::initializer_list<State> list)
         {
             initial_states.insert(list);
-            states.insert(list);
         }
 
         /**
@@ -113,7 +105,7 @@ namespace mata::nfta
         /**
          * @brief Checks whether a state exists in the automaton.
          */
-        [[nodiscard]] bool contains_state(const State& state) const { return states.contains(state); }
+        [[nodiscard]] bool contains_state(const State& state) const { return state < num_of_states; }
 
         /**
          * @brief Checks whether a state is initial.
@@ -125,9 +117,9 @@ namespace mata::nfta
          */
         void print(std::ostream& os) const;
 
-        [[nodiscard]] const utils::SparseSet<State>& get_states() const { return states; }
-        [[nodiscard]] const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
-        [[nodiscard]] std::set<Transition> get_transitions() const { return delta.get_transitions(); }
+        const unsigned get_num_of_states() const { return num_of_states; }
+        const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
+        std::set<Transition> get_transitions() const { return delta.get_transitions(); }
     };
 }
 #endif
