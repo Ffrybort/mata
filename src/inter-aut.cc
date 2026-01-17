@@ -331,7 +331,11 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
     mata::IntermediateAut mf_to_aut(const mata::parser::ParsedSection& section) {
         mata::IntermediateAut aut;
 
-        if (section.type.find("NFA") != std::string::npos) {
+        if (section.type.find("NFTA_TD") != std::string::npos) {
+            aut.automaton_type = mata::IntermediateAut::AutomatonType::NftaT;
+        } else if (section.type.find("NFTAB") != std::string::npos) {
+            aut.automaton_type = mata::IntermediateAut::AutomatonType::NftaB;
+        } else if (section.type.find("NFA") != std::string::npos) {
             aut.automaton_type = mata::IntermediateAut::AutomatonType::Nfa;
         } else if (section.type.find("AFA") != std::string::npos) {
             aut.automaton_type = mata::IntermediateAut::AutomatonType::Afa;
@@ -465,6 +469,16 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
             assert(false && "Unknown NFT type");
 
         postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
+    } else if (aut.is_nfta_td()) {
+		assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit && "Only explicit alphabet is supported for nfta.");
+
+        for (size_t i = 0; i < rhs.size(); ++i) { // symbol and target states
+            postfix.emplace_back(create_node(aut, rhs[i]));
+        }
+        for (size_t i = 1; i < rhs.size(); ++i) {
+        	postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
+        }
+
     } else
         postfix = infix_to_postfix(aut, rhs);
 
@@ -609,7 +623,7 @@ bool mata::IntermediateAut::is_graph_conjunction_of_negations(const mata::Formul
 
 std::ostream& std::operator<<(std::ostream& os, const mata::IntermediateAut& inter_aut)
 {
-    const std::string type = inter_aut.is_nfa() ? "NFA" : (inter_aut.is_afa() ? "AFA" : "Unknown");
+    const std::string type = inter_aut.is_nfa() ? "NFA" : (inter_aut.is_afa() ? "AFA" : (inter_aut.is_nfta_td() ? "NFTA_TD" : "Unknown"));
     os << "Intermediate automaton type " << type << '\n';
     os << "Naming - state: " << static_cast<size_t>(inter_aut.state_naming) << " symbol: "
        << static_cast<size_t>(inter_aut.symbol_naming) << " node: " << static_cast<size_t>(inter_aut.node_naming) << '\n';
