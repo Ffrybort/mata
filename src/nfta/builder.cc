@@ -109,4 +109,4 @@ namespace mata::nfta {
         return parse_from_mata(in_stream, alphabet);
     } // parse_from_mata
 
-} // namespace mata::nfta::builder
+} // namespace mata::nfta
