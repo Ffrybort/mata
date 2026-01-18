@@ -1,8 +1,39 @@
-//
-// Created by felix on 16/01/26.
-//
+/**
+* @file builder.hh
+* @brief A builder for top-down NFTA.
+*/
 
-#ifndef BUILDER_HH
-#define BUILDER_HH
+#ifndef NFTA_BUILDER_HH
+#define NFTA_BUILDER_HH
 
-#endif //BUILDER_HH
+#include <mata/alphabet.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/parser/inter-aut.hh>
+#include "types.hh"
+namespace mata::nfta {
+    using NameStateMap = std::unordered_map<std::string, State>;
+
+    /**
+     * @brief Parse top-down nfta from an intermediate automaton.
+     *
+     * @param inter_aut Intermediate automaton to parse.
+     * @param alphabet Compatible and already filled with symbols or OnTheFlyAlphabet.
+     * @throws std::runtime_errro Alphabet is invalid or parsing fails.
+     */
+    Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphabet);
+
+    /**
+     *  @brief Parse from the mata nfta format in an input stream. IntAlphabet is used.
+     *
+     * @throws std::runtime_error Parsing fails.
+     */
+    Nfta parse_from_mata(std::istream& input);
+
+    /**
+     * @brief Parse from the mata nfta format in a string. IntAlphabet is used.
+     *
+     * @throws std::runtime_error Parsing fails.
+     */
+    Nfta parse_from_mata(const std::string& input);
+}
+#endif //NFTA_BUILDER_HH
