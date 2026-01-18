@@ -60,11 +60,11 @@ namespace mata::nfta
                 for (const auto& [sym, arity] : arities.arities_) {
                     os << " "<< alphabet->reverse_translate_symbol(sym) << ":" << arity;
                 }
-                os << std::endl;
             }
         } else {
             os << "  none\n";
         }
+        os << std::endl;
 
         // Transitions
         os << "Transitions:\n";
