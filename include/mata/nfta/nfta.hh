@@ -26,9 +26,9 @@ namespace mata::nfta
         unsigned num_of_states;
         utils::SparseSet<State> initial_states;
 
+    public:
         Alphabet* alphabet;
         ArityMap arities;
-
         Delta delta;
 
     public:
@@ -96,7 +96,7 @@ namespace mata::nfta
         /**
          * @brief Adds a transition given its source states, symbol and target states.
          */
-        void add_transition(const Symbol symbol, State source, const std::vector<State>& targets)
+        void add_transition(State source, const Symbol symbol, const std::vector<State>& targets)
         {
             const Transition transition(symbol, source, targets);
             delta.add(transition);
