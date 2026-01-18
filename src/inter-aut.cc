@@ -333,7 +333,7 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
 
         if (section.type.find("NFTA_TD") != std::string::npos) {
             aut.automaton_type = mata::IntermediateAut::AutomatonType::NftaT;
-        } else if (section.type.find("NFTAB") != std::string::npos) {
+        } else if (section.type.find("NFTA_BU") != std::string::npos) {
             aut.automaton_type = mata::IntermediateAut::AutomatonType::NftaB;
         } else if (section.type.find("NFA") != std::string::npos) {
             aut.automaton_type = mata::IntermediateAut::AutomatonType::Nfa;
@@ -347,10 +347,34 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
         for (const auto& [key, symbol_names] : section.dict) {
             if (key.find("Alphabet") != std::string::npos) {
                 aut.symbol_naming = get_naming_type(key);
-                if (aut.are_symbols_enum_type())
-                    aut.symbols_names.insert(
-                        aut.symbols_names.end(), symbol_names.begin(), symbol_names.end()
-                    );
+                if (!aut.are_symbols_enum_type()) { continue; }
+
+                // nfta arity handeling
+                if (aut.is_nfta_td() || aut.is_nfta_bu()) {
+                    for (std::size_t i = 0; i < symbol_names.size(); ) {
+                        const std::string& current = symbol_names[i];
+                        aut.symbols_names.push_back(current);
+                        unsigned arity = 0;
+                        i++;
+                        // optional (arity)
+                        if (i < symbol_names.size() && symbol_names[i] == "(") {
+                            i++;
+                            if (i < symbol_names.size() && symbol_names[i] != ")") {
+                                arity = static_cast<unsigned int>(std::stoul(symbol_names[i]));
+                                i++;
+                            }
+                            if (i < symbol_names.size() && symbol_names[i] != ")") {
+                                throw std::runtime_error("Missing ')' in symbol arity"); }
+                            i++;
+                        }
+                        aut.symbols_arities.push_back(arity);
+                    }
+                    continue;
+                } // if nfta
+
+                aut.symbols_names.insert(
+                    aut.symbols_names.end(), symbol_names.begin(), symbol_names.end()
+                );
             } else if (key.find("States") != std::string::npos) {
                 aut.state_naming = get_naming_type(key);
                 if (aut.are_states_enum_type())
@@ -470,15 +494,25 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
 
         postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
     } else if (aut.is_nfta_td()) {
-		assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit && "Only explicit alphabet is supported for nfta.");
+		assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit
+               && "Only explicit alphabet is supported for nfta.");
 
-        for (size_t i = 0; i < rhs.size(); ++i) { // symbol and target states
+        // The targets are saved as a chain of & nodes, where each intermediate & node
+        // has its left child as a target state and its right child as the rest of
+        // the chain, ending with an & node with two target states.
+        //         &
+        //        / \.
+        //   symbol  &
+        //          / \.
+        //        q0   &
+        //            / \.
+        //          q1   q2
+        for (std::size_t i = 0; i < rhs.size(); i++) { // symbol and target states
             postfix.emplace_back(create_node(aut, rhs[i]));
         }
-        for (size_t i = 1; i < rhs.size(); ++i) {
+        for (std::size_t i = 1; i < rhs.size(); i++) {
         	postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
         }
-
     } else
         postfix = infix_to_postfix(aut, rhs);
 
@@ -623,11 +657,17 @@ bool mata::IntermediateAut::is_graph_conjunction_of_negations(const mata::Formul
 
 std::ostream& std::operator<<(std::ostream& os, const mata::IntermediateAut& inter_aut)
 {
-    const std::string type = inter_aut.is_nfa() ? "NFA" : (inter_aut.is_afa() ? "AFA" : (inter_aut.is_nfta_td() ? "NFTA_TD" : "Unknown"));
+    const std::string type = inter_aut.is_nfa() ? "NFA" : (inter_aut.is_afa() ? "AFA" :
+        (inter_aut.is_nfta_td() ? "top-down NFTA" :
+        (inter_aut.is_nfta_bu() ? "bottom-up NFTA" : "Unknown")));
     os << "Intermediate automaton type " << type << '\n';
     os << "Naming - state: " << static_cast<size_t>(inter_aut.state_naming) << " symbol: "
        << static_cast<size_t>(inter_aut.symbol_naming) << " node: " << static_cast<size_t>(inter_aut.node_naming) << '\n';
     os << "Alphabet " << static_cast<size_t>(inter_aut.alphabet_type) << '\n';
+    if (inter_aut.are_symbols_enum_type()) {
+        for (const auto& symbol : inter_aut.symbols_names) { os << symbol << " "; }
+    }
+    os << '\n';
 
     os << "Initial states: ";
     for (const auto& state : inter_aut.initial_formula.collect_node_names()) {

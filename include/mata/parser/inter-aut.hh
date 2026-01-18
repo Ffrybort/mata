@@ -187,6 +187,7 @@ public:
     // The vectors represent the given sets when enumeration is used.
     std::vector<std::string> states_names{};
     std::vector<std::string> symbols_names{};
+    std::vector<unsigned> symbols_arities{}; // if used, they need to correspond to the symbol names by position
     std::vector<std::string> nodes_names{};
 
     FormulaGraph initial_formula{};
