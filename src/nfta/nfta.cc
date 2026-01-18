@@ -31,11 +31,11 @@ namespace mata::nfta
             {
                 os << "(";
                 bool is_first = true;
-                for (const auto& source : transition.targets)
+                for (const auto& target : transition.targets)
                 {
                     if (!is_first) { os << ", "; }
                     is_first = false;
-                    os << source;
+                    os << target;
                 }
                 os << ") ";
             }
