@@ -16,7 +16,7 @@ namespace mata::nfta
     * @brief A mapping of symbols to arities. Constants (arity 0) are not stored. Every symbol not stored is considered a constant.
     *
     */
-    struct ArityMap
+    struct ArityMap // todo incorporate into alphabet?
     {
     public:
         std::unordered_map<Symbol, unsigned> arities_; ///< Maps function symbols to arities; constants not stored
