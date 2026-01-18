@@ -103,6 +103,7 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     SECTION("PrintSanity") {
         Nfta aut(2, {0}, Delta{}, &alphabet);
         aut.add_transition(alphabet["f"], 0, {0,1});
-        CHECK_NOTHROW(aut.print(std::cout));
+        CHECK_NOTHROW(aut.print_mata(std::cout));
+        CHECK_NOTHROW(aut.print_readable(std::cout));
     }
 }
