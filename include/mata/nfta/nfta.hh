@@ -89,12 +89,12 @@ namespace mata::nfta
         }
 
         /**
-         * @brief Adds a transition to the automaton. Ignores duplicates.
+         * @brief Add a transition to the automaton. Ignores duplicates.
          */
         void add_transition(const Transition& transition) { delta.add(transition); }
 
         /**
-         * @brief Adds a transition given its source states, symbol and target states.
+         * @brief Add a transition given its source states, symbol and target states.
          */
         void add_transition(State source, const Symbol symbol, const std::vector<State>& targets)
         {
@@ -103,19 +103,24 @@ namespace mata::nfta
         }
 
         /**
-         * @brief Checks whether a state exists in the automaton.
+         * @brief Check whether a state exists in the automaton.
          */
         [[nodiscard]] bool contains_state(const State& state) const { return state < num_of_states; }
 
         /**
-         * @brief Checks whether a state is initial.
+         * @brief Check whether a state is initial.
          */
         [[nodiscard]] bool is_state_initial(const State& state) const { return initial_states.contains(state); }
 
         /**
-         * @brief Prints the automaton in a textual form.
+         * @brief Print the automaton in a parsable mata format.
          */
-        void print(std::ostream& os) const;
+        void print_mata(std::ostream& os) const;
+
+        /**
+         * @brief Print the automaton in an easy to read format.
+         */
+        void print_readable(std::ostream& os) const;
 
         unsigned get_num_of_states() const { return num_of_states; }
         const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
