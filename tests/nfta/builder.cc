@@ -261,7 +261,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         CHECK(aut.get_num_of_states() == 1);
     }
 
-    SECTION("Simple using IntAlphabet") {
+    SECTION("Parse^2") {
         std::string input = R"(
             @NFTA_TD-explicit
             %States-marked
@@ -272,7 +272,17 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
             q2 2
             q3 2
         )";
-        Nfta aut;
-        CHECK_NOTHROW(parse_from_mata(input, &i_alphabet));
+        Nfta aut1 = parse_from_mata(input, &alphabet);
+
+        // print automaton to string
+        std::ostringstream out;
+        CHECK_NOTHROW(aut1.print_mata(out));
+        std::string printed = out.str();
+
+        OnTheFlyAlphabet alphabet2;
+        Nfta aut2 = parse_from_mata(printed, &alphabet);
+
+        bool check = aut1 == aut2;
+        CHECK(check);
     }
 }
