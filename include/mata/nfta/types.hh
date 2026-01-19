@@ -1,6 +1,6 @@
 /**
  * @file types.hh
- * @brief
+ * @brief Basic nfta types that will likely be used for both top-down and bottom up.
  */
 
 #ifndef NFTA_TYPES_HH
@@ -24,39 +24,20 @@ namespace mata::nfta
         ArityMap() : arities_() {}
         void set_arity(Symbol symbol, unsigned arity) { if (arity > 0) { arities_[symbol] = arity; } }
         unsigned get_arity(Symbol symbol) const { return arities_.contains(symbol) ? arities_.at(symbol) : 0; }
+
+        bool operator==(const ArityMap& other) const {
+            if (arities_.size() != other.arities_.size()) { return false; }
+            for (auto [symbol, arity] : arities_) {
+                if (other.get_arity(symbol) != arity) { return false; }
+            }
+            return true;
+        }
     };
 
     using State = unsigned;
     using StateVectorSet = utils::OrdVector<std::vector<State>>;
     constexpr Symbol EPSILON{ std::numeric_limits<Symbol>::max() };
 
-    /**
-     * @brief
-     */
-    struct Transition
-    {
-        Symbol symbol;
-        State source;
-        std::vector<State> targets;
 
-        explicit Transition(
-            const Symbol symbol = {},
-            const State source = {},
-            const std::vector<State>& targets = {}
-        )
-            : symbol(symbol),
-              source(source),
-              targets(targets)
-        {
-        }
-
-        bool operator<(const Transition& other) const
-        {
-            if (source != other.source) return source < other.source;
-            if (symbol != other.symbol) return symbol < other.symbol;
-            if (targets.size() != other.targets.size()) return targets.size() < other.targets.size();
-            return targets < other.targets;
-        }
-    };
 } // namespace mata::nfta
 #endif //NFTA_TYPES_HH

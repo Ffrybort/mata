@@ -14,6 +14,40 @@
 
 namespace mata::nfta
 {
+/**
+ * @brief
+ */
+struct Transition
+{
+    Symbol symbol;
+    State source;
+    std::vector<State> targets;
+
+    explicit Transition(
+        const Symbol symbol = {},
+        const State source = {},
+        const std::vector<State>& targets = {}
+    )
+        : symbol(symbol),
+          source(source),
+          targets(targets)
+    {
+    }
+
+    bool operator<(const Transition& other) const {
+        if (source != other.source) return source < other.source;
+        if (symbol != other.symbol) return symbol < other.symbol;
+        if (targets.size() != other.targets.size()) return targets.size() < other.targets.size();
+        return targets < other.targets;
+    }
+
+    bool operator==(const Transition& other) const {
+        return source == other.source
+        && symbol == other.symbol
+        && targets == other.targets;
+        }
+    };
+
     // simple delta prototype
     class Delta
     {
@@ -93,6 +127,11 @@ namespace mata::nfta
         }
 
         void reset_iterator() { iter = transitions.begin(); }
+
+        bool operator==(const Delta& other) const {
+            return transitions == other.transitions;
+        }
+
     }; // class delta
 
 
