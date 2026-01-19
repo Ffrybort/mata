@@ -7,13 +7,12 @@ namespace mata::nfta
     void Nfta::print_mata(std::ostream& os) const
     {
         os << "@NFTA_TD-explicit" << std::endl;
-        os << "%states-marked " << std::endl;
+        os << "%States-marked " << std::endl;
+        os << "%Alphabet-marked " << std::endl;
 
-        os << "%alphabet-marked ";
-
-        os << std::endl << "%initial ";
+        os << "%Initial ";
         for (State state : initial_states) { os <<"q" << state << " "; }
-        std::cout << std::endl;
+        os << std::endl;
 
         for (const auto& transition : delta)
         {
@@ -25,7 +24,7 @@ namespace mata::nfta
             {
                 os << "q" << target << " ";
             }
-            os << std::endl;
+            os  << std::endl;
         }
     }
 
@@ -87,4 +86,18 @@ namespace mata::nfta
         os << "================================================\n";
     }
 
+    /**
+     * @brief Check if the two automata are identical.
+	 * todo equality of language check?
+     */
+    bool Nfta::operator== (const Nfta& other) const {
+        return num_of_states == other.num_of_states
+            && initial_states == other.initial_states
+            && delta == other.delta
+            && arities.arities_ == other.arities.arities_
+            && (
+                alphabet == other.alphabet || // same pointer
+                (alphabet && other.alphabet && alphabet->is_equal(other.alphabet))
+            );
+    }
 }

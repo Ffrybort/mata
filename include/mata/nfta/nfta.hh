@@ -23,10 +23,9 @@ namespace mata::nfta
 {
     class Nfta
     {
+    public:
         unsigned num_of_states;
         utils::SparseSet<State> initial_states;
-
-    public:
         Alphabet* alphabet;
         ArityMap arities;
         Delta delta;
@@ -125,6 +124,8 @@ namespace mata::nfta
         unsigned get_num_of_states() const { return num_of_states; }
         const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
         std::set<Transition> get_transitions() const { return delta.get_transitions(); }
+
+        bool operator== (const Nfta& other) const;
     };
 }
 #endif
