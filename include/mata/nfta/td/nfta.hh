@@ -13,10 +13,9 @@
 #include <vector>
 #include <utility>
 
-#include "types.hh"
+#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 #include <mata/utils/sparse-set.hh>
-#include "types.hh"
 #include "delta.hh"
 
 namespace mata::nfta

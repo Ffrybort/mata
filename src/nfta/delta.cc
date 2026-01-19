@@ -1,4 +1,4 @@
-#include "mata/nfta/delta.hh"
+#include "mata/nfta/td/delta.hh"
 
 //mata::nfta::SymbolPost& mata::nfta::SymbolPost::operator=(SymbolPost&& rhs) noexcept {
 //    symbol = rhs.symbol;

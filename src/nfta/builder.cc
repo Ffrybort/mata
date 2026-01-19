@@ -1,4 +1,4 @@
-#include "mata/nfta/builder.hh"
+#include "mata/nfta/td/builder.hh"
 
 
 namespace mata::nfta {

@@ -8,9 +8,8 @@
 #ifndef NFTA_DELTA_HH
 #define NFTA_DELTA_HH
 
-#include "types.hh"
-#include "mata/alphabet.hh"
-//#include "mata/nfa/delta.hh"
+#include <mata/nfta/types.hh>
+#include <mata/alphabet.hh>
 
 namespace mata::nfta
 {
