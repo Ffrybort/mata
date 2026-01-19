@@ -26,11 +26,12 @@ namespace mata::nfta
         unsigned get_arity(Symbol symbol) const { return arities_.contains(symbol) ? arities_.at(symbol) : 0; }
 
         bool operator==(const ArityMap& other) const {
-            if (arities_.size() != other.arities_.size()) { return false; }
-            for (auto [symbol, arity] : arities_) {
-                if (other.get_arity(symbol) != arity) { return false; }
-            }
-            return true;
+//            if (arities_.size() != other.arities_.size()) { return false; }
+//            for (auto [symbol, arity] : arities_) {
+//                if (other.get_arity(symbol) != arity) { return false; }
+//            }
+//            return true;
+            return arities_ == other.arities_;
         }
     };
 
