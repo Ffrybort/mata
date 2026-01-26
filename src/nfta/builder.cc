@@ -6,7 +6,10 @@ namespace mata::nfta {
     Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphabet) {
         if (alphabet == nullptr) { throw std::runtime_error("A valid alphabet pointer is needed."); }
         NameStateMap state_map;
-        Nfta aut(TopDown, 0, {}, {}, alphabet);
+        Nfta aut(None, 0, {}, {}, alphabet);
+        if (inter_aut->is_nfta_td()) { aut.type = TopDown; }
+        else if (inter_aut->is_nfta_bu()) { aut.type = BottomUp; }
+        else { throw std::runtime_error("Unknown NFTA type"); }
 
         // get state numeric value from string, add it to state map if not already there
         auto get_state = [&state_map, &aut](const std::string& state) -> State {
@@ -17,9 +20,15 @@ namespace mata::nfta {
             return it->second;
         };
 
-        if (!inter_aut->is_nfta_td()) { throw std::runtime_error("Expecting a top-down nfta"); }
         // add initial states
         for (const auto& state_str : inter_aut->initial_formula.collect_node_names())
+        {
+            State state = get_state(state_str);
+            aut.add_root_state(state);
+        }
+
+        // add final states
+        for (const auto& state_str : inter_aut->final_formula.collect_node_names())
         {
             State state = get_state(state_str);
             aut.add_root_state(state);
@@ -101,6 +110,7 @@ namespace mata::nfta {
     Nfta parse_from_mata(std::istream& input, Alphabet *alphabet) {
         parser::Parsed parsed = parser::parse_mf(input, true);
         IntermediateAut ia = IntermediateAut::parse_from_mf(parsed)[0];
+        std::cout << ia << std::endl;
         return construct_from_inter_aut(&ia, alphabet);
     } // parse_from_mata
 
