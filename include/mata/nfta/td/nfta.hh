@@ -16,29 +16,32 @@
 #include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 #include <mata/utils/sparse-set.hh>
-#include "delta.hh"
+#include <mata/nfta/td/delta.hh>
 
 namespace mata::nfta
 {
     class Nfta
     {
     public:
+        AutType type;
         unsigned num_of_states;
-        utils::SparseSet<State> initial_states;
+        utils::SparseSet<State> root_states; // initial or final states
         Alphabet* alphabet;
         ArityMap arities;
         Delta delta;
 
     public:
         explicit Nfta(
+            AutType type = None,
             const unsigned num_of_states = 0,
-            const utils::SparseSet<State>& initial_states = {},
+            const utils::SparseSet<State>& root_states = {},
             const Delta& delta = {},
             Alphabet* alphabet = nullptr,
             ArityMap arities = {}
         )
-            : num_of_states(num_of_states),
-              initial_states(initial_states),
+            : type(type),
+              num_of_states(num_of_states),
+              root_states(root_states),
               alphabet(alphabet),
               arities(std::move(arities)),
               delta(delta)
@@ -56,34 +59,34 @@ namespace mata::nfta
         State add_state() { num_of_states++; return num_of_states - 1;  }
 
         /**
-         * @brief Add a state to initial states. Ignores duplicates.
+         * @brief Add a state to root states. Ignores duplicates.
          *
          * todo keep consistency
          */
-        void add_initial_state(const State& state)
+        void add_root_state(const State& state)
         {
-            initial_states.insert(state);
+            root_states.insert(state);
         }
 
         /**
-         * @brief Add multiple initial states from an iterable structure.
+         * @brief Add multiple root states from an iterable structure.
    	     *
          * todo consistency
          */
         template <typename Iterable>
-        void add_initial_states(const Iterable& initial_states)
+        void add_root_states(const Iterable& root_states)
         {
-            initial_states.insert(initial_states);
+            root_states.insert(root_states);
         }
 
         /**
-         * @brief Add multiple initial states from an initializer list.
+         * @brief Add multiple root states from an initializer list.
          *
          * todo consistency
          */
-        void add_initial_states(const std::initializer_list<State> list)
+        void add_root_states(const std::initializer_list<State> list)
         {
-            initial_states.insert(list);
+            root_states.insert(list);
         }
 
         /**
@@ -106,9 +109,9 @@ namespace mata::nfta
         [[nodiscard]] bool contains_state(const State& state) const { return state < num_of_states; }
 
         /**
-         * @brief Check whether a state is initial.
+         * @brief Check whether a state is root (initial or final.
          */
-        [[nodiscard]] bool is_state_initial(const State& state) const { return initial_states.contains(state); }
+        [[nodiscard]] bool is_state_root(const State& state) const { return root_states.contains(state); }
 
         /**
          * @brief Print the automaton in a parsable mata format.
@@ -121,8 +124,7 @@ namespace mata::nfta
         void print_readable(std::ostream& os) const;
 
         unsigned get_num_of_states() const { return num_of_states; }
-        const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
-        std::set<Transition> get_transitions() const { return delta.get_transitions(); }
+        const utils::SparseSet<State>& get_root_states() const { return root_states; }
 
         bool operator== (const Nfta& other) const;
     };

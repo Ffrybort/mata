@@ -39,6 +39,12 @@ namespace mata::nfta
     using StateVectorSet = utils::OrdVector<std::vector<State>>;
     constexpr Symbol EPSILON{ std::numeric_limits<Symbol>::max() };
 
+    enum AutType {
+        BottomUp,
+        TopDown,
+        None
+    };
+
 
 } // namespace mata::nfta
 #endif //NFTA_TYPES_HH

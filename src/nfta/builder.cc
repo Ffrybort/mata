@@ -6,7 +6,7 @@ namespace mata::nfta {
     Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphabet) {
         if (alphabet == nullptr) { throw std::runtime_error("A valid alphabet pointer is needed."); }
         NameStateMap state_map;
-        Nfta aut(0, {}, {}, alphabet);
+        Nfta aut(TopDown, 0, {}, {}, alphabet);
 
         // get state numeric value from string, add it to state map if not already there
         auto get_state = [&state_map, &aut](const std::string& state) -> State {
@@ -22,7 +22,7 @@ namespace mata::nfta {
         for (const auto& state_str : inter_aut->initial_formula.collect_node_names())
         {
             State state = get_state(state_str);
-            aut.add_initial_state(state);
+            aut.add_root_state(state);
         }
 
         // symbols and arities
