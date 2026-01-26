@@ -9,6 +9,38 @@
 namespace mata::nfta
 {
     void print_transitions_bu(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
+        for (const auto& transition : transitions) {
+            if (transition.tuple.size() > 0) {
+                os << "a" << alphabet->reverse_translate_symbol(transition.symbol) << "(";
+                for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
+                    os << "q" << transition.tuple[i];
+                    if (i + 1 < transition.tuple.size()) {
+                        os << ",";
+                    }
+                }
+                os << ")";
+            }
+            os << "-> " << "q" << transition.single << "\n";
+        }
+    }
+
+    void print_transitions_td(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
+        for (const auto& transition : transitions) {
+            os <<  "q" <<  transition.single << " -> " << "a" << alphabet->reverse_translate_symbol(transition.symbol);
+            if (transition.tuple.size() > 0) {
+
+                os <<"(";
+                for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
+                    os << "q" << transition.tuple[i];
+                    if (i + 1 < transition.tuple.size()) os << ",";
+                }
+                os << ")";
+            }
+            os << std::endl;
+        }
+    }
+
+    void print_transitions_mata_bu(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
         for (const auto& transition : transitions)
         {
             // sources
@@ -21,7 +53,7 @@ namespace mata::nfta
         }
     }
 
-    void print_transitions_td(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
+    void print_transitions_mata_td(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
         for (const auto& transition : transitions)
         {
             // source symbol
@@ -53,7 +85,17 @@ namespace mata::nfta
 
     void Nfta::print_mata(std::ostream& os) const // todo change to type
     {
-        os << "@NFTA_TD-explicit" << std::endl;
+        switch (type) {
+            case TopDown:
+                os << "@NFTA_TD-explicit" << std::endl;
+                break;
+            case BottomUp:
+                os << "@NFTA_BU-explicit" << std::endl;
+                break;
+            default:
+                os << "Unknown automaton type" << std::endl;
+                return;
+        }
         os << "%States-marked " << std::endl;
         os << "%Alphabet-marked " << std::endl;
 
@@ -63,32 +105,48 @@ namespace mata::nfta
 
         switch (type) {
             case TopDown:
-                print_transitions_td(os, delta.get_transitions(), alphabet);
+                print_transitions_mata_td(os, delta.get_transitions(), alphabet);
                 break;
             case BottomUp:
-                print_transitions_bu(os, delta.get_transitions(), alphabet);
+                print_transitions_mata_bu(os, delta.get_transitions(), alphabet);
                 break;
             default:
-                print_transitions_unknown(os, delta.get_transitions(), alphabet);
                 break;
         }
-
     }
 
-    void Nfta::print_readable(std::ostream& os) const // todo
+    void Nfta::print_readable(std::ostream& os) const
 	{
-        os << "Top-down NFTA\n";
-        os << "================================================\n";
+        switch (type) {
+            case TopDown:
+                os << "Top-down NFTA" << std::endl;
+            break;
+            case BottomUp:
+                os << "Bottom-up NFTA" << std::endl;
+            break;
+            default:
+                os << "Unknown type NFTA" << std::endl;
+            return;
+        }
+
+        os << "================================================" << std::endl;
 
         // States
         os << "States (" << num_of_states << "): ";
-        for (State s = 0; s < num_of_states; ++s) {
-            os << "q" << s << " ";
-        }
-        os << std::endl;
 
-        // Initial states
-        os << "Initial states: ";
+        // Root states
+        switch (type) {
+            case TopDown:
+                os << "Initial states: ";
+            break;
+            case BottomUp:
+                os << "Final states: ";
+            break;
+            default:
+                os << "Root (initial or final) states: ";
+            return;
+        }
+
         for (State s : root_states) {
             os << "q" << s << " ";
         }
@@ -114,23 +172,33 @@ namespace mata::nfta
 
         // Transitions
         os << "Transitions:\n";
-        os << "todo";
+        switch (type) {
+            case TopDown:
+                print_transitions_td(os, delta.get_transitions(), alphabet);
+            break;
+            case BottomUp:
+                print_transitions_bu(os, delta.get_transitions(), alphabet);
+            break;
+            default:
+                print_transitions_unknown(os, delta.get_transitions(), alphabet);
+        }
 
-        os << "================================================\n";
+        os << "\n================================================\n";
     }
 
     /**
      * @brief Check if the two automata are identical.
-	 * todo equality of language check?
+     *
      */
     bool Nfta::operator== (const Nfta& other) const {
-        return num_of_states == other.num_of_states
+        return type == other.type
+            && num_of_states == other.num_of_states
             && root_states == other.root_states
             && delta == other.delta
             && arities.arities_ == other.arities.arities_
             && (
                 alphabet == other.alphabet || // same pointer
                 (alphabet && other.alphabet && alphabet->is_equal(other.alphabet))
-            );
+               );
     }
 }
