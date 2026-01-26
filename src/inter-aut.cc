@@ -453,8 +453,20 @@ size_t mata::IntermediateAut::get_number_of_disjuncts() const
 void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const std::vector<std::string>& tokens)
 {
     assert(tokens.size() > 1); // transition formula has at least two items
-    mata::FormulaNode lhs = create_node(aut, tokens[0]);
-    std::vector<std::string> rhs(tokens.begin()+1, tokens.end());
+
+    mata::FormulaNode lhs;
+    std::vector<std::string> rhs;
+    if (aut.is_nfta_bu()) {
+        // The bottom-up transitions are flipped so they can be processed in the same way as top-down.
+        // This make the processing less readable but much simpler.
+        lhs = create_node(aut, tokens.back());
+        rhs.push_back(tokens[tokens.size() - 2]); // push back symbol first
+        rhs.insert(rhs.end(), tokens.begin(), tokens.end() - 2); // add source states
+    }
+    else {
+        lhs = create_node(aut, tokens[0]);
+        rhs.assign(tokens.begin()+1, tokens.end());
+    }
 
     std::vector<mata::FormulaNode> postfix;
 
@@ -493,11 +505,11 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
             assert(false && "Unknown NFT type");
 
         postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
-    } else if (aut.is_nfta_td()) {
-		assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit
+    } else if (aut.is_nfta_td() || aut.is_nfta_bu()) { // TODO handle the case that the user already used &
+	assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit
                && "Only explicit alphabet is supported for nfta.");
 
-        // The targets are saved as a chain of & nodes, where each intermediate & node
+        // The targets (sources fot bu) are saved as a chain of & nodes, where each intermediate & node
         // has its left child as a target state and its right child as the rest of
         // the chain, ending with an & node with two target states.
         //         &
@@ -507,13 +519,13 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
         //        q0   &
         //            / \.
         //          q1   q2
-        for (std::size_t i = 0; i < rhs.size(); i++) { // symbol and target states
+        for (std::size_t i = 0; i < rhs.size(); i++) { // symbol and target/source states
             postfix.emplace_back(create_node(aut, rhs[i]));
         }
         for (std::size_t i = 1; i < rhs.size(); i++) {
         	postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
         }
-    } else
+    }  else
         postfix = infix_to_postfix(aut, rhs);
 
     #ifndef NDEBUG
