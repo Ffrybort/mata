@@ -16,7 +16,7 @@
 #ifndef NFTA_ALGORITHMS_HH
 #define NFTA_ALGORITHMS_HH
 
-#include <mata/nfta/td/nfta.hh>
+#include <mata/nfta/nfta.hh>
 #include <stdexcept>
 namespace mata::nfta
 {

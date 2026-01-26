@@ -7,7 +7,7 @@
 #define NFTA_BUILDER_HH
 
 #include <mata/alphabet.hh>
-#include <mata/nfta/td/nfta.hh>
+#include <mata/nfta/nfta.hh>
 #include <mata/nfta/types.hh>
 #include <mata/parser/inter-aut.hh>
 

@@ -16,7 +16,7 @@
 #include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 #include <mata/utils/sparse-set.hh>
-#include <mata/nfta/td/delta.hh>
+#include <mata/nfta/delta.hh>
 
 namespace mata::nfta
 {

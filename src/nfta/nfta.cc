@@ -1,7 +1,7 @@
 #include <iostream>
 #include <ostream>
 
-#include "mata/nfta/td/nfta.hh"
+#include "mata/nfta/nfta.hh"
 
 
 
