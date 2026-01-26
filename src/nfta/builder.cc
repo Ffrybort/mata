@@ -110,7 +110,6 @@ namespace mata::nfta {
     Nfta parse_from_mata(std::istream& input, Alphabet *alphabet) {
         parser::Parsed parsed = parser::parse_mf(input, true);
         IntermediateAut ia = IntermediateAut::parse_from_mf(parsed)[0];
-        std::cout << ia << std::endl;
         return construct_from_inter_aut(&ia, alphabet);
     } // parse_from_mata
 
