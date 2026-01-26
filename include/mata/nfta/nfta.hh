@@ -1,10 +1,12 @@
 /**
  * @file nfta.hh
- * @brief Implementation of a top-down finite tree automaton.
+ * @brief Implementation of a nondeterministic finite tree automaton.
+ *
+ * The automaton can be either top-down or bottom-up, given by its type.
  */
 
-#ifndef NFTA_H
-#define NFTA_H
+#ifndef MATA_NFTA_H
+#define MATA_NFTA_H
 
 #include <string>
 #include <iostream>
@@ -61,7 +63,6 @@ namespace mata::nfta
         /**
          * @brief Add a state to root states. Ignores duplicates.
          *
-         * todo keep consistency
          */
         void add_root_state(const State& state)
         {
@@ -70,8 +71,7 @@ namespace mata::nfta
 
         /**
          * @brief Add multiple root states from an iterable structure.
-   	     *
-         * todo consistency
+   	 *
          */
         template <typename Iterable>
         void add_root_states(const Iterable& root_states)
@@ -82,7 +82,6 @@ namespace mata::nfta
         /**
          * @brief Add multiple root states from an initializer list.
          *
-         * todo consistency
          */
         void add_root_states(const std::initializer_list<State> list)
         {
@@ -106,12 +105,12 @@ namespace mata::nfta
         /**
          * @brief Check whether a state exists in the automaton.
          */
-        [[nodiscard]] bool contains_state(const State& state) const { return state < num_of_states; }
+        bool contains_state(const State& state) const { return state < num_of_states; }
 
         /**
          * @brief Check whether a state is root (initial or final.
          */
-        [[nodiscard]] bool is_state_root(const State& state) const { return root_states.contains(state); }
+        bool is_state_root(const State& state) const { return root_states.contains(state); }
 
         /**
          * @brief Print the automaton in a parsable mata format.
@@ -129,4 +128,4 @@ namespace mata::nfta
         bool operator== (const Nfta& other) const;
     };
 }
-#endif
+#endif // MATA_NFTA
