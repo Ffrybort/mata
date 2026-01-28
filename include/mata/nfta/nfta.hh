@@ -22,10 +22,26 @@
 
 namespace mata::nfta
 {
+	/**
+     * @brief A mapping of symbols to arities. Constants (arity 0) are not stored. Every symbol not stored is considered a constant.
+     */
+    struct ArityMap
+    {
+    public:
+        std::unordered_map<Symbol, unsigned> arities_; ///< Maps function symbols to arities; constants not stored
+
+        ArityMap() : arities_() {}
+        void set_arity(Symbol symbol, unsigned arity) { if (arity > 0) { arities_[symbol] = arity; } }
+        unsigned get_arity(Symbol symbol) const { return arities_.contains(symbol) ? arities_.at(symbol) : 0; }
+
+        bool operator==(const ArityMap& other) const {
+            return arities_ == other.arities_;
+        }
+    };
+
     class Nfta
     {
     public:
-        AutType type;
         unsigned num_of_states;
         utils::SparseSet<State> root_states; // initial or final states
         Alphabet* alphabet;
@@ -34,15 +50,13 @@ namespace mata::nfta
 
     public:
         explicit Nfta(
-            AutType type = None,
             const unsigned num_of_states = 0,
             const utils::SparseSet<State>& root_states = {},
             const Delta& delta = {},
             Alphabet* alphabet = nullptr,
             ArityMap arities = {}
         )
-            : type(type),
-              num_of_states(num_of_states),
+            : num_of_states(num_of_states),
               root_states(root_states),
               alphabet(alphabet),
               arities(std::move(arities)),
@@ -62,7 +76,6 @@ namespace mata::nfta
 
         /**
          * @brief Add a state to root states. Ignores duplicates.
-         *
          */
         void add_root_state(const State& state)
         {
@@ -71,7 +84,6 @@ namespace mata::nfta
 
         /**
          * @brief Add multiple root states from an iterable structure.
-   	 *
          */
         template <typename Iterable>
         void add_root_states(const Iterable& root_states)
@@ -81,7 +93,6 @@ namespace mata::nfta
 
         /**
          * @brief Add multiple root states from an initializer list.
-         *
          */
         void add_root_states(const std::initializer_list<State> list)
         {
@@ -120,7 +131,7 @@ namespace mata::nfta
         /**
          * @brief Print the automaton in an easy to read format.
          */
-        void print_readable(std::ostream& os) const;
+        void print_readable(std::ostream& os, std::string type) const;
 
         unsigned get_num_of_states() const { return num_of_states; }
         const utils::SparseSet<State>& get_root_states() const { return root_states; }

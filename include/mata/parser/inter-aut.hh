@@ -146,8 +146,7 @@ public:
         Nfa,
         Afa,
         Nft,
-        NftaT,
-        NftaB,
+        Nfta,
     };
 
     /**
@@ -235,8 +234,7 @@ public:
     bool is_nft() const {return automaton_type == AutomatonType::Nft;}
     bool is_nfa() const {return automaton_type == AutomatonType::Nfa;}
     bool is_afa() const {return automaton_type == AutomatonType::Afa;}
-    bool is_nfta_td() const {return automaton_type == AutomatonType::NftaT;}
-    bool is_nfta_bu() const {return automaton_type == AutomatonType::NftaB;}
+    bool is_nfta() const {return automaton_type == AutomatonType::Nfta;}
 
     std::unordered_set<std::string> get_enumerated_initials() const {return initial_formula.collect_node_names();}
     std::unordered_set<std::string> get_enumerated_finals() const {return final_formula.collect_node_names();}

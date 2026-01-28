@@ -331,10 +331,8 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
     mata::IntermediateAut mf_to_aut(const mata::parser::ParsedSection& section) {
         mata::IntermediateAut aut;
 
-        if (section.type.find("NFTA_TD") != std::string::npos) {
-            aut.automaton_type = mata::IntermediateAut::AutomatonType::NftaT;
-        } else if (section.type.find("NFTA_BU") != std::string::npos) {
-            aut.automaton_type = mata::IntermediateAut::AutomatonType::NftaB;
+        if (section.type.find("NFTA") != std::string::npos) {
+            aut.automaton_type = mata::IntermediateAut::AutomatonType::Nfta;
         } else if (section.type.find("NFA") != std::string::npos) {
             aut.automaton_type = mata::IntermediateAut::AutomatonType::Nfa;
         } else if (section.type.find("AFA") != std::string::npos) {
@@ -350,7 +348,7 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
                 if (!aut.are_symbols_enum_type()) { continue; }
 
                 // nfta arity handeling
-                if (aut.is_nfta_td() || aut.is_nfta_bu()) {
+                if (aut.is_nfta()) {
                     for (std::size_t i = 0; i < symbol_names.size(); ) {
                         const std::string& current = symbol_names[i];
                         aut.symbols_names.push_back(current);
@@ -454,19 +452,15 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
 {
     assert(tokens.size() > 1); // transition formula has at least two items
 
-    mata::FormulaNode lhs;
-    std::vector<std::string> rhs;
-    if (aut.is_nfta_bu()) {
-        // The bottom-up transitions are flipped so they can be processed in the same way as top-down.
-        // This make the processing less readable but much simpler.
-        lhs = create_node(aut, tokens.back());
-        rhs.push_back(tokens[tokens.size() - 2]); // push back symbol first
-        rhs.insert(rhs.end(), tokens.begin(), tokens.end() - 2); // add source states
-    }
-    else {
-        lhs = create_node(aut, tokens[0]);
-        rhs.assign(tokens.begin()+1, tokens.end());
-    }
+    mata::FormulaNode lhs = create_node(aut, tokens[0]);
+    std::vector<std::string> rhs(tokens.begin()+1, tokens.end());
+
+//    if (aut.is_nfta_bu()) {
+//        // The bottom-up transitions are flipped so they can be processed in the same way as top-down.
+//        lhs = create_node(aut, tokens.back());
+//        rhs.push_back(tokens[tokens.size() - 2]); // push back symbol first
+//        rhs.insert(rhs.end(), tokens.begin(), tokens.end() - 2); // add source states
+//    }
 
     std::vector<mata::FormulaNode> postfix;
 
@@ -505,10 +499,9 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
             assert(false && "Unknown NFT type");
 
         postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
-    } else if (aut.is_nfta_td() || aut.is_nfta_bu()) { // TODO handle the case that the user already used &
-	assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit
+    } else if (aut.is_nfta()) { // TODO handle the case that the user already used &
+		assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit
                && "Only explicit alphabet is supported for nfta.");
-
         // The targets (sources fot bu) are saved as a chain of & nodes, where each intermediate & node
         // has its left child as a target state and its right child as the rest of
         // the chain, ending with an & node with two target states.
@@ -519,10 +512,25 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
         //        q0   &
         //            / \.
         //          q1   q2
-        for (std::size_t i = 0; i < rhs.size(); i++) { // symbol and target/source states
-            postfix.emplace_back(create_node(aut, rhs[i]));
+
+        // symbol
+        postfix.emplace_back(create_node(aut, rhs[0]));
+        // root states in ()
+        if (rhs.size() > 1) {
+        if (rhs[1] == "(") {
+            std::size_t i = 2;
+            while (rhs.size() > i && rhs[i] != ")") {
+                postfix.emplace_back(create_node(aut, rhs[i]));
+                i++;
+            }
+            if (rhs[i] != ")") { throw std::runtime_error("Invalid transition format - missing )"); }
+        } else {
+            assert(rhs.size() == 2 && "Invalid transition format - parentheses needed");
+            postfix.emplace_back(create_node(aut, rhs[1]));
         }
-        for (std::size_t i = 1; i < rhs.size(); i++) {
+        }
+        std::size_t size = postfix.size();
+        for (std::size_t i = 1; i < size; i++) {
         	postfix.emplace_back(mata::FormulaNode::Type::Operator, "&", "&", mata::FormulaNode::OperatorType::And);
         }
     }  else
@@ -670,8 +678,7 @@ bool mata::IntermediateAut::is_graph_conjunction_of_negations(const mata::Formul
 std::ostream& std::operator<<(std::ostream& os, const mata::IntermediateAut& inter_aut)
 {
     const std::string type = inter_aut.is_nfa() ? "NFA" : (inter_aut.is_afa() ? "AFA" :
-        (inter_aut.is_nfta_td() ? "top-down NFTA" :
-        (inter_aut.is_nfta_bu() ? "bottom-up NFTA" : "Unknown")));
+        (inter_aut.is_nfta() ? "top-down NFTA" :"Unknown"));
     os << "Intermediate automaton type " << type << '\n';
     os << "Naming - state: " << static_cast<size_t>(inter_aut.state_naming) << " symbol: "
        << static_cast<size_t>(inter_aut.symbol_naming) << " node: " << static_cast<size_t>(inter_aut.node_naming) << '\n';
@@ -695,16 +702,10 @@ std::ostream& std::operator<<(std::ostream& os, const mata::IntermediateAut& int
 
     os << "Transitions: \n";
     for (const auto& [formula_node, formula_graph] : inter_aut.transitions) {
-        os << formula_node.raw << " -> ";
-        os << serialize_graph(formula_graph);
-        /*
-        for (const auto& rhs : trans.second.collect_node_names()) {
-            os << rhs << ' ';
-        }
-         */
-        os << '\n';
+    	os << formula_node.raw << " -> ";
+    	os << serialize_graph(formula_graph);
+    	os << '\n';
     }
-    os << "\n";
 
     return os;
 }
