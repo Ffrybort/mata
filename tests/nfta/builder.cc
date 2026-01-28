@@ -88,8 +88,9 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
+        std::vector<Transition> t = aut.delta.get_transitions();
         CHECK(std::count_if(
-            aut.delta.begin(), aut.delta.end(),
+            t.begin(), t.end(),
             [](const auto& t){ return t.single == 0 && t.symbol == 0; }
         ) == 2);
     }
@@ -138,9 +139,10 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(std::count_if(
-            aut.delta.begin(), aut.delta.end(),
-            [](const auto& t){ return t.single == 0 && t.symbol == 0; }
+        std::vector<Transition> t = aut.delta.get_transitions();
+        CHECK(std::count_if(t.begin(), t.end(), [](const auto& t) {
+                  return t.single == 0 && t.symbol == 0;
+              }
         ) == 2);
     }
 
