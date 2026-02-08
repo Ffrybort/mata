@@ -8,29 +8,29 @@ namespace mata::nfta
     void print_transitions_bu(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
         for (const auto& transition : transitions) {
             os << alphabet->reverse_translate_symbol(transition.symbol);
-            if (transition.tuple.size() > 0) {
+            if (transition.targets.size() > 0) {
                 os << "(";
-                for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
-                    os << "q" << transition.tuple[i];
-                    if (i + 1 < transition.tuple.size()) {
+                for (std::size_t i = 0; i < transition.targets.size(); ++i) {
+                    os << "q" << transition.targets[i];
+                    if (i + 1 < transition.targets.size()) {
                         os << ",";
                     }
                 }
                 os << ")";
             }
-            os << " -> " << "q" << transition.single << "\n";
+            os << " -> " << "q" << transition.source << "\n";
         }
     }
 
     void print_transitions_td(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
         for (const auto& transition : transitions) {
-            os <<  "q" <<  transition.single << " -> " << alphabet->reverse_translate_symbol(transition.symbol);
-            if (transition.tuple.size() > 0) {
+            os <<  "q" <<  transition.source << " -> " << alphabet->reverse_translate_symbol(transition.symbol);
+            if (transition.targets.size() > 0) {
 
                 os <<"(";
-                for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
-                    os << "q" << transition.tuple[i];
-                    if (i + 1 < transition.tuple.size()) os << ",";
+                for (std::size_t i = 0; i < transition.targets.size(); ++i) {
+                    os << "q" << transition.targets[i];
+                    if (i + 1 < transition.targets.size()) os << ",";
                 }
                 os << ")";
             }
@@ -44,17 +44,17 @@ namespace mata::nfta
         os << "%States-marked " << std::endl;
         os << "%Alphabet-auto " << std::endl;
         os << "%Initial ";
-        for (State state : root_states) { os <<"q" << state << " "; }
+        for (State state : final_states) { os <<"q" << state << " "; }
         os << std::endl;
 
         for (const auto& transition : delta.get_transitions())
         {
             // source symbol
-            os << "q" << transition.single << " " << alphabet->reverse_translate_symbol(transition.symbol) << " ";
+            os << "q" << transition.source << " " << alphabet->reverse_translate_symbol(transition.symbol) << " ";
 
             // targets
             os << "(";
-            for (const auto& target : transition.tuple)
+            for (const auto& target : transition.targets)
             {
                 os << "q" << target << " ";
             }
@@ -74,11 +74,11 @@ namespace mata::nfta
         // States
         os << "States (" << num_of_states << "): ";
 
-        // Root states
+        // Final (or initial) states
         if (type == "bottom-up") {os << "Final states: "; }
         else { os << "Initial states: "; }
 
-        for (State s : root_states) {
+        for (State s : final_states) {
             os << "q" << s << " ";
         }
         os << std::endl;
@@ -114,7 +114,7 @@ namespace mata::nfta
      */
     bool Nfta::operator== (const Nfta& other) const {
         return num_of_states == other.num_of_states
-            && root_states == other.root_states
+            && final_states == other.final_states
             && delta == other.delta
             && arities.arities_ == other.arities.arities_
             && (

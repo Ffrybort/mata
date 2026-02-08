@@ -42,8 +42,8 @@ namespace mata::nfta
     class Nfta
     {
     public:
-        unsigned num_of_states;
-        utils::SparseSet<State> root_states; // initial or final states
+        unsigned num_of_states; // todo delete this, use delta
+        utils::SparseSet<State> final_states; // a set of final (or initial) states
         Alphabet* alphabet;
         ArityMap arities;
         Delta delta;
@@ -51,13 +51,13 @@ namespace mata::nfta
     public:
         explicit Nfta(
             const unsigned num_of_states = 0,
-            const utils::SparseSet<State>& root_states = {},
-            const Delta& delta = {},
+            const utils::SparseSet<State>& final_states = {},
             Alphabet* alphabet = nullptr,
-            ArityMap arities = {}
+            ArityMap arities = {},
+            const Delta& delta = {}
         )
             : num_of_states(num_of_states),
-              root_states(root_states),
+              final_states(final_states),
               alphabet(alphabet),
               arities(std::move(arities)),
               delta(delta)
@@ -75,43 +75,41 @@ namespace mata::nfta
         State add_state() { num_of_states++; return num_of_states - 1;  }
 
         /**
-         * @brief Add a state to root states. Ignores duplicates.
+         * Add a specific @p state value.
+		 *
+		 *
          */
-        void add_root_state(const State& state)
-        {
-            root_states.insert(state);
-        }
+        void add_state(const State state) {
+            if (state >= delta.num_of_states()) {
+                delta.allocate(state + 1);
+                num_of_states = state + 1;
+            }
+		}
+
+        void add_final_state(const State state) {
+            add_state(state);
+            final_states.insert(state);
+		}
 
         /**
-         * @brief Add multiple root states from an iterable structure.
+         * @brief Add multiple final states from an iterable structure.
          */
         template <typename Iterable>
-        void add_root_states(const Iterable& root_states)
+        void add_final_states(const Iterable& states)
         {
-            root_states.insert(root_states);
+            add_state(*std::max_element(states.begin(), states.end()));
+            final_states.insert(states.begin(), states.end());
         }
 
         /**
-         * @brief Add multiple root states from an initializer list.
+         * @brief Add multiple final states from an initializer list.
          */
-        void add_root_states(const std::initializer_list<State> list)
+        void add_final_states(const std::initializer_list<State> states)
         {
-            root_states.insert(list);
+            add_state(*std::max_element(states.begin(), states.end()));
+            final_states.insert(states);
         }
 
-        /**
-         * @brief Add a transition to the automaton. Ignores duplicates.
-         */
-        void add_transition(const Transition& transition) { delta.add(transition); }
-
-        /**
-         * @brief Add a transition given its source states, symbol and target states.
-         */
-        void add_transition(State source, const Symbol symbol, const std::vector<State>& targets)
-        {
-            const Transition transition(symbol, source, targets);
-            delta.add(transition);
-        }
 
         /**
          * @brief Check whether a state exists in the automaton.
@@ -119,9 +117,9 @@ namespace mata::nfta
         bool contains_state(const State& state) const { return state < num_of_states; }
 
         /**
-         * @brief Check whether a state is root (initial or final.
+         * @brief Check whether a state is final (initial).
          */
-        bool is_state_root(const State& state) const { return root_states.contains(state); }
+        bool is_state_final(const State& state) const { return final_states.contains(state); }
 
         /**
          * @brief Print the automaton in a parsable mata format.
@@ -134,7 +132,7 @@ namespace mata::nfta
         void print_readable(std::ostream& os, std::string type) const;
 
         unsigned get_num_of_states() const { return num_of_states; }
-        const utils::SparseSet<State>& get_root_states() const { return root_states; }
+        const utils::SparseSet<State>& get_final_states() const { return final_states; }
 
         bool operator== (const Nfta& other) const;
     };

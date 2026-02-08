@@ -7,33 +7,45 @@
 #define NFTA_BUILDER_HH
 
 #include <mata/alphabet.hh>
+#include <mata/nft/nft.hh>
 #include <mata/nfta/nfta.hh>
 #include <mata/nfta/types.hh>
 #include <mata/parser/inter-aut.hh>
+#include <mata/parser/parser.hh>
 
 namespace mata::nfta {
     using NameStateMap = std::unordered_map<std::string, State>;
 
+    inline Nfta create_empty(Alphabet *alphabet = nullptr) {
+       return Nfta(1, {0}, alphabet, {}, Delta(1));
+    }
+
     /**
-     * @brief Parse top-down nfta from an intermediate automaton.
+     * @brief Parse nfta from an intermediate automaton.
      *
      * @param inter_aut Intermediate automaton to parse.
-     * @param IntAlphabet, OnTheFlyAlphabet, or EnumAlphabet that is already filled with symbols.
+     * @param IntAlphabet, OnTheFlyAlphabet, (or EnumAlphabet that is already filled with symbols).
      * @throws std::runtime_errro Alphabet is invalid or parsing fails.
      */
     Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphabet);
 
     /**
+     * @brief Parse nfta from a parsed object.
+     * @throws std::runtime_errro Alphabet is invalid or parsing fails.
+     */
+    Nfta construct_from_parsed_object(const parser::Parsed *parsed, Alphabet *alphabet);
+
+    /**
      *  @brief Parse from the mata nfta format in an input stream.
      *
-     * @throws std::runtime_error Parsing fails.
+     * @throws std::runtime_errro Alphabet is invalid or parsing fails.
      */
     Nfta parse_from_mata(std::istream& input, Alphabet *alphabet);
 
     /**
      * @brief Parse from the mata nfta format in a string.
      *
-     * @throws std::runtime_error Parsing fails.
+     * @throws std::runtime_errro Alphabet is invalid or parsing fails.
      */
     Nfta parse_from_mata(const std::string& input, Alphabet *alphabet);
 }

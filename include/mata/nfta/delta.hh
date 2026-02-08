@@ -29,128 +29,41 @@ namespace mata::nfta
 struct Transition
 {
     Symbol symbol;
-    State single;
-    std::vector<State> tuple;
+    State source;
+    std::vector<State> targets;
 
     explicit Transition(
         const Symbol symbol = {},
-        const State single = {},
-        const std::vector<State>& tuple = {}
+        const State source = {},
+        const std::vector<State>& targets = {}
     )
         : symbol(symbol),
-          single(single),
-          tuple(tuple)
+          source(source),
+          targets(targets)
     {
     }
 
     bool operator<(const Transition& other) const {
-        if (single != other.single) return single < other.single;
+        if (source != other.source) return source < other.source;
         if (symbol != other.symbol) return symbol < other.symbol;
-        if (tuple.size() != other.tuple.size()) return tuple.size() < other.tuple.size();
-        return tuple < other.tuple;
+        if (targets.size() != other.targets.size()) return targets.size() < other.targets.size();
+        return targets < other.targets;
     }
 
     bool operator==(const Transition& other) const {
-        return single == other.single
+        return source == other.source
         && symbol == other.symbol
-        && tuple == other.tuple;
+        && targets == other.targets;
         }
     };
 
-    // simple delta prototype
-//    class Delta
-//    {
-//        std::set<Transition> transitions;
-//        typename std::set<Transition>::const_iterator iter;
-//    public:
-//        Delta() : transitions(), iter(transitions.begin())  {}
-//
-//        explicit Delta(std::set<Transition> transitions)
-//            : transitions(std::move(transitions)), iter(transitions.begin())
-//        {
-//            reset_iterator();
-//        }
-//
-//        /**
-//        * @brief Add a transition to the Delta. Ignores duplicates.
-//        */
-//        void add(const Transition& transition)
-//        {
-//            transitions.insert(transition);
-//        }
-//
-//        /**
-//         * @brief Checks if Delta is empty.
-//         */
-//        [[nodiscard]] bool is_empty() const
-//        {
-//            return transitions.empty();
-//        }
-//
-//        /**
-//         * @brief Returns the number of transitions in the Delta.
-//         */
-//        [[nodiscard]] std::size_t size() const
-//        {
-//            return transitions.size();
-//        }
-//
-//        /**
-//         * @brief Checks whether a specific transition exists in the Delta.
-//         */
-//        [[nodiscard]] bool contains(const Transition& transition) const
-//        {
-//            return transitions.contains(transition);
-//        }
-//
-//        /**
-//         * @brief Returns a const reference to the set of transitions.
-//         * @return Const reference to internal transitions set.
-//         */
-//        std::vector<Transition> get_transitions() const
-//        {
-//            return std::vector<Transition>(transitions.begin(), transitions.end());
-//        }
-//
-//        /**
-//         * @brief Returns an iterator to the beginning of the transitions.
-//         * @return Iterator to the first transition.
-//         */
-//        auto begin() const { return transitions.begin(); }
-//
-//        /**
-//         * @brief Returns an iterator to the end of the transitions.
-//         * @return Iterator past the last transition.
-//         */
-//        auto end() const { return transitions.end(); }
-//
-//        /**
-//         * @brief Returns a pointer to the next transition after the given one, or nullptr.
-//         *
-//         * @return Pointer to the next transition, or nullptr.
-//         */
-//        const Transition* next_transition()
-//        {
-//            if (iter == transitions.end()) return nullptr;
-//            return &*(iter++);
-//        }
-//
-//        void reset_iterator() { iter = transitions.begin(); }
-//
-//        bool operator==(const Delta& other) const {
-//            return transitions == other.transitions;
-//        }
-//
-//    }; // class delta
-
-
 /**
- * Move from a @c StatePost for a single state, represented as a pair of @c symbol and target state @c target.
+ * Move from a @c StatePost for a single state, represented as a pair of @c symbol and targets state @c targets.
  */
 class Move {
 public:
     Symbol symbol;
-    std::vector<State> tuple;
+    std::vector<State> targets;
 
     bool operator==(const Move&) const = default;
 }; // class Move.
@@ -163,14 +76,14 @@ public:
 class SymbolPost {
 public:
     Symbol symbol{};
-    StateVectorSet tuples{};
+    StateVectorSet target_tuples{};
 
     SymbolPost() = default;
     explicit SymbolPost(const Symbol symbol) : symbol{ symbol } {}
-    SymbolPost(const Symbol symbol, const std::vector<State> state_to) : symbol{ symbol }, tuples{ state_to } {}
-    SymbolPost(const Symbol symbol, StateVectorSet states_to) : symbol{ symbol }, tuples{ std::move(states_to) } {}
+    SymbolPost(const Symbol symbol, const std::vector<State> state_to) : symbol{ symbol }, target_tuples{ state_to } {}
+    SymbolPost(const Symbol symbol, StateVectorSet states_to) : symbol{ symbol }, target_tuples{ std::move(states_to) } {}
 
-    SymbolPost(SymbolPost&& rhs) noexcept : symbol{ rhs.symbol }, tuples{ std::move(rhs.tuples) } {}
+    SymbolPost(SymbolPost&& rhs) noexcept : symbol{ rhs.symbol }, target_tuples{ std::move(rhs.target_tuples) } {}
     SymbolPost(const SymbolPost& rhs) = default;
     SymbolPost& operator=(SymbolPost&& rhs) noexcept;
     SymbolPost& operator=(const SymbolPost& rhs) = default;
@@ -178,14 +91,14 @@ public:
     std::weak_ordering operator<=>(const SymbolPost& other) const { return symbol <=> other.symbol; }
     bool operator==(const SymbolPost& other) const { return symbol == other.symbol; }
 
-    StateVectorSet::iterator begin() { return tuples.begin(); }
-    StateVectorSet::iterator end() { return tuples.end(); }
-    StateVectorSet::const_iterator cbegin() const { return tuples.cbegin(); }
-    StateVectorSet::const_iterator cend() const { return tuples.cend(); }
+    StateVectorSet::iterator begin() { return target_tuples.begin(); }
+    StateVectorSet::iterator end() { return target_tuples.end(); }
+    StateVectorSet::const_iterator cbegin() const { return target_tuples.cbegin(); }
+    StateVectorSet::const_iterator cend() const { return target_tuples.cend(); }
 
-    size_t count(const std::vector<State> s) const { return tuples.count(s); }
-    bool empty() const { return tuples.empty(); }
-    size_t num_of_tuples() const { return tuples.size(); }
+    size_t count(const std::vector<State> s) const { return target_tuples.count(s); }
+    bool empty() const { return target_tuples.empty(); }
+    size_t num_of_target_tuples() const { return target_tuples.size(); }
 
     void insert(std::vector<State> s);
     void insert(const StateVectorSet& states);
@@ -193,18 +106,18 @@ public:
     // THIS BREAKS THE SORTEDNESS INVARIANT,
     // dangerous,
     // but useful for adding states in a random order to sort later (supposedly more efficient than inserting in a random order)
-    void push_back(const std::vector<State> s) { tuples.push_back(s); }
+    void push_back(const std::vector<State> s) { target_tuples.push_back(s); }
 
     template <typename... Args>
     StateVectorSet& emplace_back(Args&&... args) {
     // Forwardinng the variadic template pack of arguments to the emplace_back() of the underlying container.
-        return tuples.emplace_back(std::forward<Args>(args)...);
+        return target_tuples.emplace_back(std::forward<Args>(args)...);
     }
 
-    void erase(const std::vector<State> s) { tuples.erase(s); }
+    void erase(const std::vector<State> s) { target_tuples.erase(s); }
 
-    StateVectorSet::const_iterator find(const std::vector<State> s) const { return tuples.find(s); }
-    StateVectorSet::iterator find(const std::vector<State> s) { return tuples.find(s); }
+    StateVectorSet::const_iterator find(const std::vector<State> s) const { return target_tuples.find(s); }
+    StateVectorSet::iterator find(const std::vector<State> s) { return target_tuples.find(s); }
 }; // class mata::nfta::SymbolPost.
 
 /**
@@ -339,7 +252,7 @@ class StatePost::Moves::const_iterator {
 private:
     const StatePost* state_post_{ nullptr };
     StatePost::const_iterator symbol_post_it_{};
-    StateVectorSet::const_iterator tuple_it_{};
+    StateVectorSet::const_iterator targets_it_{};
     StatePost::const_iterator symbol_post_end_{};
     bool is_end_{ false };
     /// Internal allocated instance of @c Move which is set for the move currently iterated over and returned as
@@ -531,20 +444,20 @@ public:
      */
     size_t num_of_transitions() const;
 
-    void add(State single, Symbol symbol, std::vector<State> tuple);
-    void add(const Transition& trans) { add(trans.single, trans.symbol, trans.tuple); }
-    void remove(State single, Symbol symbol, std::vector<State> tuple);
-    void remove(const Transition& transition) { remove(transition.single, transition.symbol, transition.tuple); }
+    void add(State source, Symbol symbol, std::vector<State> targets);
+    void add(const Transition& trans) { add(trans.source, trans.symbol, trans.targets); }
+    void remove(State source, Symbol symbol, std::vector<State> targets);
+    void remove(const Transition& transition) { remove(transition.source, transition.symbol, transition.targets); }
 
     /**
      * Check whether @c Delta contains a passed transition.
      */
-    bool contains(State single, Symbol symbol, std::vector<State> tuple) const;
+    bool contains(State source, Symbol symbol, std::vector<State> targets) const;
     /**
      * Check whether @c Delta contains a transition passed as a triple.
      */
     bool contains(const Transition& transition) const {
-        return contains(transition.single, transition.symbol, transition.tuple);
+        return contains(transition.source, transition.symbol, transition.targets);
 	}
 
     /**
@@ -571,19 +484,19 @@ public:
      * IMPORTANT: In order to work properly, the lambda function needs to be
      * monotonic, that is, the order of states in targets cannot change.
      *
-     * @param target_renumberer Monotonic lambda function mapping states to different states.
+     * @param t_renumberer Monotonic lambda function mapping states to different states.
      * @return std::vector<Post> Copied posts.
      */
-    std::vector<StatePost> renumber_tuples(const std::function<std::vector<State>(const std::vector<State>&)> t_renumberer)  const;
+    std::vector<StatePost> renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)> t_renumberer)  const;
 
     /**
      * @brief Add transitions to multiple destinations
      *
-     * @param single From
+     * @param source From
      * @param symbol Symbol
-     * @param tuples Set of state vectors to
+     * @param target_tuples Set of state vectors to
      */
-    void add(State single, Symbol symbol, const StateVectorSet& tuples);
+    void add_set(State source, Symbol symbol, const StateVectorSet& target_tuples);
 
     using const_iterator = std::vector<StatePost>::const_iterator;
     const_iterator cbegin() const { return state_posts_.cbegin(); }

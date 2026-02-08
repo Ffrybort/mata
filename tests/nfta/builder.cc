@@ -13,7 +13,7 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
-TEST_CASE("Nfta builder tests", "[nfta][parse]") {
+TEST_CASE("Nfta builder tests") {
     OnTheFlyAlphabet alphabet = OnTheFlyAlphabet();
     IntAlphabet i_alphabet = IntAlphabet();
 
@@ -91,7 +91,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         std::vector<Transition> t = aut.delta.get_transitions();
         CHECK(std::count_if(
             t.begin(), t.end(),
-            [](const auto& t){ return t.single == 0 && t.symbol == 0; }
+            [](const auto& t){ return t.source == 0 && t.symbol == 0; }
         ) == 2);
     }
 
@@ -106,7 +106,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.get_num_of_states() == 1);
-        CHECK(aut.get_root_states().size() == 1);
+        CHECK(aut.get_final_states().size() == 1);
     }
 
     SECTION("Alphabet-marked, states-marked") {
@@ -123,7 +123,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.arities.get_arity(alphabet.translate_symb("0")) == 2);
-        CHECK(aut.get_root_states().size() == 2);
+        CHECK(aut.get_final_states().size() == 2);
     }
 
 
@@ -141,7 +141,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         Nfta aut = parse_from_mata(input, &alphabet);
         std::vector<Transition> t = aut.delta.get_transitions();
         CHECK(std::count_if(t.begin(), t.end(), [](const auto& t) {
-                  return t.single == 0 && t.symbol == 0;
+                  return t.source == 0 && t.symbol == 0;
               }
         ) == 2);
     }
@@ -248,7 +248,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.get_num_of_states() >= 104);
-        CHECK(aut.get_root_states().size() == 3);
+        CHECK(aut.get_final_states().size() == 3);
     }
 
     SECTION("Single state using IntAlphabet") {
@@ -289,7 +289,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
     }
 }
 
-//TEST_CASE("Nfta builder bottom-up tests", "[nfta][parse][bu]") {
+//TEST_CASE("Nfta builder bottom-up tests") {
 //    OnTheFlyAlphabet alphabet;
 //    IntAlphabet i_alphabet;
 //
@@ -299,7 +299,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //            %States-marked
 //            %Alphabet-marked
 //            %Final q0
-//            q1 q2 a0 q0
+//            (q1 q2 a0) q0
 //            q2 a1 q1
 //            a2 q2
 //        )";
@@ -341,7 +341,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //            %States-marked
 //            %Alphabet-enum a0(5)
 //            %Final q0
-//            q1 q2 q3 q4 q5 a0 q0
+//            (q1 q2 q3 q4 q5) a0 q0
 //        )";
 //        alphabet.clear();
 //        Nfta aut = parse_from_mata(input, &alphabet);
@@ -354,8 +354,8 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //            %States-marked
 //            %Alphabet-enum a0(2)
 //            %Final q0
-//            q1 q2 a0 q0
-//            q1 q2 a0 q1
+//            (q1 q2) a0 q0
+//            (q1 q2) a0 q1
 //        )";
 //        alphabet.clear();
 //        Nfta aut = parse_from_mata(input, &alphabet);
@@ -376,7 +376,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //        alphabet.clear();
 //        Nfta aut = parse_from_mata(input, &alphabet);
 //        CHECK(aut.get_num_of_states() == 1);
-//        CHECK(aut.get_root_states().size() == 1);
+//        CHECK(aut.get_final_states().size() == 1);
 //    }
 //
 //    SECTION("Cycle") {
@@ -413,18 +413,18 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //            %States-marked
 //            %Alphabet-enum a0(3) a1(2) a2(1) a3(0)
 //            %Final q0 q1 q2 q3
-//            q4 q5 q6 a0 q0
-//            q7 q8 q9 a0 q1
-//            q10 q11 a1 q2
-//            q12 q13 a1 q3
+//            (q4 q5 q6) a0 q0
+//            (q7 q8 q9) a0 q1
+//            (q10 q11) a1 q2
+//            (q12 q13) a1 q3
 //            q14 a2 q4
 //            q15 a2 q5
 //            a3 q6
 //            a3 q7
-//            q0 q1 q2 a0 q8
-//            q3 q4 q5 a0 q9
-//            q6 q7 a1 q10
-//            q8 q9 a1 q11
+//            (q0 q1 q2) a0 q8
+//            (q3 q4 q5) a0 q9
+//            (q6 q7) a1 q10
+//            (q8 q9) a1 q11
 //            q10 a2 q12
 //            q11 a2 q13
 //            a3 q14
@@ -436,7 +436,7 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //
 //        // sanity checks
 //        CHECK(aut.get_num_of_states() >= 16);        // enough states
-//        CHECK(aut.get_root_states().size() >= 4);    // multiple roots
+//        CHECK(aut.get_final_states().size() >= 4);    // multiple roots
 //
 //        std::vector<Transition> transitions = aut.delta.get_transitions();
 //        CHECK(std::count_if(
@@ -456,8 +456,8 @@ TEST_CASE("Nfta builder tests", "[nfta][parse]") {
 //            %States-marked
 //            %Alphabet-marked
 //            %Final q0
-//            q1 q2 a0 q0
-//            q3 a1 q1
+//            (q1 q2) a0 q0
+//            (q3) a1 q1
 //            a2 q2
 //            a2 q3
 //        )";

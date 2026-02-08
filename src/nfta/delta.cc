@@ -13,20 +13,20 @@ using StateBoolArray = std::vector<bool>; ///< Bool array for states in the auto
 SymbolPost& SymbolPost::operator=(SymbolPost&& rhs) noexcept {
     if (*this != rhs) {
         symbol = rhs.symbol;
-        tuples = std::move(rhs.tuples);
+        target_tuples = std::move(rhs.target_tuples);
     }
     return *this;
 }
 
 void SymbolPost::insert(const std::vector<State> s) {
-    if(tuples.empty() || tuples.back() < s) {
-        tuples.push_back(s);
+    if(target_tuples.empty() || target_tuples.back() < s) {
+        target_tuples.push_back(s);
         return;
     }
     // Find the place where to put the element (if not present).
     // Insert to OrdVector without the searching of a proper position inside insert(const Key&x).
-    if (const auto it = std::ranges::lower_bound(tuples, s); it == tuples.end() || *it != s) {
-        tuples.insert(it, s);
+    if (const auto it = std::ranges::lower_bound(target_tuples, s); it == target_tuples.end() || *it != s) {
+        target_tuples.insert(it, s);
     }
 }
 
@@ -53,7 +53,7 @@ StatePost::const_iterator Delta::epsilon_symbol_posts(const StatePost& state_pos
 StateVectorSet StatePost::get_successors() const {
     StateVectorSet successors;
     for (const SymbolPost& symbol_post: *this) {
-        successors.insert(symbol_post.tuples);
+        successors.insert(symbol_post.target_tuples);
     }
     return successors;
 }
@@ -64,7 +64,7 @@ const StateVectorSet& StatePost::get_successors(const Symbol symbol) const {
         static StateVectorSet empty_set{};
         return empty_set;
     }
-    return symbol_post_it->tuples;
+    return symbol_post_it->target_tuples;
 }
 
 
@@ -86,7 +86,7 @@ std::vector<Transition> Delta::get_transitions() const {
         // Iterate over symbols
         for (const SymbolPost& symbol_post : state_post) {
             // Iterate over tuples
-            for (const auto& tuple : symbol_post.tuples) {
+            for (const auto& tuple : symbol_post.target_tuples) {
                 all_transitions.emplace_back(symbol_post.symbol, s, tuple);
             }
         }
@@ -100,8 +100,8 @@ std::vector<Transition> Delta::get_transitions_to(std::vector<State> states_to) 
     const std::size_t num_of_states{ this->num_of_states() };
     for (State state_from{ 0 }; state_from < num_of_states; ++state_from) {
         for (const SymbolPost& state_from_move: state_post(state_from)) {
-            if (const auto to_state{ state_from_move.tuples.find(states_to) };
-                to_state != state_from_move.tuples.end()) {
+            if (const auto to_state{ state_from_move.target_tuples.find(states_to) };
+                to_state != state_from_move.target_tuples.end()) {
                 transitions_to_state.emplace_back(state_from, state_from_move.symbol, states_to);
             }
         }
@@ -112,77 +112,77 @@ std::vector<Transition> Delta::get_transitions_to(std::vector<State> states_to) 
 std::vector<Transition> Delta::get_transitions_between(State state_from, std::vector<State> states_to) const {
     std::vector<Transition> transitions_between{};
     for (const SymbolPost& symbol_post : state_post(state_from)) {
-        if (const auto state_to_find_it = symbol_post.tuples.find(states_to);
-            state_to_find_it != symbol_post.tuples.end()) {
+        if (const auto state_to_find_it = symbol_post.target_tuples.find(states_to);
+            state_to_find_it != symbol_post.target_tuples.end()) {
             transitions_between.emplace_back(state_from, symbol_post.symbol, states_to);
         }
     }
     return transitions_between;
 }
 
-void Delta::add(State single, Symbol symbol, std::vector<State> tuple) {
-    resize_for_states(tuple);
+void Delta::add(State single, Symbol symbol, std::vector<State> targets) {
+    resize_for_states(targets);
     resize_for_states(single);
 
     if (StatePost& state_transitions{ state_posts_[single] }; state_transitions.empty()) {
-        state_transitions.insert({ symbol, tuple });
+        state_transitions.insert({ symbol, targets });
     } else if (state_transitions.back().symbol < symbol) {
-        state_transitions.insert({ symbol, tuple });
+        state_transitions.insert({ symbol, targets });
     } else {
         if (const auto symbol_transitions{ state_transitions.find(SymbolPost{ symbol }) };
             symbol_transitions != state_transitions.end()) {
             // Add transition with symbol already used on transitions from state_from.
-            symbol_transitions->insert(tuple);
+            symbol_transitions->insert(targets);
         } else {
             // Add transition to a new Move struct with symbol yet unused on transitions from state_from.
-            const SymbolPost new_symbol_transitions{ symbol, tuple };
+            const SymbolPost new_symbol_transitions{ symbol, targets };
             state_transitions.insert(new_symbol_transitions);
         }
     }
 }
 
-void Delta::add(const State single, const Symbol symbol, const StateVectorSet& tuples) {
-    if(tuples.empty()) { return; }
+void Delta::add_set(const State single, const Symbol symbol, const StateVectorSet& target_tuples) {
+    if(target_tuples.empty()) { return; }
     resize_for_states(single);
-    resize_for_states(tuples.back());
+    resize_for_states(target_tuples.back());
 
     if (StatePost& state_transitions{ state_posts_[single] }; state_transitions.empty()) {
-        state_transitions.insert({ symbol, tuples });
+        state_transitions.insert({ symbol, target_tuples });
     } else if (state_transitions.back().symbol < symbol) {
-        state_transitions.insert({ symbol, tuples });
+        state_transitions.insert({ symbol, target_tuples });
     } else {
         if (const auto symbol_transitions{ state_transitions.find(symbol) };
             symbol_transitions != state_transitions.end()) {
             // Add transition with symbolOnTransition already used on transitions from state_from.
-            symbol_transitions->insert(tuples);
+            symbol_transitions->insert(target_tuples);
 
         } else {
             // Add transition to a new Move struct with symbol yet unused on transitions from state_from.
             // Move new_symbol_transitions{ symbol, states };
-            state_transitions.insert(SymbolPost{ symbol, tuples});
+            state_transitions.insert(SymbolPost{ symbol, target_tuples});
         }
     }
 }
 
-void Delta::remove(const State single, const Symbol symbol, const std::vector<State> tuple) {
+void Delta::remove(const State single, const Symbol symbol, const std::vector<State> targets) {
     if (single >= state_posts_.size()) { return; }
 
     if (StatePost& state_transitions{ state_posts_[single] }; state_transitions.empty()) {
         throw std::invalid_argument(
                 "Transition [" + std::to_string(single) + ", " + std::to_string(symbol) + ", " +
-                std::to_string(tuple) + "] does not exist.");
+                std::to_string(targets) + "] does not exist.");
     } else if (state_transitions.back().symbol < symbol) {
         throw std::invalid_argument(
                 "Transition [" + std::to_string(single) + ", " + std::to_string(symbol) + ", " +
-                std::to_string(tuple) + "] does not exist.");
+                std::to_string(targets) + "] does not exist.");
     } else {
         if (const auto symbol_transitions{ state_transitions.find(symbol) };
             symbol_transitions == state_transitions.end()) {
             throw std::invalid_argument(
                     "Transition [" + std::to_string(single) + ", " + std::to_string(symbol) + ", " +
-                    std::to_string(tuple) + "] does not exist.");
+                    std::to_string(targets) + "] does not exist.");
         } else {
-            symbol_transitions->erase(tuple);
+            symbol_transitions->erase(targets);
             if (symbol_transitions->empty()) {
                 state_posts_[single].erase(*symbol_transitions);
             }
@@ -190,7 +190,7 @@ void Delta::remove(const State single, const Symbol symbol, const std::vector<St
     }
 }
 
-bool Delta::contains(State single, Symbol symbol, std::vector<State> tuple) const
+bool Delta::contains(State single, Symbol symbol, std::vector<State> targets) const
 { // {{{
     if (state_posts_.empty()) { return false; }
     if (state_posts_.size() <= single) { return false; }
@@ -202,7 +202,7 @@ bool Delta::contains(State single, Symbol symbol, std::vector<State> tuple) cons
         return false;
     }
 
-    return symbol_transitions->tuples.find(tuple) != symbol_transitions->tuples.end();
+    return symbol_transitions->target_tuples.find(targets) != symbol_transitions->target_tuples.end();
 }
 
 
@@ -211,7 +211,7 @@ size_t Delta::num_of_transitions() const {
     size_t number_of_transitions{ 0 };
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost& symbol_post: state_post) {
-            number_of_transitions += symbol_post.num_of_tuples();
+            number_of_transitions += symbol_post.num_of_target_tuples();
         }
     }
     return number_of_transitions;
@@ -227,10 +227,10 @@ Delta::Transitions::const_iterator::const_iterator(const Delta& delta): delta_{ 
         if (!(*delta_)[static_cast<State>(i)].empty()) {
             current_state_ = i;
             state_post_it_ = (*delta_)[static_cast<State>(i)].begin();
-            symbol_post_it_ = state_post_it_->tuples.begin();
-            transition_.single = static_cast<State>(current_state_);
+            symbol_post_it_ = state_post_it_->target_tuples.begin();
+            transition_.source = static_cast<State>(current_state_);
             transition_.symbol = state_post_it_->symbol;
-            transition_.tuple = *symbol_post_it_;
+            transition_.targets = *symbol_post_it_;
             return;
         }
     }
@@ -246,10 +246,10 @@ Delta::Transitions::const_iterator::const_iterator(const Delta& delta, const Sta
         if (const StatePost& state_post{ delta_->state_post(s) }; !state_post.empty()) {
             current_state_ = s;
             state_post_it_ = state_post.begin();
-            symbol_post_it_ = state_post_it_->tuples.begin();
-            transition_.single = static_cast<State>(current_state_);
+            symbol_post_it_ = state_post_it_->target_tuples.begin();
+            transition_.source = static_cast<State>(current_state_);
             transition_.symbol = state_post_it_->symbol;
-            transition_.tuple = *symbol_post_it_;
+            transition_.targets = *symbol_post_it_;
             return;
         }
     }
@@ -262,16 +262,16 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
     assert(delta_->begin() != delta_->end());
 
     ++symbol_post_it_;
-    if (symbol_post_it_ != state_post_it_->tuples.end()) {
-        transition_.tuple = *symbol_post_it_;
+    if (symbol_post_it_ != state_post_it_->target_tuples.end()) {
+        transition_.targets = *symbol_post_it_;
         return *this;
     }
 
     ++state_post_it_;
     if (state_post_it_ != (*delta_)[static_cast<State>(current_state_)].cend()) {
-        symbol_post_it_ = state_post_it_->tuples.begin();
+        symbol_post_it_ = state_post_it_->target_tuples.begin();
         transition_.symbol = state_post_it_->symbol;
-        transition_.tuple = *symbol_post_it_;
+        transition_.targets = *symbol_post_it_;
         return *this;
     }
 
@@ -286,11 +286,11 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
 
     const StatePost& state_post{ (*delta_)[static_cast<State>(current_state_)] };
     state_post_it_ = state_post.begin();
-    symbol_post_it_ = state_post_it_->tuples.begin();
+    symbol_post_it_ = state_post_it_->target_tuples.begin();
 
-    transition_.single = static_cast<State>(current_state_);
+    transition_.source = static_cast<State>(current_state_);
     transition_.symbol = state_post_it_->symbol;
-    transition_.tuple = *symbol_post_it_;
+    transition_.targets = *symbol_post_it_;
 
     return *this;
 }
@@ -312,7 +312,7 @@ bool Delta::Transitions::const_iterator::operator==(const Delta::Transitions::co
     }
 }
 
-std::vector<StatePost> Delta::renumber_tuples(const std::function<std::vector<State>(const std::vector<State>&)> t_renumberer) const {
+std::vector<StatePost> Delta::renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)> t_renumberer) const {
     std::vector<StatePost> copied_state_posts;
     copied_state_posts.reserve(num_of_states());
     for(const StatePost& state_post: state_posts_) {
@@ -320,8 +320,8 @@ std::vector<StatePost> Delta::renumber_tuples(const std::function<std::vector<St
         copied_state_post.reserve(state_post.size());
         for(const SymbolPost& symbol_post: state_post) {
             StateVectorSet copied_tuples;
-            copied_tuples.reserve(symbol_post.num_of_tuples());
-            for(const std::vector<State>& states: symbol_post.tuples) {
+            copied_tuples.reserve(symbol_post.num_of_target_tuples());
+            for(const std::vector<State>& states: symbol_post.target_tuples) {
                 copied_tuples.push_back(t_renumberer(states));
             }
             copied_state_post.push_back(SymbolPost(symbol_post.symbol, copied_tuples));
@@ -434,8 +434,8 @@ StatePost::Moves::const_iterator::const_iterator(
     }
 
     move_.symbol = symbol_post_it_->symbol;
-    tuple_it_ = symbol_post_it_->tuples.cbegin();
-    move_.tuple = *tuple_it_;
+    targets_it_ = symbol_post_it_->target_tuples.cbegin();
+    move_.targets = *targets_it_;
 }
 
 StatePost::Moves::const_iterator::const_iterator(const StatePost& state_post)
@@ -446,14 +446,14 @@ StatePost::Moves::const_iterator::const_iterator(const StatePost& state_post)
     }
 
     move_.symbol = symbol_post_it_->symbol;
-    tuple_it_ = symbol_post_it_->tuples.cbegin();
-    move_.tuple = *tuple_it_;
+    targets_it_ = symbol_post_it_->target_tuples.cbegin();
+    move_.targets = *targets_it_;
 }
 
 StatePost::Moves::const_iterator& StatePost::Moves::const_iterator::operator++() {
-    ++tuple_it_;
-    if (tuple_it_ != symbol_post_it_->tuples.end()) {
-        move_.tuple = *tuple_it_;
+    ++targets_it_;
+    if (targets_it_ != symbol_post_it_->target_tuples.end()) {
+        move_.targets = *targets_it_;
         return *this;
     }
 
@@ -466,8 +466,8 @@ StatePost::Moves::const_iterator& StatePost::Moves::const_iterator::operator++()
     }
     // The current symbol post is valid (not equal symbol_post_end_).
     move_.symbol = symbol_post_it_->symbol;
-    tuple_it_ = symbol_post_it_->tuples.begin();
-    move_.tuple = *tuple_it_;
+    targets_it_ = symbol_post_it_->target_tuples.begin();
+    move_.targets = *targets_it_;
     return *this;
 }
 
@@ -483,14 +483,14 @@ bool StatePost::Moves::const_iterator::operator==(const StatePost::Moves::const_
     } else if ((is_end_ && !other.is_end_) || (!is_end_ && other.is_end_)) {
         return false;
     }
-    return symbol_post_it_ == other.symbol_post_it_ && tuple_it_ == other.tuple_it_
+    return symbol_post_it_ == other.symbol_post_it_ && targets_it_ == other.targets_it_
            && symbol_post_end_ == other.symbol_post_end_;
 }
 
 size_t StatePost::num_of_moves() const {
     size_t counter{ 0 };
     for (const SymbolPost& symbol_post: *this) {
-        counter += symbol_post.num_of_tuples();
+        counter += symbol_post.num_of_target_tuples();
     }
     return counter;
 }
