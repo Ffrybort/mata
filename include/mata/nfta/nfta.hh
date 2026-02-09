@@ -61,6 +61,7 @@ namespace mata::nfta
               delta(std::move(delta))
         {
         }
+        Nfta(size_t num_of_states) : final_states({}), alphabet(nullptr), arities({}), delta(num_of_states) {}
         Nfta(const Nfta&) = delete; // todo implement moving
         Nfta& operator=(const Nfta&) = delete;
 
