@@ -28,7 +28,7 @@ TEST_CASE("Nfta builder tests") {
             q2 a2
         )";
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() > 0);
+        CHECK(aut.delta.num_of_states() > 0);
     }
 
     SECTION("Single target") {
@@ -42,7 +42,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() == 2);
+        CHECK(aut.delta.num_of_states() == 2);
     }
 
     SECTION("Constants") {
@@ -55,7 +55,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() == 1);
+        CHECK(aut.delta.num_of_states() == 1);
     }
 
     SECTION("Many target states") {
@@ -71,7 +71,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() == 8);
+        CHECK(aut.delta.num_of_states() == 8);
     }
 
     SECTION("Multiple transitions for same source/symbol") {
@@ -105,7 +105,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() == 1);
+        CHECK(aut.delta.num_of_states() == 1);
         CHECK(aut.get_final_states().size() == 1);
     }
 
@@ -157,7 +157,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() == 2);
+        CHECK(aut.delta.num_of_states() == 2);
     }
 
     SECTION("Single state loop") {
@@ -170,7 +170,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() == 1);
+        CHECK(aut.delta.num_of_states() == 1);
     }
 
     SECTION("One big boi") {
@@ -247,7 +247,7 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_num_of_states() >= 104);
+        CHECK(aut.delta.num_of_states() >= 104);
         CHECK(aut.get_final_states().size() == 3);
     }
 
@@ -260,7 +260,7 @@ TEST_CASE("Nfta builder tests") {
             q0 0 q0
         )";
         Nfta aut = parse_from_mata(input, &i_alphabet);
-        CHECK(aut.get_num_of_states() == 1);
+        CHECK(aut.delta.num_of_states() == 1);
     }
 
     SECTION("Parse^2") {
@@ -282,193 +282,9 @@ TEST_CASE("Nfta builder tests") {
         std::string printed = out.str();
 
         OnTheFlyAlphabet alphabet2;
-        Nfta aut2 = parse_from_mata(printed, &alphabet);
+        Nfta aut2 = parse_from_mata(printed, &alphabet2);
 
         bool check = aut1 == aut2;
         CHECK(check);
     }
 }
-
-//TEST_CASE("Nfta builder bottom-up tests") {
-//    OnTheFlyAlphabet alphabet;
-//    IntAlphabet i_alphabet;
-//
-//    SECTION("Basic BU NFTA") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-marked
-//            %Final q0
-//            (q1 q2 a0) q0
-//            q2 a1 q1
-//            a2 q2
-//        )";
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() > 0);
-//    }
-//
-//    SECTION("Single source") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-auto
-//            %Final q0
-//            q1 a0 q0
-//            a1 q1
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() == 2);
-//    }
-//
-//    SECTION("Constants only") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-enum a0 a1
-//            %Final q0
-//            a0 q0
-//            a1 q0
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() == 1);
-//    }
-//
-//    SECTION("Bunch of sources") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-enum a0(5)
-//            %Final q0
-//            (q1 q2 q3 q4 q5) a0 q0
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() == 6);
-//    }
-//
-//    SECTION("Multiple transitions same left-hand side") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-enum a0(2)
-//            %Final q0
-//            (q1 q2) a0 q0
-//            (q1 q2) a0 q1
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        std::vector<Transition> transitions = aut.delta.get_transitions();
-//        CHECK(std::count_if(transitions.begin(), transitions.end(),
-//            [](const auto& t) { return t.tuple == std::vector<State>{1, 2} && t.symbol == 0; }
-//            ) == 2);
-//    }
-//
-//    SECTION("Single symbol alphabet-auto") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-enum q0
-//            %Alphabet-auto
-//            %Final q0
-//            a0 q0
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() == 1);
-//        CHECK(aut.get_final_states().size() == 1);
-//    }
-//
-//    SECTION("Cycle") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-enum a0(1)
-//            %Final q0
-//            q1 a0 q0
-//            q0 a0 q1
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() == 2);
-//    }
-//
-//    SECTION("Single state loop") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-enum a0(1)
-//            %Final q0
-//            q0 a0 q0
-//        )";
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//        CHECK(aut.get_num_of_states() == 1);
-//    }
-//
-//
-//    SECTION("Real Big Boi") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-enum a0(3) a1(2) a2(1) a3(0)
-//            %Final q0 q1 q2 q3
-//            (q4 q5 q6) a0 q0
-//            (q7 q8 q9) a0 q1
-//            (q10 q11) a1 q2
-//            (q12 q13) a1 q3
-//            q14 a2 q4
-//            q15 a2 q5
-//            a3 q6
-//            a3 q7
-//            (q0 q1 q2) a0 q8
-//            (q3 q4 q5) a0 q9
-//            (q6 q7) a1 q10
-//            (q8 q9) a1 q11
-//            q10 a2 q12
-//            q11 a2 q13
-//            a3 q14
-//            a3 q15
-//        )";
-//
-//        alphabet.clear();
-//        Nfta aut = parse_from_mata(input, &alphabet);
-//
-//        // sanity checks
-//        CHECK(aut.get_num_of_states() >= 16);        // enough states
-//        CHECK(aut.get_final_states().size() >= 4);    // multiple roots
-//
-//        std::vector<Transition> transitions = aut.delta.get_transitions();
-//        CHECK(std::count_if(
-//            transitions.begin(),
-//            transitions.end(),
-//            [](const auto& t) {
-//                return t.tuple.size() == 3 && t.symbol == 0;
-//            }
-//        ) >= 2);
-//    }
-//
-//
-//
-//    SECTION("BU round-trip Parse^2") {
-//        std::string input = R"(
-//            @NFTA_BU-explicit
-//            %States-marked
-//            %Alphabet-marked
-//            %Final q0
-//            (q1 q2) a0 q0
-//            (q3) a1 q1
-//            a2 q2
-//            a2 q3
-//        )";
-//        Nfta aut1 = parse_from_mata(input, &i_alphabet);
-//
-//        std::ostringstream out;
-//        CHECK_NOTHROW(aut1.print_mata(out));
-//        std::string printed = out.str();
-//
-//        Nfta aut2 = parse_from_mata(printed, &i_alphabet);
-//
-//        CHECK(aut1 == aut2);
-//    }
-//}

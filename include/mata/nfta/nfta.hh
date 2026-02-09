@@ -2,7 +2,7 @@
  * @file nfta.hh
  * @brief Implementation of a nondeterministic finite tree automaton.
  *
- * The automaton can be either top-down or bottom-up, given by its type.
+ *
  */
 
 #ifndef MATA_NFTA_H
@@ -42,25 +42,23 @@ namespace mata::nfta
     class Nfta
     {
     public:
-        unsigned num_of_states; // todo delete this, use delta
         utils::SparseSet<State> final_states; // a set of final (or initial) states
         Alphabet* alphabet;
         ArityMap arities;
-        Delta delta;
+        Delta delta; // states live in delta, so do functions like add_state()
 
     public:
         explicit Nfta(
-            const unsigned num_of_states = 0,
             const utils::SparseSet<State>& final_states = {},
             Alphabet* alphabet = nullptr,
             ArityMap arities = {},
-            const Delta& delta = {}
+            Delta  delta = {}
         )
-            : num_of_states(num_of_states),
+            :
               final_states(final_states),
               alphabet(alphabet),
               arities(std::move(arities)),
-              delta(delta)
+              delta(std::move(delta))
         {
         }
         Nfta(const Nfta&) = delete; // todo implement moving
@@ -70,24 +68,10 @@ namespace mata::nfta
         Nfta& operator=(Nfta&&) noexcept = default;
 
         /**
-         * @brief Add a state to the automaton.
+         * @brief Add a final state, the state itself is also added if it didn't exist already.
          */
-        State add_state() { num_of_states++; return num_of_states - 1;  }
-
-        /**
-         * Add a specific @p state value.
-		 *
-		 *
-         */
-        void add_state(const State state) {
-            if (state >= delta.num_of_states()) {
-                delta.allocate(state + 1);
-                num_of_states = state + 1;
-            }
-		}
-
         void add_final_state(const State state) {
-            add_state(state);
+            delta.add_state(state);
             final_states.insert(state);
 		}
 
@@ -106,15 +90,9 @@ namespace mata::nfta
          */
         void add_final_states(const std::initializer_list<State> states)
         {
-            add_state(*std::max_element(states.begin(), states.end()));
+            delta.add_state(*std::ranges::max_element(states));
             final_states.insert(states);
         }
-
-
-        /**
-         * @brief Check whether a state exists in the automaton.
-         */
-        bool contains_state(const State& state) const { return state < num_of_states; }
 
         /**
          * @brief Check whether a state is final (initial).
@@ -127,14 +105,16 @@ namespace mata::nfta
         void print_mata(std::ostream& os) const;
 
         /**
-         * @brief Print the automaton in an easy to read format.
+         * @brief Print the automaton in an easy-to-read format.
          */
-        void print_readable(std::ostream& os, std::string type) const;
+        void print_readable(std::ostream& os, const std::string& type = "") const;
 
-        unsigned get_num_of_states() const { return num_of_states; }
+        /**
+         * @brief Get the set of final states.
+         */
         const utils::SparseSet<State>& get_final_states() const { return final_states; }
 
         bool operator== (const Nfta& other) const;
-    };
-}
-#endif // MATA_NFTA
+    }; // class Nfta
+} // namespace mata::nfta
+#endif // MATA_NFTA_H

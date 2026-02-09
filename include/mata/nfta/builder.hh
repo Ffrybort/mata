@@ -17,7 +17,7 @@ namespace mata::nfta {
     using NameStateMap = std::unordered_map<std::string, State>;
 
     inline Nfta create_empty(Alphabet *alphabet = nullptr) {
-       return Nfta(1, {0}, alphabet, {}, Delta(1));
+       return Nfta({0}, alphabet, {}, Delta(1));
     }
 
     /**

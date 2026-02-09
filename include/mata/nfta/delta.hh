@@ -418,26 +418,35 @@ public:
     void clear() { state_posts_.clear(); }
 
     /**
-     * @brief Allocate state posts up to @p num_of_states states, creating empty @c StatePost for yet unallocated state
-     *  posts.
+     * @brief Allocate state posts up to @p state.
      *
-     * @param[in] num_of_states Number of states in @c Delta to allocate state posts for. Have to be at least
-     *  num_of_states() + 1.
+     * @param state new state to add.
+     * @return True if delta was allocated, false if the state was present already.
      */
-    void allocate(const size_t num_of_states) {
-        assert(num_of_states >= this->num_of_states());
-        state_posts_.resize(num_of_states);
+    bool add_state(const State state) {
+        if(state < this->num_of_states()) { return false; }
+        state_posts_.resize(state + 1);
+        return true;
     }
 
     /**
-     * @return Number of states in the whole Delta, including both source and target states.
+     * @brief Increase delta by one state.
+     * @return the new state.
+     */
+    State add_state() {
+        state_posts_.resize(this->num_of_states() + 1);
+        return static_cast<State>(num_of_states() - 1);
+    }
+
+    /**
+     * @return Number of states in the whole Delta.
      */
     size_t num_of_states() const { return state_posts_.size(); }
 
     /**
-     * Check whether the @p state is used in @c Delta.
+     * Check whether the @p state is in @c Delta.
      */
-    bool uses_state(const State state) const { return state < num_of_states(); }
+    bool contains_state(const State state) const { return state < num_of_states(); }
 
     /**
      * @return Number of transitions in Delta.

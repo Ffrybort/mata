@@ -22,29 +22,29 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     arities.set_arity(alphabet["f"], 2); // f -> 2, a -> 0 implicit
 
     SECTION("AddState") {
-        Nfta aut(0, {}, &alphabet, {});
-        State s = aut.add_state();
-        CHECK(aut.contains_state(s));
-        CHECK(aut.get_num_of_states() == 1);
+        Nfta aut({}, &alphabet, {});
+        State s = aut.delta.add_state();
+        CHECK(aut.delta.contains_state(s));
+        CHECK(aut.delta.num_of_states() == 1);
     }
 
     SECTION("AddInitialState") {
-        Nfta aut(0, {}, &alphabet, {});
+        Nfta aut({}, &alphabet, {});
         aut.add_final_state(0);
         CHECK(aut.is_state_final(0));
-        CHECK(aut.get_num_of_states() == 1); // adding initial state increases num of states
+        CHECK(aut.delta.num_of_states() == 1); // adding initial state increases num of states
     }
 
     SECTION("DuplicateStateIgnored") {
-        Nfta aut(0, {}, &alphabet, {});
-        aut.add_state();
-        aut.add_state();
+        Nfta aut({}, &alphabet, {});
+        aut.delta.add_state();
+        aut.delta.add_state();
         // All added states are unique numbers, so count reflects additions
-        CHECK(aut.get_num_of_states() == 2);
+        CHECK(aut.delta.num_of_states() == 2);
     }
 
     SECTION("DuplicateInitialStateIgnored") {
-        Nfta aut(0, {}, &alphabet, {});
+        Nfta aut({}, &alphabet, {});
         aut.add_final_state(0);
         aut.add_final_state(0);
         // Initial states are tracked separately; duplicates ignored
@@ -52,10 +52,10 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     }
 
     SECTION("AddTransition") {
-        Nfta aut(0, {}, &alphabet, {});
-        State src = aut.add_state(); // source state
-        State t1 = aut.add_state();
-        State t2 = aut.add_state();
+        Nfta aut( {}, &alphabet, {});
+        State src = aut.delta.add_state(); // source state
+        State t1 = aut.delta.add_state();
+        State t2 = aut.delta.add_state();
         aut.delta.add(alphabet["f"], src, {t1, t2});
         auto transitions = aut.delta.get_transitions();
         REQUIRE(transitions.size() == 1);
@@ -66,12 +66,12 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     }
 
     SECTION("AddMultipleTransitions") {
-        Nfta aut(0, {}, &alphabet, {});
-        State s1 = aut.add_state();
-        State s2 = aut.add_state();
-        State s3 = aut.add_state();
+        Nfta aut({}, &alphabet, {});
+        State s1 = aut.delta.add_state();
+        State s2 = aut.delta.add_state();
+        State s3 = aut.delta.add_state();
         aut.delta.add(alphabet["f"], s1, {s2, s3});
-        State s4 = aut.add_state();
+        State s4 = aut.delta.add_state();
         aut.delta.add(s4, alphabet["a"], {});
         auto transitions = aut.delta.get_transitions();
         CHECK(transitions.size() == 2);
@@ -84,24 +84,24 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     }
 
     SECTION("ContainsStateAndInitialCheck") {
-        Nfta aut(0, {}, &alphabet, {});
-        State s = aut.add_state();
-        CHECK(aut.contains_state(s));
+        Nfta aut({}, &alphabet, {});
+        State s = aut.delta.add_state();
+        CHECK(aut.delta.contains_state(s));
         CHECK(!aut.is_state_final(s));
-        CHECK(!aut.contains_state(aut.get_num_of_states() + 10)); // definitely out of range
+        CHECK(!aut.delta.contains_state(static_cast<State>(aut.delta.num_of_states()))); // should out of range
     }
 
     SECTION("ConstructorInitialization") {
-        Nfta aut(2, {1}, &alphabet, {}); // 2 states: 0 and 1, initial state 1
-        CHECK(aut.contains_state(0));
-        CHECK(aut.contains_state(1));
+        Nfta aut( {1}, &alphabet, {}, Delta(2)); // 2 states: 0 and 1, initial state 1
+        CHECK(aut.delta.contains_state(0));
+        CHECK(aut.delta.contains_state(1));
         CHECK(aut.is_state_final(1));
         CHECK(!aut.is_state_final(0));
-        CHECK(aut.get_num_of_states() == 2);
+        CHECK(aut.delta.num_of_states() == 2);
     }
 
     SECTION("PrintSanity") {
-        Nfta aut(2, {0}, &alphabet, {});
+        Nfta aut({0}, &alphabet, {});
         aut.delta.add(alphabet["f"], 0, {0,1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
         CHECK_NOTHROW(aut.print_readable(std::cout, "bottom-up"));

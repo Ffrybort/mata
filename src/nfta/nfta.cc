@@ -37,20 +37,26 @@ namespace mata::nfta
             os << std::endl;
         }
     }
-
-    void Nfta::print_mata(std::ostream& os) const
+void Nfta::print_mata(std::ostream& os) const
     {
         os << "@NFTA-explicit" << std::endl;
         os << "%States-marked " << std::endl;
         os << "%Alphabet-auto " << std::endl;
         os << "%Initial ";
-        for (State state : final_states) { os <<"q" << state << " "; }
+        for (State state : final_states) { os << "q" << state << " "; }
         os << std::endl;
 
         for (const auto& transition : delta.get_transitions())
         {
-            // source symbol
-            os << "q" << transition.source << " " << alphabet->reverse_translate_symbol(transition.symbol) << " ";
+            os << "q" << transition.source << " ";
+
+            // symbol
+            if (alphabet != nullptr) {
+                os << alphabet->reverse_translate_symbol(transition.symbol);
+            } else {
+                os << transition.symbol;
+            }
+            os << " ";
 
             // targets
             os << "(";
@@ -59,11 +65,12 @@ namespace mata::nfta
                 os << "q" << target << " ";
             }
             os << ")";
-            os  << std::endl;
+            os << std::endl;
         }
     }
 
-    void Nfta::print_readable(std::ostream& os, std::string type) const
+
+    void Nfta::print_readable(std::ostream& os, const std::string& type) const
 	{
         if (type == "bottom-up") {os << "Bottom-up NFTA"; }
         else { os << "Top-down NFTA"; }
@@ -72,7 +79,7 @@ namespace mata::nfta
         os << "================================================" << std::endl;
 
         // States
-        os << "States (" << num_of_states << "): ";
+        os << "States (" << delta.num_of_states() << "): ";
 
         // Final (or initial) states
         if (type == "bottom-up") {os << "Final states: "; }
@@ -109,17 +116,14 @@ namespace mata::nfta
     }
 
     /**
-     * @brief Check if the two automata are identical (not equal).
+     * @brief Check if the two automata are identical. Alphabets are not compared -
+     * only that transitions use the same symbol representations.
      *
      */
     bool Nfta::operator== (const Nfta& other) const {
-        return num_of_states == other.num_of_states
+        return delta.num_of_states() == other.delta.num_of_states()
             && final_states == other.final_states
             && delta == other.delta
-            && arities.arities_ == other.arities.arities_
-            && (
-                alphabet == other.alphabet || // same pointer
-                (alphabet && other.alphabet && alphabet->is_equal(other.alphabet))
-               );
+            && arities.arities_ == other.arities.arities_;
     }
 }

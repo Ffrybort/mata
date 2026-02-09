@@ -4,15 +4,16 @@
 
 namespace mata::nfta {
 Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphabet) {
-    if (alphabet == nullptr) { throw std::runtime_error("A valid alphabet pointer is needed."); }
+    if (alphabet == nullptr) { throw std::runtime_error("A valid alphabet pointer is needed."); } // todo create one instead
     NameStateMap state_map;
-    Nfta aut(0, {}, alphabet, {} );
+    Nfta aut;
+    aut.alphabet = alphabet;
 
     // get state numeric value from string, add it to state map if not already there
     auto get_state = [&state_map, &aut](const std::string& state) -> State {
         auto [it, inserted] = state_map.try_emplace(state, State{});
         if (inserted) {
-            it->second = aut.add_state();
+            it->second = aut.delta.add_state();
         }
         return it->second;
     };
