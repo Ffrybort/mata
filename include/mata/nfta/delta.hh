@@ -455,7 +455,7 @@ public:
 
     void add(State source, Symbol symbol, std::vector<State> targets);
     void add(const Transition& trans) { add(trans.source, trans.symbol, trans.targets); }
-    void remove(State source, Symbol symbol, std::vector<State> targets);
+    void remove(State source, Symbol symbol, const std::vector<State>& targets);
     void remove(const Transition& transition) { remove(transition.source, transition.symbol, transition.targets); }
 
     /**
@@ -505,7 +505,7 @@ public:
      * @param symbol Symbol
      * @param target_tuples Set of state vectors to
      */
-    void add_set(State source, Symbol symbol, const StateVectorSet& target_tuples);
+    void add_multiple(State source, Symbol symbol, const StateVectorSet& target_tuples);
 
     using const_iterator = std::vector<StatePost>::const_iterator;
     const_iterator cbegin() const { return state_posts_.cbegin(); }

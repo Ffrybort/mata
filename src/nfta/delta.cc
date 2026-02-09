@@ -141,7 +141,7 @@ void Delta::add(State single, Symbol symbol, std::vector<State> targets) {
     }
 }
 
-void Delta::add_set(const State single, const Symbol symbol, const StateVectorSet& target_tuples) {
+void Delta::add_multiple(const State single, const Symbol symbol, const StateVectorSet& target_tuples) {
     if(target_tuples.empty()) { return; }
     resize_for_states(single);
     resize_for_states(target_tuples.back());
@@ -164,31 +164,28 @@ void Delta::add_set(const State single, const Symbol symbol, const StateVectorSe
     }
 }
 
-void Delta::remove(const State single, const Symbol symbol, const std::vector<State> targets) {
-    if (single >= state_posts_.size()) { return; }
+void Delta::remove(const State source, const Symbol symbol, const std::vector<State>& targets) {
+    auto throw_no_transition = [&]() {
+        throw std::invalid_argument(
+            "Transition [" + std::to_string(source) + ", " + std::to_string(symbol) + ", " +
+            std::to_string(targets) + "] does not exist."
+        );
+    };
 
-    if (StatePost& state_transitions{ state_posts_[single] }; state_transitions.empty()) {
-        throw std::invalid_argument(
-                "Transition [" + std::to_string(single) + ", " + std::to_string(symbol) + ", " +
-                std::to_string(targets) + "] does not exist.");
-    } else if (state_transitions.back().symbol < symbol) {
-        throw std::invalid_argument(
-                "Transition [" + std::to_string(single) + ", " + std::to_string(symbol) + ", " +
-                std::to_string(targets) + "] does not exist.");
-    } else {
-        if (const auto symbol_transitions{ state_transitions.find(symbol) };
-            symbol_transitions == state_transitions.end()) {
-            throw std::invalid_argument(
-                    "Transition [" + std::to_string(single) + ", " + std::to_string(symbol) + ", " +
-                    std::to_string(targets) + "] does not exist.");
-        } else {
-            symbol_transitions->erase(targets);
-            if (symbol_transitions->empty()) {
-                state_posts_[single].erase(*symbol_transitions);
-            }
-        }
+    if (source >= state_posts_.size()) { throw_no_transition(); }
+
+    StatePost& state_transitions = state_posts_[source];
+    if (state_transitions.empty() || state_transitions.back().symbol < symbol) { throw_no_transition(); }
+
+    auto symbol_transitions = state_transitions.find(symbol);
+    if (symbol_transitions == state_transitions.end()) { throw_no_transition(); }
+
+    symbol_transitions->erase(targets);
+    if (symbol_transitions->empty()) { // remove symbol is no targets remain
+        state_transitions.erase(*symbol_transitions);
     }
 }
+
 
 bool Delta::contains(State single, Symbol symbol, std::vector<State> targets) const
 { // {{{
