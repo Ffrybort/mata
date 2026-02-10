@@ -61,8 +61,9 @@ namespace mata::nfta
               delta(std::move(delta))
         {
         }
-        Nfta(size_t num_of_states) : final_states({}), alphabet(nullptr), arities({}), delta(num_of_states) {}
-        Nfta(const Nfta&) = delete; // todo implement moving
+        explicit Nfta(size_t num_of_states) : final_states({}), alphabet(nullptr), arities({}), delta(num_of_states) {}
+
+        Nfta(const Nfta&) = delete; // todo copy with a null alphabet? or explicitly copy the pointer?
         Nfta& operator=(const Nfta&) = delete;
 
         Nfta(Nfta&&) noexcept = default;
@@ -96,7 +97,7 @@ namespace mata::nfta
         }
 
         /**
-         * @brief Check whether a state is final (initial).
+         * @brief Check whether a state is final (or initial).
          */
         bool is_state_final(const State& state) const { return final_states.contains(state); }
 
@@ -115,6 +116,8 @@ namespace mata::nfta
          */
         const utils::SparseSet<State>& get_final_states() const { return final_states; }
 
+
+        // comparing delta and final states, ignoring alphabet
         bool operator== (const Nfta& other) const;
     }; // class Nfta
 } // namespace mata::nfta
