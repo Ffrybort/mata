@@ -228,4 +228,404 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         RankedOnTheFlyAlphabet b{ std::move(a) };
         CHECK(b.get_number_of_symbols() == 1);
     }
+
+    SECTION("pointer constructor") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_ranked_symbol("a", 1);
+        RankedOnTheFlyAlphabet b{ &a };
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("copy assignment") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_ranked_symbol("a", 1);
+
+        RankedOnTheFlyAlphabet b{};
+        b = a;
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("SymbolMap constructor") {
+    RankedOnTheFlyAlphabet::SymbolMap map{
+        {{"a", 1}, 5},
+        {{"b", 2}, 7}
+    };
+
+    RankedOnTheFlyAlphabet a{ map };
+
+    CHECK(a.translate_ranked_symbol("a", 1) == 5);
+    CHECK(a.translate_ranked_symbol("b", 2) == 7);
 }
+
+    SECTION("move assignment") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_ranked_symbol("a", 1);
+
+        RankedOnTheFlyAlphabet b{};
+        b = std::move(a);
+
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("get_symbol_map returns internal map") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_ranked_symbol("a", 1);
+
+        const auto& map = a.get_symbol_map();
+        CHECK(map.size() == 1);
+    }
+
+    SECTION("update_next_symbol_value updates correctly") {
+        RankedOnTheFlyAlphabet a{};
+
+        a.update_next_symbol_value(10);
+        CHECK(a.get_next_value() == 11);
+
+        a.update_next_symbol_value(5);  // should not decrease
+        CHECK(a.get_next_value() == 11);
+    }
+
+    SECTION("erase by iterator removes symbol") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_ranked_symbol("a", 1);
+
+        auto it = a.get_symbol_map().begin();
+        a.erase(it);
+
+        CHECK(a.empty());
+    }
+
+    SECTION("erase iterator range removes symbols") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_ranked_symbol("b", 2);
+
+        auto first = a.get_symbol_map().begin();
+        auto last = a.get_symbol_map().end();
+
+        a.erase(first, last);
+
+        CHECK(a.empty());
+    }
+
+    SECTION("add_new_symbol with explicit value") {
+        RankedOnTheFlyAlphabet a{};
+
+        a.add_new_symbol(RankedOnTheFlyAlphabet::StringArity{"a", 1}, 42);
+
+        CHECK(a.translate_ranked_symbol("a", 1) == 42);
+    }
+
+    SECTION("add_new_symbol string arity value overload") {
+        RankedOnTheFlyAlphabet a{};
+
+        a.add_new_symbol("a", 2, 99);
+
+        CHECK(a.translate_ranked_symbol("a", 2) == 99);
+    }
+}
+
+TEST_CASE("mata::RankedIntAlphabet") {
+
+    SECTION("translate_or_add_ranked_symbol returns integer symbol") {
+        RankedIntAlphabet a{};
+        Symbol s = a.translate_or_add_ranked_symbol("5", 2);
+        CHECK(s == 5);
+    }
+
+    SECTION("translate_ranked_symbol returns existing symbol") {
+        RankedIntAlphabet a{};
+        a.translate_or_add_ranked_symbol("3", 1);
+        CHECK(a.translate_ranked_symbol("3", 1) == 3);
+    }
+
+    SECTION("translate_ranked_symbol throws if missing") {
+        RankedIntAlphabet a{};
+        CHECK_THROWS(a.translate_ranked_symbol("7", 1));
+    }
+
+    SECTION("same symbol different arity is allowed") {
+        RankedIntAlphabet a{};
+        Symbol s1 = a.translate_or_add_ranked_symbol("4", 1);
+        Symbol s2 = a.translate_or_add_ranked_symbol("4", 2);
+
+        CHECK(s1 == s2);
+        CHECK(a.get_arity(4) == 2);
+    }
+
+    SECTION("get_arity returns 0 for constants") {
+        RankedIntAlphabet a{};
+        a.translate_or_add_ranked_symbol("10", 0);
+
+        CHECK(a.get_arity(10) == 0);
+    }
+
+    SECTION("set_arity sets non-zero arity") {
+        RankedIntAlphabet a{};
+        a.translate_or_add_ranked_symbol("6", 0);
+
+        a.set_arity(6, 3);
+        CHECK(a.get_arity(6) == 3);
+    }
+
+    SECTION("set_arity ignores zero arity") {
+        RankedIntAlphabet a{};
+        a.translate_or_add_ranked_symbol("8", 2);
+
+        a.set_arity(8, 0);
+        CHECK(a.get_arity(8) == 2);
+    }
+
+    SECTION("clear removes all arities") {
+        RankedIntAlphabet a{};
+        a.translate_or_add_ranked_symbol("1", 2);
+        a.translate_or_add_ranked_symbol("2", 3);
+
+        a.clear();
+
+        CHECK(a.get_arity(1) == 0);
+        CHECK(a.get_arity(2) == 0);
+    }
+
+    SECTION("re-adding symbol after clear works") {
+        RankedIntAlphabet a{};
+        a.translate_or_add_ranked_symbol("9", 4);
+
+        a.clear();
+        a.translate_or_add_ranked_symbol("9", 1);
+
+        CHECK(a.get_arity(9) == 1);
+    }
+
+    SECTION("translate_symb translates numeric string to symbol") {
+        RankedIntAlphabet a{};
+        Symbol s = a.translate_symb("42");
+
+        CHECK(s == 42);
+        CHECK(a.reverse_translate_symbol(s) == "42");
+    }
+
+    SECTION("empty is always false") {
+        RankedIntAlphabet a{};
+
+        CHECK_FALSE(a.empty());
+    }
+
+    SECTION("unsupported operations throw") {
+        RankedIntAlphabet a{};
+        utils::OrdVector<Symbol> syms{1, 2};
+
+        CHECK_THROWS(a.get_alphabet_symbols());
+        CHECK_THROWS(a.get_complement(syms));
+    }
+
+    SECTION("translate_symb translates numeric string to symbol") {
+        RankedIntAlphabet a{};
+        Symbol s = a.translate_symb("42");
+
+        CHECK(s == 42);
+        CHECK(a.reverse_translate_symbol(s) == "42");
+        CHECK_THROWS(a.translate_symb("abc"));
+    }
+
+    SECTION("empty is always false") {
+        RankedIntAlphabet a{};
+        CHECK_FALSE(a.empty());
+    }
+
+    SECTION("unsupported operations throw") {
+        RankedIntAlphabet a{};
+        utils::OrdVector<Symbol> syms{1, 2};
+
+        CHECK_THROWS(a.get_alphabet_symbols());
+        CHECK_THROWS(a.get_complement(syms));
+    }
+}
+TEST_CASE("mata::RankedEnumAlphabet") {
+
+    SECTION("empty alphabet basics") {
+        RankedEnumAlphabet a{};
+
+        CHECK(a.empty());
+        CHECK(a.get_number_of_symbols() == 0);
+        CHECK(a.get_next_value() == 0);
+    }
+
+    SECTION("add_new_symbol(string, arity) assigns increasing symbols") {
+        RankedEnumAlphabet a{};
+
+        a.add_new_symbol("5", 1);
+        a.add_new_symbol("6", 2);
+
+        CHECK(a.get_number_of_symbols() == 2);
+        CHECK(a.get_next_value() == 7);
+        CHECK_FALSE(a.empty());
+    }
+
+    SECTION("add_new_symbol(Symbol, arity) uses numeric symbol") {
+        RankedEnumAlphabet a{};
+
+        a.add_new_symbol(42, 3);
+
+        CHECK(a.get_number_of_symbols() == 1);
+        CHECK(a.get_next_value() == 43);
+    }
+
+    SECTION("translate_ranked_symbol returns existing symbol") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("10000", 2);
+
+        Symbol s1 = a.translate_ranked_symbol("10000", 2);
+        Symbol s2 = a.translate_symb("10000");
+        CHECK(s1 == s2);
+        CHECK(a.reverse_translate_symbol(s1) == "10000");
+    }
+
+    SECTION("translate_ranked_symbol throws if missing") {
+        RankedEnumAlphabet a{};
+        a.translate_or_add_ranked_symbol("1", 1);
+        CHECK_THROWS(a.translate_ranked_symbol("1", 5));
+        CHECK_THROWS(a.translate_ranked_symbol("2", 1));
+        CHECK_THROWS(a.translate_symb("2"));
+    }
+
+    SECTION("translate_or_add_ranked_symbol inserts if missing") {
+        RankedEnumAlphabet a{};
+
+        Symbol s = a.translate_or_add_ranked_symbol("0", 4);
+
+        CHECK(a.get_number_of_symbols() == 1);
+        CHECK(a.reverse_translate_symbol(s) == "0");
+    }
+
+    SECTION("translate_symb throws on bs value") {
+        RankedEnumAlphabet a{};
+        CHECK_THROWS(a.translate_symb("abc"));
+    }
+
+    SECTION("get_alphabet_symbols_arities returns symbol-arity pairs") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("1", 1);
+        a.add_new_symbol("2", 2);
+
+        auto syms = a.get_alphabet_symbols_arities();
+        CHECK(syms.size() == 2);
+        CHECK(syms.at(0) == std::make_pair(1u, 1u));
+        CHECK(syms.at(1) == std::make_pair(2u, 2u));
+    }
+
+    SECTION("get_complement returns missing symbols") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("0", 1);
+        a.add_new_symbol("1", 2);
+
+        auto all = a.get_alphabet_symbols();
+        utils::OrdVector<Symbol> subset{0};
+
+        auto complement = a.get_complement(subset);
+        CHECK(complement == mata::utils::OrdVector<Symbol>{1});
+    }
+
+    SECTION("add_symbols_from iterator range") {
+        RankedEnumAlphabet a{};
+        std::vector<std::pair<Symbol,unsigned>> v{
+            {10, 1}, {20, 2}
+        };
+
+        a.add_symbols_from(v.begin(), v.end());
+
+        CHECK(a.get_number_of_symbols() == 2);
+    }
+
+    SECTION("add_symbols_from alphabet") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("1", 1);
+        a.add_new_symbol("2", 1);
+
+        RankedEnumAlphabet b{};
+        b.add_symbols_from(a);
+
+        CHECK(b.get_number_of_symbols() == 2);
+    }
+
+    SECTION("update_next_symbol_value updates correctly") {
+        RankedEnumAlphabet a{};
+
+        a.update_next_symbol_value(10);
+        CHECK(a.get_next_value() == 11);
+
+        a.update_next_symbol_value(5); // should not decrease
+        CHECK(a.get_next_value() == 11);
+    }
+
+    SECTION("erase by symbol removes entry") { //  todo how the fuck does this pass
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("1", 1);
+        CHECK(a.erase(1) == 1);
+        CHECK(a.empty());
+    }
+
+    SECTION("erase removes entry") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("1", 1);
+        Symbol s = a.get_alphabet_symbols().at(0);
+        CHECK(a.erase(s) ==1);
+        CHECK(a.empty());
+    }
+
+    SECTION("clear resets alphabet") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("1", 1);
+        a.add_new_symbol("2", 2);
+
+        a.clear();
+
+        CHECK(a.empty());
+        CHECK(a.get_next_value() == 0);
+    }
+
+    SECTION("copy constructor copies alphabet") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("2", 1);
+
+        RankedEnumAlphabet b{ a };
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("move constructor transfers alphabet") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("1", 1);
+
+        RankedEnumAlphabet b{ std::move(a) };
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("copy assignment") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("3", 1);
+
+        RankedEnumAlphabet b{};
+        b = a;
+
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("move assignment") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("4", 1);
+
+        RankedEnumAlphabet b{};
+        b = std::move(a);
+
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+
+    SECTION("pointer constructor") {
+        RankedEnumAlphabet a{};
+        a.add_new_symbol("5", 1);
+
+        RankedEnumAlphabet b{ &a };
+        CHECK(b.get_number_of_symbols() == 1);
+    }
+}
+
