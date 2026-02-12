@@ -14,12 +14,9 @@ using namespace mata;
 
 TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     OnTheFlyAlphabet alphabet;
-    ArityMap arities;
-
     // populate the alphabet
     alphabet.add_new_symbol("f"); // function symbol
     alphabet.add_new_symbol("a"); // constant symbol
-    arities.set_arity(alphabet["f"], 2); // f -> 2, a -> 0 implicit
 
     SECTION("AddState") {
         Nfta aut({}, &alphabet, {});
@@ -77,12 +74,6 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
         CHECK(transitions.size() == 2);
     }
 
-    SECTION("ArityMap") {
-        CHECK(arities.get_arity(alphabet["f"]) == 2);
-        CHECK(arities.get_arity(alphabet["a"]) == 0);
-        CHECK(arities.get_arity(999) == 0);
-    }
-
     SECTION("ContainsStateAndInitialCheck") {
         Nfta aut({}, &alphabet, {});
         State s = aut.delta.add_state();
@@ -92,7 +83,7 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     }
 
     SECTION("ConstructorInitialization") {
-        Nfta aut( {1}, &alphabet, {}, Delta(2)); // 2 states: 0 and 1, initial state 1
+        Nfta aut( {1}, &alphabet, Delta(2)); // 2 states: 0 and 1, initial state 1
         CHECK(aut.delta.contains_state(0));
         CHECK(aut.delta.contains_state(1));
         CHECK(aut.is_state_final(1));

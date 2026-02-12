@@ -73,7 +73,7 @@ void Nfta::print_mata(std::ostream& os) const
     void Nfta::print_readable(std::ostream& os, const std::string& type) const
 	{
         if (type == "bottom-up") {os << "Bottom-up NFTA"; }
-        else { os << "Top-down NFTA"; }
+        else { os << "Top-down NFTA\n"; }
 
 
         os << "================================================" << std::endl;
@@ -95,13 +95,10 @@ void Nfta::print_mata(std::ostream& os) const
         if (alphabet) {
             try {
                 for (Symbol sym : alphabet->get_alphabet_symbols()) {
-                    os << "  "<< alphabet->reverse_translate_symbol(sym) << ":" << arities.get_arity(sym);
+                    os << "  "<< alphabet->reverse_translate_symbol(sym); // todo print arities
                 }
             } catch (const std::exception& e) {
-                os << " (only positive arities)";
-                for (const auto& [sym, arity] : arities.arities_) {
-                    os << " "<< alphabet->reverse_translate_symbol(sym) << ":" << arity;
-                }
+                ;
             }
         } else {
             os << "  none\n";
@@ -123,7 +120,6 @@ void Nfta::print_mata(std::ostream& os) const
     bool Nfta::operator== (const Nfta& other) const {
         return delta.num_of_states() == other.delta.num_of_states()
             && final_states == other.final_states
-            && delta == other.delta
-            && arities.arities_ == other.arities.arities_;
+            && delta == other.delta;
     }
 }

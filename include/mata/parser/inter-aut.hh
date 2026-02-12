@@ -195,6 +195,8 @@ public:
     bool initial_enumerated = false;
     bool final_enumerated = false;
 
+    bool overload = false;
+
     /**
      * Transitions are pairs where the first member is left-hand side of transition (i.e., a state)
      * and the second item is a graph representing transition formula (which can contain symbols, nodes, and states).

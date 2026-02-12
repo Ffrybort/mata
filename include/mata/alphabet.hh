@@ -628,7 +628,9 @@ public:
 
     bool empty() const override { return symbol_map_.empty(); }
 
-    unsigned get_arity(Symbol symbol) const;
+    size_t  contains_symbol_name(const std::string& str);
+
+    std::vector<unsigned> get_arity(Symbol symbol) const;
     void set_arity(Symbol symbol, unsigned new_arity);
 
 private:

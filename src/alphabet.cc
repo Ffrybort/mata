@@ -331,13 +331,21 @@ size_t mata::RankedOnTheFlyAlphabet::erase(const StringArity& symbol_name) {
     return 0;
 }
 
-unsigned mata::RankedOnTheFlyAlphabet::get_arity(Symbol symbol) const {
-    for (const auto& [key, value] : symbol_map_) {
-        if (value == symbol) {
-            return key.second;
-        }
+size_t mata::RankedOnTheFlyAlphabet::contains_symbol_name(const std::string& str) {
+    size_t res = 0;
+    for (const auto& key: symbol_map_ | std::views::keys) {
+        if (key.first == str) { res++;; }
     }
-    throw std::runtime_error("Cannot get arity of a nonexistent symbol.");
+    return res;
+}
+
+// todo this makes it inconsistent with the other ranked alphabets, is it a problem?
+std::vector<unsigned> mata::RankedOnTheFlyAlphabet::get_arity(Symbol symbol) const {
+    std::vector<unsigned> result = {};
+    for (const auto& [key, value] : symbol_map_) {
+        if (value == symbol) { result.push_back(key.second); }
+    }
+    return result;
 }
 
 void mata::RankedOnTheFlyAlphabet::set_arity(Symbol symbol, unsigned new_arity) {
@@ -363,7 +371,7 @@ Symbol mata::RankedOnTheFlyAlphabet::translate_or_add_ranked_symbol(const std::s
 Symbol mata::RankedOnTheFlyAlphabet::translate_ranked_symbol(const std::string &str, unsigned arity) {
     auto it = symbol_map_.find({str, arity});
     if (it == symbol_map_.end()) {
-        throw std::runtime_error("Symbol" + str + ":" + std::to_string(arity) + " not found");
+        throw std::runtime_error("Symbol " + str + "(" + std::to_string(arity) + ") does not exist or has a different arity");
     }
     return it->second;
 }

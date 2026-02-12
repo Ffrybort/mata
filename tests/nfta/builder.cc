@@ -13,9 +13,11 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
+// todo check overload
 TEST_CASE("Nfta builder tests") {
     OnTheFlyAlphabet alphabet = OnTheFlyAlphabet();
     IntAlphabet i_alphabet = IntAlphabet();
+    RankedOnTheFlyAlphabet ranked_alphabet = RankedOnTheFlyAlphabet();
 
     SECTION("Basic NFTA") {
         std::string input = R"(
@@ -122,7 +124,6 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.arities.get_arity(alphabet.translate_symb("0")) == 2);
         CHECK(aut.get_final_states().size() == 2);
     }
 
@@ -286,5 +287,239 @@ TEST_CASE("Nfta builder tests") {
 
         bool check = aut1 == aut2;
         CHECK(check);
+    }
+
+    SECTION("Ranked alphabet basic usage (enum symbols)") {
+        ranked_alphabet.clear();
+
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-enum a0(2) a1(1)
+            %Initial q0
+            q0 a0 (q1 q2)
+            q1 a1 q2
+        )";
+
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        CHECK(aut.delta.num_of_states() == 3);
+        CHECK(ranked_alphabet.get_alphabet_symbols().size() == 2);
+    }
+
+    SECTION("Ranked alphabet auto symbols") {
+        ranked_alphabet.clear();
+
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 f (q1 q2 q3)
+            q1 g q2
+            q2 h
+        )";
+
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        CHECK(aut.delta.num_of_states() == 4);
+        CHECK(ranked_alphabet.get_alphabet_symbols().size() == 3);
+
+        // arities inferred from transitions
+        CHECK(ranked_alphabet.get_arity(
+            ranked_alphabet.translate_ranked_symbol("f", 3)
+        ) == std::vector<unsigned>{3});
+    }
+
+    SECTION("Ranked alphabet constant symbols") {
+        ranked_alphabet.clear();
+
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 c
+        )";
+
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        CHECK(aut.delta.num_of_states() == 1);
+        CHECK(ranked_alphabet.get_alphabet_symbols().size() == 1);
+
+        Symbol c = ranked_alphabet.translate_ranked_symbol("c", 0);
+        CHECK(ranked_alphabet.get_arity(c) == std::vector<unsigned>{0});
+    }
+
+    SECTION("Ranked alphabet: same symbol with same arity multiple times") {
+        ranked_alphabet.clear();
+
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 f (q1 q2)
+            q1 f (q2 q3)
+            q2 f (q3 q4)
+        )";
+
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        CHECK(aut.delta.num_of_states() == 5);
+        CHECK(ranked_alphabet.get_alphabet_symbols().size() == 1);
+    }
+
+    SECTION("Ranked alphabet: same symbol with different arities (overload)") {
+        ranked_alphabet.clear();
+
+        std::string input = R"(
+            @NFTA-explicit
+            %Overload
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 f (q1)
+            q1 f (q2 q3)
+            q2 f
+        )";
+
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        CHECK(aut.delta.num_of_states() == 4);
+
+        // same name, different arities → multiple ranked symbols
+        CHECK(ranked_alphabet.get_alphabet_symbols().size() == 3);
+    }
+
+    SECTION("Ranked alphabet enum: arity mismatch throws") {
+        ranked_alphabet.clear();
+
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-enum f(2)
+            %Initial q0
+            q0 f q1
+        )";
+
+        CHECK_THROWS_AS(
+            parse_from_mata(input, &ranked_alphabet),
+            std::runtime_error
+        );
+    }
+
+    SECTION("Ranked alphabet consistency with generic alphabet") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 f (q1 q2)
+            q1 g q2
+            q2 h
+        )";
+
+        ranked_alphabet.clear();
+        alphabet.clear();
+
+        Nfta ranked_aut = parse_from_mata(input, &ranked_alphabet);
+        Nfta generic_aut = parse_from_mata(input, &alphabet);
+
+        CHECK(ranked_aut.delta.num_of_states() == generic_aut.delta.num_of_states());
+        CHECK(ranked_aut.get_final_states() == generic_aut.get_final_states());
+        CHECK(ranked_aut.delta == generic_aut.delta);
+    }
+
+    SECTION("Overload alphabet enumerated") {
+        std::string input = R"(
+            @NFTA-explicit
+            %Overload
+            %States-marked
+            %Alphabet-enum a(1) a(2)
+            %Initial q0
+            q0 a q1
+            q0 a (q1 q2)
+        )";
+        ranked_alphabet.clear();
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        auto symbols = ranked_alphabet.get_alphabet_symbols();
+        CHECK(symbols.size() == 2);
+    }
+
+    SECTION("Overload alphabet auto") {
+        std::string input = R"(
+            @NFTA-explicit
+            %Overload
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 a q1
+            q0 a (q1 q2 q3)
+        )";
+        ranked_alphabet.clear();
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        CHECK(aut.delta.num_of_states() == 4);
+    }
+
+    SECTION("Overload enumerated alphabet not defined - fails") {
+        std::string input = R"(
+            @NFTA-explicit
+            %Overload
+            %States-marked
+            %Alphabet-enum a(1)
+            %Initial q0
+            q0 a (q1 q2)
+        )";
+        ranked_alphabet.clear();
+        CHECK_THROWS(parse_from_mata(input, &ranked_alphabet));
+    }
+
+    SECTION("Overload auto alphabet – multiple overloaded transitions") {
+        std::string input = R"(
+            @NFTA-explicit
+            %Overload
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 a q1
+            q0 a (q1 q2)
+            q0 a (q2 q1)
+            q0 a (q2 q3 q4)
+        )";
+        ranked_alphabet.clear();
+        Nfta aut = parse_from_mata(input, &ranked_alphabet);
+
+        auto transitions = aut.delta.get_transitions();
+        CHECK(transitions.size() == 4);
+        CHECK(ranked_alphabet.get_alphabet_symbols().size() == 3); // 3 different arities
+    }
+
+    SECTION("No overload auto – same symbol name with different arities fails") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 a q1
+            q0 a (q1 q2)
+        )";
+        ranked_alphabet.clear();
+        CHECK_THROWS(parse_from_mata(input, &ranked_alphabet));
+    }
+
+    SECTION("No overload enumerated – same symbol name with different arities fails") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-enum a(1) a(2)
+            %Initial q0
+            q0 a q1
+            q0 a (q1 q2)
+        )";
+        ranked_alphabet.clear();
+        CHECK_THROWS(parse_from_mata(input, &ranked_alphabet));
     }
 }

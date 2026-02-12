@@ -385,6 +385,8 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
                     aut.nodes_names.insert(
                         aut.nodes_names.end(), symbol_names.begin(), symbol_names.end()
                     );
+            } else if (key.find("Overload") != std::string::npos) {
+                aut.overload = true;
             }
         }
 

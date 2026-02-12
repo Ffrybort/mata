@@ -102,14 +102,14 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
     SECTION("get_arity returns correct arity") {
         RankedOnTheFlyAlphabet a{};
         Symbol s = a.translate_or_add_ranked_symbol("a", 4);
-        CHECK(a.get_arity(s) == 4);
+        CHECK(a.get_arity(s) == std::vector<unsigned>{4});
     }
 
     SECTION("set_arity updates arity") {
         RankedOnTheFlyAlphabet a{};
         Symbol s = a.translate_or_add_ranked_symbol("a", 1);
         a.set_arity(s, 3);
-        CHECK(a.get_arity(s) == 3);
+        CHECK(a.get_arity(s) == std::vector<unsigned>{3});
     }
 
     SECTION("erase by symbol removes entry") {
@@ -628,4 +628,3 @@ TEST_CASE("mata::RankedEnumAlphabet") {
         CHECK(b.get_number_of_symbols() == 1);
     }
 }
-
