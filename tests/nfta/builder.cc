@@ -13,7 +13,6 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
-// todo check overload
 TEST_CASE("Nfta builder tests") {
     OnTheFlyAlphabet alphabet = OnTheFlyAlphabet();
     IntAlphabet i_alphabet = IntAlphabet();

@@ -342,30 +342,54 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
         }
         aut.alphabet_type = get_alphabet_type(section.type);
 
+        // parsing this first because the order may get mixed up
+        // another option would be to move this option into section header
+        if (aut.is_nfta()) {
+            for (const auto& [key, _] : section.dict) {
+                if (key.find("Overload") != std::string::npos) {
+                    aut.overload = true;
+                    break;
+                }
+            }
+        }
+
         for (const auto& [key, symbol_names] : section.dict) {
             if (key.find("Alphabet") != std::string::npos) {
                 aut.symbol_naming = get_naming_type(key);
                 if (!aut.are_symbols_enum_type()) { continue; }
 
-                // nfta arity handeling
+                // nfta arity handling
                 if (aut.is_nfta()) {
                     for (std::size_t i = 0; i < symbol_names.size(); ) {
-                        const std::string& current = symbol_names[i];
-                        aut.symbols_names.push_back(current);
-                        unsigned arity = 0;
+                        const std::string& current_symbol = symbol_names[i];
+                        unsigned current_arity = 0; // implicit arity 0
                         i++;
                         // optional (arity)
                         if (i < symbol_names.size() && symbol_names[i] == "(") {
                             i++;
                             if (i < symbol_names.size() && symbol_names[i] != ")") {
-                                arity = static_cast<unsigned int>(std::stoul(symbol_names[i]));
+                                current_arity = static_cast<unsigned int>(std::stoul(symbol_names[i]));
                                 i++;
                             }
                             if (i < symbol_names.size() && symbol_names[i] != ")") {
                                 throw std::runtime_error("Missing ')' in symbol arity"); }
                             i++;
                         }
-                        aut.symbols_arities.push_back(arity);
+
+                        // symbol already exists and overload is off => duplicate arity (ok) or error
+                        if (auto it = std::ranges::find(aut.symbols_names, current_symbol);
+                            !aut.overload && it != aut.symbols_names.end()) {
+
+                            const auto index = static_cast<std::vector<std::string>::size_type>(
+                                std::distance(aut.symbols_names.begin(), it));
+                            if (aut.symbols_arities[index] != current_arity) {
+                                throw std::runtime_error("Symbol arities do not match - "
+                                                         "use %Overload to allow multiple symbols of the same name");
+                            }
+                        }
+
+                        aut.symbols_names.push_back(current_symbol);
+                        aut.symbols_arities.push_back(current_arity);
                     }
                     continue;
                 } // if nfta
@@ -385,8 +409,6 @@ bool has_at_most_one_auto_naming(const mata::IntermediateAut& aut) {
                     aut.nodes_names.insert(
                         aut.nodes_names.end(), symbol_names.begin(), symbol_names.end()
                     );
-            } else if (key.find("Overload") != std::string::npos) {
-                aut.overload = true;
             }
         }
 

@@ -1,6 +1,6 @@
 /**
 * @file builder.hh
-* @brief A builder for top-down NFTA.
+* @brief A builder for NFTA.
 */
 
 #ifndef NFTA_BUILDER_HH

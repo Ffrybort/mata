@@ -94,11 +94,6 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
         assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
                "The number of symbols and arities don't match");
         for (std::size_t i = 0; i < inter_aut->symbols_names.size(); i++) {
-            if (!inter_aut->overload &&alphabet->contains_symbol_name(inter_aut->symbols_names[i])) {
-                // will throw if the arity does not match - duplicate symbols are fine
-                alphabet->translate_ranked_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
-            }
-            // otherwise add
             alphabet->translate_or_add_ranked_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
         }
     }
@@ -117,10 +112,10 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
         // c. overload = false AND the symbol name is already present => arity must match (duplicates are ok)
         // d. overload = false AND the symbol is new => add
         if (inter_aut->are_symbols_enum_type() || (!inter_aut->overload && alphabet->contains_symbol_name(symbol_str))) {
-            // must be already in the alphabet with the correct arity
+            // a. and c. => symbol must be already present
             symbol = alphabet->translate_ranked_symbol(symbol_str, arity);
         } else {
-            // existing symbol is translated, new  is added
+            // b. and d. => existing symbol is translated, new  is added
             symbol = alphabet->translate_or_add_ranked_symbol(symbol_str, arity);
         }
         aut.delta.add(source, symbol, std::move(targets));
