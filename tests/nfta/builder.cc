@@ -1,4 +1,4 @@
-// testing parse_from_mata with multiple NFTAs
+// testing parse_from_mata
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
@@ -92,7 +92,7 @@ TEST_CASE("Nfta builder tests") {
         std::vector<Transition> t = aut.delta.get_transitions();
         CHECK(std::count_if(
             t.begin(), t.end(),
-            [](const auto& t){ return t.source == 0 && t.symbol == 0; }
+            [alphabet](const auto& t){ return t.source == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0"; }
         ) == 2);
     }
 
@@ -140,8 +140,8 @@ TEST_CASE("Nfta builder tests") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         std::vector<Transition> t = aut.delta.get_transitions();
-        CHECK(std::count_if(t.begin(), t.end(), [](const auto& t) {
-                  return t.source == 0 && t.symbol == 0;
+        CHECK(std::count_if(t.begin(), t.end(), [alphabet](const auto& t) {
+                  return t.source == 0 && alphabet.reverse_translate_symbol(t.symbol) == "0";
               }
         ) == 2);
     }

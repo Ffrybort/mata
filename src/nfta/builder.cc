@@ -62,6 +62,7 @@ std::tuple<State, std::string, std::vector<State>> get_transition(
                 targets.push_back(get_state(tmp_graph->children[0].node.name, state_map, delta));
             }
             tmp_graph = &tmp_graph->children[1];
+            num_of_children = tmp_graph->children.size();
         }
 
         // final node - add both children
@@ -90,34 +91,24 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
     add_initial_and_final_states(inter_aut,state_map,aut);
 
     // symbols (and arities)
-    if (inter_aut->are_symbols_enum_type()) {
-        assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
+    // symbols are added for nfta even if they are not enumerated, they are checked for validity so why not also add them
+    assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
                "The number of symbols and arities don't match");
-        for (std::size_t i = 0; i < inter_aut->symbols_names.size(); i++) {
-            alphabet->translate_or_add_ranked_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
-        }
+    for (std::size_t i = 0; i < inter_aut->symbols_names.size(); i++) {
+        alphabet->translate_or_add_ranked_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
     }
+
+    // todo states can be enumerated too
 
     // transitions
     // if symbols are not enumerated, they are added when first encountered, arity is set to match the transition
     // symbols maybe added with multiple arities regardless of whether they are enumerated
     for (const auto& [formula_node, formula_graph] : inter_aut->transitions) {
-        auto [source, symbol_str, targets] =
-            get_transition(formula_node, formula_graph, state_map, aut.delta);
-
-        Symbol symbol;
+        auto [source, symbol_str, targets] = get_transition(
+            formula_node, formula_graph, state_map, aut.delta
+        );
         auto arity = static_cast<unsigned>(targets.size());
-        // a. symbols enumerated => all valid symbols have been added already
-        // b. overload == true => adding every new symbol
-        // c. overload = false AND the symbol name is already present => arity must match (duplicates are ok)
-        // d. overload = false AND the symbol is new => add
-        if (inter_aut->are_symbols_enum_type() || (!inter_aut->overload && alphabet->contains_symbol_name(symbol_str))) {
-            // a. and c. => symbol must be already present
-            symbol = alphabet->translate_ranked_symbol(symbol_str, arity);
-        } else {
-            // b. and d. => existing symbol is translated, new  is added
-            symbol = alphabet->translate_or_add_ranked_symbol(symbol_str, arity);
-        }
+        Symbol symbol = alphabet->translate_ranked_symbol(symbol_str, arity);
         aut.delta.add(source, symbol, std::move(targets));
     } // for transitions
     return aut;
@@ -128,7 +119,6 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
     // (separating alphabet and ranked alphabet might be a better idea)
     if (alphabet == nullptr) { static IntAlphabet ia; alphabet = &ia; }
     NameStateMap state_map = {};
-    std::unordered_map<State, unsigned> symbol_arity_map = {};
 
     Nfta aut;
     aut.alphabet = alphabet;
@@ -136,26 +126,18 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
     // both initial and final states are added to final_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
 
-    // symbols (and arities)
-    if (inter_aut->are_symbols_enum_type()) {
-        assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
-               "The number of symbols and arities don't match");
-        for (std::size_t i = 0; i < inter_aut->symbols_names.size(); i++) {
-            symbol_arity_map[alphabet->translate_symb(inter_aut->symbols_names[i])] =  inter_aut->symbols_arities[i];
-        }
+    // symbols
+    assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
+         "The number of symbols and arities don't match");
+    for (const auto & symbols_name : inter_aut->symbols_names) {
+        alphabet->translate_symb(symbols_name); // this should add
     }
 
     // transitions
     // if symbols are not enumerated, they are added when first encountered, arity is set to match the transition
     for (const auto& [formula_node, formula_graph] : inter_aut->transitions) {
         auto [source, symbol_str, targets] = get_transition(formula_node, formula_graph, state_map, aut.delta);
-        Symbol symbol = alphabet->translate_symb(symbol_str);
-        // check valid arity
-        if (symbol_arity_map.contains(symbol)) {
-            if (targets.size() != symbol_arity_map[symbol]) {
-                throw std::runtime_error("Arity of symbol " + std::to_string(symbol) + " does not match.");
-            }
-        } else { symbol_arity_map[symbol] = static_cast<unsigned>(targets.size()); }
+        Symbol symbol = alphabet->translate_symb(symbol_str); // this should throw
         aut.delta.add(source, symbol, std::move(targets));
     } // for transitions
     return aut;
