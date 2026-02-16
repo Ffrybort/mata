@@ -17,22 +17,8 @@ namespace {
            (aut.state_naming == mata::IntermediateAut::Naming::Auto));
     }
 
-// todo rename and do something other than the pair
-    bool has_correct_arity(const mata::IntermediateAut &aut, const std::string& symbol_str, unsigned arity) {
-        bool found = false;
-        for (std::size_t i = 0; i < aut.symbols_names.size(); ++i) {
-            if (aut.symbols_names[i] == symbol_str) {
-                found = true;
-                if (aut.symbols_arities[i] == arity) {
-                    return true; // already exists with the correct arity
-                }
-            }
-        }
-        return false;
-    }
-
     // helper function to add nfta symbols
-    void check_or_add_ranked_symbol(mata::IntermediateAut &aut, const std::string& symbol_str, const unsigned arity) {
+    void check_or_add_ranked_symbol(mata::IntermediateAut &aut, const std::string& symbol_str, const unsigned arity, const bool add_if_new) {
         bool found = false;
         for (std::size_t i = 0; i < aut.symbols_names.size(); ++i) {
             if (aut.symbols_names[i] == symbol_str) {
@@ -42,8 +28,10 @@ namespace {
                 }
             }
         }
-        // symbol found with different arity
-        if (found && (!aut.overload)) {
+        if (!add_if_new) { // symbol does not exist and is not supposed to be added
+            throw std::runtime_error("Symbol '" + symbol_str + "' with arity " + std::to_string(arity) + " does not exist");
+        }
+        if (found && !aut.overload) { // symbol found with different arity
             throw std::runtime_error(
                 "Symbol arities do not match - use %Overload to allow multiple symbols of the same name"
             );
@@ -413,7 +401,7 @@ namespace {
                         }
 
                         // symbol already exists and overload is off => duplicate arity (ok) or error
-                       check_or_add_ranked_symbol(aut, current_symbol, current_arity);
+                       check_or_add_ranked_symbol(aut, current_symbol, current_arity, true);
                     }
                     continue;
                 } // if nfta
@@ -490,6 +478,14 @@ size_t mata::IntermediateAut::get_number_of_disjuncts() const
     return res;
 }
 
+void check_or_add_state(mata::IntermediateAut& aut, const mata::FormulaNode& state_node) {
+    if (!state_node.is_state()) {
+        throw std::runtime_error("Tokem '" + state_node.raw + "' is not a valid state.");
+    }
+    if (!aut.are_states_enum_type() && !contains(aut.states_names, state_node.name)) {
+        aut.states_names.push_back(state_node.name);
+    }
+}
 
 /**
  * Parses a transition by firstly transforming transition formula to postfix form and then creating
@@ -543,7 +539,7 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
     } else if (aut.is_nfta()) {
 		assert(aut.alphabet_type == mata::IntermediateAut::AlphabetType::Explicit
                && "Only explicit alphabet is supported for nfta.");
-        if (!lhs.is_state()) { throw std::runtime_error("Left-hand side '" + tokens[0] + "' is not a valid state."); }
+        check_or_add_state(aut, lhs);
         // The targets (sources fot bu) are saved as a chain of AND nodes, where each intermediate & node
         // has its left child as a target state and its right child as the rest of
         // the chain, ending with an & node with two target states. Example with 3 targets:
@@ -566,13 +562,13 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
             for (; rhs.size() > i && rhs[i] != ")"; i++) {
                 current_node = create_node(aut, rhs[i]);
                 postfix.emplace_back(current_node);
-                if (!current_node.is_state()) { throw std::runtime_error("Token '" + rhs[0] + "' is not a valid state."); }
+                check_or_add_state(aut, current_node);
             }
             if (i == rhs.size()) { throw std::runtime_error("Invalid transition format - missing )"); }
         } else if (rhs.size() > 1) { // single target
             if (rhs.size() != 2) { throw std::runtime_error("Invalid transition format - parentheses needed"); }
             current_node = create_node(aut, rhs[1]);
-            if (!current_node.is_state()) { throw std::runtime_error("Token '" + rhs[1] + "' is not a valid state."); }
+            check_or_add_state(aut, current_node);
             postfix.emplace_back(current_node);
         }
         const size_t postfix_size = postfix.size(); // do not put this in the loop again you moron
@@ -581,11 +577,9 @@ void mata::IntermediateAut::parse_transition(mata::IntermediateAut &aut, const s
         }
 
         // adding symbol if not enumerated, checking arity
-        if (!aut.are_symbols_enum_type()) {
-            check_or_add_ranked_symbol(aut, rhs[0], static_cast<unsigned>(postfix_size - 1)); // arity = num of targets
-        } else if (!has_correct_arity(aut, rhs[0], static_cast<unsigned>(postfix_size - 1))) {
-            throw std::runtime_error("Invalid arity.");
-        }
+        auto arity = static_cast<unsigned>(postfix_size - 1); // num of targets
+
+        check_or_add_ranked_symbol(aut, rhs[0], arity, !aut.are_symbols_enum_type());
     } else
         postfix = infix_to_postfix(aut, rhs);
 
