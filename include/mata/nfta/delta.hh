@@ -91,6 +91,7 @@ public:
     bool empty() const { return target_tuples.empty(); }
     size_t num_of_target_tuples() const { return target_tuples.size(); }
 
+
     void insert(std::vector<State> s);
     void insert(const StateVectorSet& states);
 

@@ -13,6 +13,7 @@ namespace mata::nfta
 {
     using State = unsigned;
     using StateVectorSet = utils::OrdVector<std::vector<State>>;
+    using StateSet = utils::OrdVector<State>;
     constexpr Symbol EPSILON{ std::numeric_limits<Symbol>::max() };
 } // namespace mata::nfta
 #endif //NFTA_TYPES_HH

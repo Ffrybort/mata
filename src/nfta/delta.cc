@@ -338,6 +338,7 @@ StatePost& Delta::mutable_state_post(const State q) {
     return state_posts_[q];
 }
 
+// todo will i need this?
 //Delta mata::nfa::defragment(const Delta &delta, const BoolVector &is_staying, const std::vector<std::vector<State>> &renaming) {
 //    auto filter_rename_symbol_post = [&](const SymbolPost& symbol_post) {
 //        SymbolPost new_symbol_post{ symbol_post.symbol };
@@ -549,61 +550,8 @@ void Delta::add_symbols_to(OnTheFlyAlphabet& target_alphabet) const {
     }
 }
 
-OrdVector<Symbol> Delta::get_used_symbols() const {
-    //TODO: look at the variants in profiling (there are tests in tests-nfa-profiling.cc),
-    // for instance figure out why NumberPredicate and OrdVector are slow,
-    // try also with _STATIC_DATA_STRUCTURES_, it changes things.
-
-    //below are different variant, with different data structures for accumulating symbols,
-    //that then must be converted to an OrdVector
-    //measured are times with "mata::nfa::get_used_symbols speed, harder", "[.profiling]" now on line 104 of nfa-profiling.cc
-
-    //WITH VECTOR (4.434 s)
+OrdVector<Symbol> Delta::get_used_symbols() const { // todo test variants
     return get_used_symbols_vec();
-
-    //WITH SET (26.5 s)
-    //auto from_set = get_used_symbols_set();
-    //return utils::OrdVector<Symbol> (from_set .begin(),from_set.end());
-
-    //WITH NUMBER PREDICATE (4.857s) (NP removed)
-    //return utils::OrdVector(get_used_symbols_np().get_elements());
-
-    //WITH SPARSE SET (haven't tried)
-    //return utils::OrdVector<State>(get_used_symbols_sps());
-
-    //WITH BOOL VECTOR (error !!!!!!!):
-    //return utils::OrdVector<Symbol>(utils::NumberPredicate<Symbol>(get_used_symbols_bv()));
-
-    //WITH BOOL VECTOR (1.9s): (The fastest, it seems.)
-    // However, it will try to allocate a vector indexed by the symbols. If there are epsilons in the automaton,
-    //  for example, the bool vector implementation will implode.
-    // std::vector<bool> bv{ get_used_symbols_bv() };
-    // utils::OrdVector<Symbol> ov{};
-    // const size_t bv_size{ bv.size() };
-    // for (Symbol i{ 0 }; i < bv_size; ++i) { if (bv[i]) { ov.push_back(i); } }
-    // return ov;
-
-    ///WITH BOOL VECTOR, DIFFERENT VARIANT? (1.9s):
-    // std::vector<bool> bv = get_used_symbols_bv();
-    // utils::OrdVector<Symbol> ov{};
-    // ov.reserve(static_cast<size_t>(std::count(bv.begin(), bv.end(), true)));
-    // const size_t bv_size{ bv.size() };
-    // for (Symbol i = 0; i < bv_size; i++) {
-    //     if (bv[i]) {
-    //         ov.push_back(i);
-    //     }
-    // }
-    // return ov;
-
-    //WITH CHAR VECTOR (should be the fastest, haven't tried in this branch):
-    //BEWARE: failing in one noodlificatoin test ("Simple automata -- epsilon result") ... strange
-    // BoolVector chv = get_used_symbols_chv();
-    // utils::OrdVector<Symbol> ov;
-    // for(Symbol i = 0;i<chv.size();i++)
-    //    if (chv[i]) {
-    //        ov.push_back(i);
-    //    }
-    // return ov;
 }
 
 // Other versions, maybe an interesting experiment with speed of data structures.
@@ -621,7 +569,7 @@ mata::utils::OrdVector<Symbol> Delta::get_used_symbols_vec() const {
             symbols.push_back(symbol_post.symbol);
         }
     }
-    utils::OrdVector<Symbol> sorted_symbols(symbols);
+    OrdVector<Symbol> sorted_symbols(symbols);
     return sorted_symbols;
 }
 
@@ -640,8 +588,6 @@ std::set<Symbol> Delta::get_used_symbols_set() const {
         }
     }
     return symbols;
-    //utils::OrdVector<Symbol>  sorted_symbols(symbols.begin(),symbols.end());
-    //return sorted_symbols;
 }
 
 // returns symbols appearing in Delta, adds to NumberPredicate,
@@ -660,7 +606,6 @@ mata::utils::SparseSet<Symbol> Delta::get_used_symbols_sps() const {
             symbols.insert(symbol_post.symbol);
         }
     }
-    //TODO: is it necessary to return ordered vector? Would the number predicate suffice?
     return symbols;
 }
 
@@ -686,27 +631,6 @@ std::vector<bool> Delta::get_used_symbols_bv() const {
     return symbols;
 }
 
-//mata::BoolVector Delta::get_used_symbols_chv() const {
-//#ifdef _STATIC_STRUCTURES_
-//    //static seems to speed things up a little
-//    static BoolVector symbols(64,false);
-//    symbols.clear();
-//#else
-//    BoolVector symbols(64,false);
-//#endif
-//    //symbols.dont_track_elements();
-//    for (const StatePost& state_post: state_posts_) {
-//        for (const SymbolPost& symbol_post: state_post) {
-//            if (const size_t capacity{ symbol_post.symbol + 1 }; symbols.size() < capacity) {
-//                symbols.resize(capacity * 2);
-//            }
-//            symbols[symbol_post.symbol] = true;
-//        }
-//    }
-//    //TODO: is it necessary to return ordered vector? Would the number predicate suffice?
-//    return symbols;
-//}
-
 Symbol Delta::get_max_symbol() const {
     Symbol max{ 0 };
     for (const StatePost& state_post: state_posts_) {
@@ -716,62 +640,3 @@ Symbol Delta::get_max_symbol() const {
     }
     return max;
 }
-
-//StateSet SynchronizedExistentialSymbolPostIterator::unify_targets() const {
-//    // TODO: decide which version performs the best.
-//
-//    if(!is_synchronized()) { return {}; }
-//
-//    StateSet unified_targets{};
-//
-//    // Version with synchronized iterator.
-//    // static utils::SynchronizedExistentialIterator<StateSet::const_iterator> sync_iterator;
-//    // sync_iterator.reset();
-//    // size_t all_targets_size{ 0 };
-//    // const std::vector<StatePost::const_iterator>& current_symbol_post_its{ this->get_current() };
-//    // sync_iterator.reserve(current_symbol_post_its.size());
-//    // for (const auto symbol_post_it: current_symbol_post_its) {
-//    //     sync_iterator.push_back(symbol_post_it->cbegin(), symbol_post_it->cend());
-//    //     all_targets_size += symbol_post_it->num_of_targets();
-//    // }
-//    // unified_targets.reserve(all_targets_size);
-//    // while (sync_iterator.advance()) { unified_targets.push_back(*sync_iterator.get_current_minimum()); }
-//
-//    // Version with set union.
-//    // for (const auto& symbol_post_it: get_current()) {
-//    //     unified_targets.insert(symbol_post_it->targets);
-//    // }
-//
-//    // Version with priority queue.
-//    using TargetSetBeginEndPair = std::pair<StateSet::const_iterator, StateSet::const_iterator>;
-//    auto compare = [](const auto& a, const auto& b) { return *(a.first) > *(b.first); };
-//    std::priority_queue<TargetSetBeginEndPair, std::vector<TargetSetBeginEndPair>, decltype(compare) > queue(compare);
-//    for (const StatePost::const_iterator& symbol_post_it: get_current()) {
-//        queue.emplace(symbol_post_it->cbegin(), symbol_post_it->cend());
-//    }
-//    unified_targets.reserve(32);
-//    while (!queue.empty()) {
-//        auto item = queue.top();
-//        queue.pop();
-//        if (unified_targets.empty() || unified_targets.back() != *(item.first)) {
-//            unified_targets.push_back(*(item.first));
-//        }
-//        if (++item.first != item.second) { queue.emplace(item); }
-//    }
-//
-//    return unified_targets;
-//}
-//
-//bool SynchronizedExistentialSymbolPostIterator::synchronize_with(const Symbol sync_symbol) {
-//    do {
-//        if (is_synchronized()) {
-//            if (const auto current_min_symbol_post_it = get_current_minimum();
-//                current_min_symbol_post_it->symbol >= sync_symbol) { break; }
-//        }
-//    } while (advance());
-//    return is_synchronized() && get_current_minimum()->symbol == sync_symbol;
-//}
-//
-//bool SynchronizedExistentialSymbolPostIterator::synchronize_with(const SymbolPost& sync) {
-//    return synchronize_with(sync.symbol);
-//}
