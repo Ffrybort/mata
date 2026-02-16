@@ -75,26 +75,6 @@ TEST_CASE("Nfta builder tests") {
         CHECK(aut.delta.num_of_states() == 8);
     }
 
-    SECTION("Multiple transitions for same source/symbol") {
-        std::string input = R"(
-            @NFTA-explicit
-            %States-marked
-            %Alphabet-enum a0(2) a1(1) a2
-            %Initial q0
-            q0 a0 (q1 q2)
-            q0 a0 (q2 q3)
-            q1 a1 q3
-            q2 a2
-            q3 a1 q0
-        )";
-        alphabet.clear();
-        Nfta aut = parse_from_mata(input, &alphabet);
-        std::vector<Transition> t = aut.delta.get_transitions();
-        CHECK(std::count_if(
-            t.begin(), t.end(),
-            [alphabet](const auto& t){ return t.source == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0"; }
-        ) == 2);
-    }
 
     SECTION("Single symbol alphabet-auto") {
         std::string input = R"(
@@ -126,8 +106,29 @@ TEST_CASE("Nfta builder tests") {
         CHECK(aut.get_final_states().size() == 2);
     }
 
+    SECTION("Multiple transitions from same source and symbol 1") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-enum a0(2) a1(1) a2
+            %Initial q0
+            q0 a0 (q1 q2)
+            q0 a0 (q2 q3)
+            q1 a1 q3
+            q2 a2
+            q3 a1 q0
+        )";
+        alphabet.clear();
+        Nfta aut = parse_from_mata(input, &alphabet);
+        std::vector<Transition> t = aut.delta.get_transitions();
+        CHECK(std::count_if(
+            t.begin(), t.end(),
+            [alphabet](const auto& t){ return t.source == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0"; }
+        ) == 2);
+    }
 
-    SECTION("Multiple transitions from same source and symbol") {
+
+    SECTION("Multiple transitions from same source and symbol 2") {
         std::string input = R"(
             @NFTA-explicit
             %States-marked
@@ -139,11 +140,17 @@ TEST_CASE("Nfta builder tests") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        std::vector<Transition> t = aut.delta.get_transitions();
-        CHECK(std::count_if(t.begin(), t.end(), [alphabet](const auto& t) {
-                  return t.source == 0 && alphabet.reverse_translate_symbol(t.symbol) == "0";
-              }
-        ) == 2);
+        const StatePost& sp = aut.delta.state_post(0);
+        auto moves = sp.moves();
+        std::set<std::vector<State>> targets_found;
+        for (auto it = moves.begin(); it != StatePost::Moves::end(); ++it) {
+            if (alphabet.reverse_translate_symbol(it->symbol) == "0") {
+                targets_found.insert(it->targets);
+            }
+        }
+        CHECK(targets_found.count({1,2}) == 1); // q1 q2
+        CHECK(targets_found.count({2,3}) == 1); // q2 q3
+        CHECK(targets_found.size() == 2);
     }
 
     SECTION("Cycle") {

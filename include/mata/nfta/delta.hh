@@ -24,24 +24,16 @@
 namespace mata::nfta
 {
 /**
- * @brief
+ * @brief Structure to hold a nfta transition, top-down format (single source and multiple targets).
  */
 struct Transition
 {
-    Symbol symbol;
     State source;
+    Symbol symbol;
     std::vector<State> targets;
 
-    explicit Transition(
-        const Symbol symbol = {},
-        const State source = {},
-        const std::vector<State>& targets = {}
-    )
-        : symbol(symbol),
-          source(source),
-          targets(targets)
-    {
-    }
+    explicit Transition(const State source = {}, const Symbol symbol = {}, const std::vector<State>& targets = {})
+        : source(source), symbol(symbol), targets(targets) {}
 
     bool operator<(const Transition& other) const {
         if (source != other.source) return source < other.source;
@@ -58,20 +50,19 @@ struct Transition
     };
 
 /**
- * Move from a @c StatePost for a single state, represented as a pair of @c symbol and targets state @c targets.
+ * @brief Move from a @c StatePost for a single state, represented as a pair of @c symbol and @c targets.
  */
 class Move {
 public:
     Symbol symbol;
     std::vector<State> targets;
+    explicit Move(Symbol symbol = {}, std::vector<State> targets = {}) : symbol{symbol}, targets{std::move(targets)} {}
 
     bool operator==(const Move&) const = default;
 }; // class Move.
 
 /**
- * Structure represents a post of a single @c symbol: a set of target states in transitions.
- *
- * A set of @c SymbolPost, called @c StatePost, is describing the automata transitions from a single source state.
+ * @brief Structure represents a post of a single @c symbol: a set of target states in transitions.
  */
 class SymbolPost {
 public:
@@ -80,8 +71,8 @@ public:
 
     SymbolPost() = default;
     explicit SymbolPost(const Symbol symbol) : symbol{ symbol } {}
-    SymbolPost(const Symbol symbol, const std::vector<State> state_to) : symbol{ symbol }, target_tuples{ state_to } {}
-    SymbolPost(const Symbol symbol, StateVectorSet states_to) : symbol{ symbol }, target_tuples{ std::move(states_to) } {}
+    SymbolPost(const Symbol symbol, const std::vector<State>& state_to) : symbol{ symbol }, target_tuples{ state_to } {}
+    SymbolPost(const Symbol symbol, StateVectorSet  states_to) : symbol{ symbol }, target_tuples{std::move( states_to )} {}
 
     SymbolPost(SymbolPost&& rhs) noexcept : symbol{ rhs.symbol }, target_tuples{ std::move(rhs.target_tuples) } {}
     SymbolPost(const SymbolPost& rhs) = default;
@@ -121,10 +112,7 @@ public:
 }; // class mata::nfta::SymbolPost.
 
 /**
- * @brief A data structure representing possible transitions over different symbols from a source state.
- *
- * It is an ordered vector containing possible @c SymbolPost (i.e., pair of symbol and target states).
- * @c SymbolPosts in the vector are ordered by symbols in @c SymbolPosts.
+ * @brief A data structure representing possible transitions from a single source state.
  */
 class StatePost : utils::OrdVector<SymbolPost> {
     using super = OrdVector<SymbolPost>;
@@ -179,9 +167,6 @@ public:
      * @brief Returns a reference to target states for a given symbol in the @c StatePost.
      *
      * If there is no such symbol, a static empty set is returned.
-     *
-     * @param symbol Symbol to get the successors for.
-     * @return Set of target states for the given symbol.
      */
     const StateVectorSet& get_successors(Symbol symbol) const;
 
@@ -453,7 +438,7 @@ public:
      */
     size_t num_of_transitions() const;
 
-    void add(State source, Symbol symbol, std::vector<State> targets);
+    void add(State source, Symbol symbol, const std::vector<State>& targets);
     void add(const Transition& trans) { add(trans.source, trans.symbol, trans.targets); }
     void remove(State source, Symbol symbol, const std::vector<State>& targets);
     void remove(const Transition& transition) { remove(transition.source, transition.symbol, transition.targets); }
@@ -496,7 +481,7 @@ public:
      * @param t_renumberer Monotonic lambda function mapping states to different states.
      * @return std::vector<Post> Copied posts.
      */
-    std::vector<StatePost> renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)> t_renumberer)  const;
+    std::vector<StatePost> renumber_targets(std::function<std::vector<State>(const std::vector<State>&)> t_renumberer)  const;
 
     /**
      * @brief Add transitions to multiple destinations
@@ -543,7 +528,7 @@ public:
      *
      * Operation is slow, traverses over all symbol posts.
      */
-    std::vector<Transition> get_transitions_between(State state_from, std::vector<State> states_to) const;
+    std::vector<Transition> get_transitions_between(State state_from, const std::vector<State>& states_to) const;
 
     /**
      * @brief Resize the delta to fit the given @p states.

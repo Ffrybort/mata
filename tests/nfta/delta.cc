@@ -13,7 +13,6 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 TEST_CASE("Delta basic functionality") {
-
     Delta delta;
 
     SECTION("Add and Contains transitions") {
@@ -53,17 +52,21 @@ TEST_CASE("Delta basic functionality") {
         auto transitions = delta.get_transitions();
         CHECK(transitions.size() == 3);
 
-        CHECK(transitions[0].source == 0);
-        CHECK(transitions[0].symbol == 1);
-        CHECK(transitions[0].targets == std::vector<State>{2});
+        CHECK(std::any_of(transitions.begin(), transitions.end(),
+            [](const Transition& t){
+                return t.source == 0 && t.symbol == 1 && t.targets == std::vector<State>{2};
+            }));
 
-        CHECK(transitions[1].source == 0);
-        CHECK(transitions[1].symbol == 2);
-        CHECK(transitions[1].targets == std::vector<State>{3});
+        CHECK(std::any_of(transitions.begin(), transitions.end(),
+            [](const Transition& t){
+                return t.source == 0 && t.symbol == 2 && t.targets == std::vector<State>{3};
+            }));
 
-        CHECK(transitions[2].source == 1);
-        CHECK(transitions[2].symbol == 1);
-        CHECK(transitions[2].targets == std::vector<State>{0});
+        CHECK(std::any_of(transitions.begin(), transitions.end(),
+            [](const Transition& t){
+                return t.source == 1 && t.symbol == 1 && t.targets == std::vector<State>{0};
+            }));
+
     }
 
     SECTION("Get transitions to a specific state vector") {
@@ -126,4 +129,168 @@ TEST_CASE("Delta basic functionality") {
         delta.add(0, 1, {2});
         CHECK_FALSE(delta.is_empty());
     }
+
+
+    SECTION("Equality and inequality") {
+        Move m1{1, {2,3}};
+        Move m2{1, {2,3}};
+        Move m3{1, {3,2}};
+        Move m4{2, {2,3}};
+
+        CHECK(m1 == m2);
+        CHECK_FALSE(m1 == m3);
+        CHECK_FALSE(m1 == m4);
+    }
+
+    delta.clear();
+
+    SECTION("Empty StatePost produces no moves") {
+        const StatePost& sp = delta.state_post(0);
+        auto moves = sp.moves();
+
+        CHECK(moves.begin() == StatePost::Moves::end());
+    }
+
+    SECTION("Multiple target tuples under same symbol") {
+        delta.add(0, 1, {2});
+        delta.add(0, 1, {3});
+
+        const StatePost& sp = delta.state_post(0);
+
+        size_t count = 0;
+        for (auto it = sp.moves().begin(); it != StatePost::Moves::end(); it++) {
+            ++count;
+        }
+
+        CHECK(count == 2);
+        CHECK(sp.num_of_moves() == 2);
+    }
+
+    SECTION("Postfix increment works") {
+        delta.add(0, 1, {2});
+        delta.add(0, 2, {3});
+
+        const StatePost& sp = delta.state_post(0);
+        auto it = sp.moves().begin();
+
+        auto first = *it++;
+        CHECK(first.symbol == 1);
+
+        auto second = *it;
+        CHECK(second.symbol == 2);
+    }
+
+    SECTION("Iterator equality semantics") {
+        delta.add(0, 1, {2});
+
+        const StatePost& sp = delta.state_post(0);
+        auto it1 = sp.moves().begin();
+        auto it2 = sp.moves().begin();
+
+        CHECK(it1 == it2);
+
+        ++it1;
+        CHECK(it1 == StatePost::Moves::end());
+    }
+
+    delta.clear();
+    delta.add(0, 1, {2});
+    delta.add(1, 2, {3});
+
+    auto transitions = delta.transitions();
+
+    std::vector<Transition> collected;
+
+    for (auto it = transitions.begin(); it != Delta::Transitions::end(); ++it) {
+        collected.push_back(*it);
+    }
+
+    CHECK(collected.size() == 2);
+
+    CHECK(collected[0].source == 0);
+    CHECK(collected[0].symbol == 1);
+    CHECK(collected[0].targets == std::vector<State>{2});
+
+    CHECK(collected[1].source == 1);
+    CHECK(collected[1].symbol == 2);
+    CHECK(collected[1].targets == std::vector<State>{3});
+
+    delta.clear();
+
+    SECTION("add_state explicit index") {
+        delta.add_state(5);
+        CHECK(delta.num_of_states() == 6);
+        CHECK(delta.contains_state(5));
+    }
+
+    SECTION("add_state auto increment") {
+        State s = delta.add_state();
+        CHECK(s == 0);
+        CHECK(delta.num_of_states() == 1);
+    }
+
+    SECTION("resize_for_states variadic") {
+        delta.resize_for_states(3u, 7u);
+        CHECK(delta.num_of_states() == 8);
+    }
+
+    SECTION("contains_state") {
+        delta.add_state(2);
+        CHECK(delta.contains_state(2));
+        CHECK_FALSE(delta.contains_state(5));
+    }
+
+    Delta d1;
+    d1.add(0, 1, {2});
+
+    SECTION("Copy constructor") {
+        Delta d2{d1};
+        CHECK(d2 == d1);
+    }
+
+    SECTION("Move constructor") {
+        Delta temp;
+        temp.add(0, 1, {2});
+        Delta d2{std::move(temp)};
+        CHECK(d2.contains(0,1,{2}));
+    }
+
+    SECTION("Copy assignment") {
+        Delta d2;
+        d2 = d1;
+        CHECK(d2 == d1);
+    }
+
+    SECTION("Move assignment") {
+        Delta temp;
+        temp.add(0, 1, {2});
+        Delta d2;
+        d2 = std::move(temp);
+        CHECK(d2.contains(0,1,{2}));
+    }
+    SECTION("Get transitions between states") {
+
+        delta.clear();
+        delta.add(0, 52, {2, 3});
+        delta.add(0, 25, {2, 3});
+        delta.add(1, 1, {2});
+
+        auto between = delta.get_transitions_between(0, {2, 3});
+        CHECK(between.size() == 2);
+        std::set<Symbol> symbols;
+        for (const auto& t : between) { symbols.insert(t.symbol); }
+        CHECK(symbols == std::set<Symbol>{25, 52});}
+
+    SECTION("Epsilon symbol posts") {
+
+        delta.clear();
+        delta.add(0, EPSILON, {1});
+        delta.add(0, 5, {2});
+
+        auto it = delta.epsilon_symbol_posts(0);
+        CHECK(it != delta.state_post(0).end());
+        CHECK(it->symbol == EPSILON);
+    }
 }
+
+

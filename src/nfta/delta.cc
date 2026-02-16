@@ -80,14 +80,14 @@ std::vector<Transition> Delta::get_transitions() const {
     std::vector<Transition> all_transitions;
 
     // Iterate over states
-    for (State s = 0; s < state_posts_.size(); ++s) {
-        const StatePost& state_post = state_posts_[s];
+    for (State source = 0; source < state_posts_.size(); ++source) {
+        const StatePost& state_post = state_posts_[source];
 
         // Iterate over symbols
         for (const SymbolPost& symbol_post : state_post) {
             // Iterate over tuples
-            for (const auto& tuple : symbol_post.target_tuples) {
-                all_transitions.emplace_back(symbol_post.symbol, s, tuple);
+            for (const auto& targets : symbol_post.target_tuples) {
+                all_transitions.emplace_back(source, symbol_post.symbol, targets); 
             }
         }
     }
@@ -109,7 +109,7 @@ std::vector<Transition> Delta::get_transitions_to(std::vector<State> states_to) 
     return transitions_to_state;
 }
 
-std::vector<Transition> Delta::get_transitions_between(State state_from, std::vector<State> states_to) const {
+std::vector<Transition> Delta::get_transitions_between(State state_from, const std::vector<State>& states_to) const {
     std::vector<Transition> transitions_between{};
     for (const SymbolPost& symbol_post : state_post(state_from)) {
         if (const auto state_to_find_it = symbol_post.target_tuples.find(states_to);
@@ -120,7 +120,7 @@ std::vector<Transition> Delta::get_transitions_between(State state_from, std::ve
     return transitions_between;
 }
 
-void Delta::add(State single, Symbol symbol, std::vector<State> targets) {
+void Delta::add(State single, Symbol symbol, const std::vector<State>& targets) {
     resize_for_states(targets);
     resize_for_states(single);
 

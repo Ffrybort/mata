@@ -31,15 +31,14 @@ void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap
  * @param formula_node A node containing the left-hand side (source state).
  * @param formula_graph A graph containing the right-hand side (symbol and target(s)).
  * @param state_map A mapping of state names to numbers used by the constructor.
- * @param delta A delta of the automaton being constructed, new states are added.
  * @return A transition, with the symbol remaining a std::string, and states translated to internal numeric values.
  *
  * The reason for not translating a symbol right away is there is currently no unified way to do so for every possible
  * construction.
  */
 std::tuple<State, std::string, std::vector<State>> get_transition(
-    const FormulaNode &formula_node, const FormulaGraph &formula_graph, NameStateMap &state_map, Delta &delta) {
-    State source = get_state(formula_node.name, state_map, delta);
+    const FormulaNode &formula_node, const FormulaGraph &formula_graph, const NameStateMap &state_map) {
+    State source = state_map.at(formula_node.name);;
     std::string symbol;
     std::vector<State> targets = {};
     if (formula_graph.node.is_and()) {
@@ -51,7 +50,7 @@ std::tuple<State, std::string, std::vector<State>> get_transition(
 
     std::size_t num_of_children = formula_graph.children.size();
     if (num_of_children == 2 && !formula_graph.children[1].node.is_and()) { // single target
-        targets.push_back(get_state(formula_graph.children[1].node.name, state_map, delta));
+        targets.push_back(state_map.at(formula_graph.children[1].node.name));
     } else if (num_of_children == 2) {
         auto *tmp_graph = &formula_graph.children[1];
         num_of_children = tmp_graph->children.size();
@@ -59,7 +58,7 @@ std::tuple<State, std::string, std::vector<State>> get_transition(
         while (num_of_children == 2 && tmp_graph->children[1].node.is_and())
         {
             if(!tmp_graph->children[1].node.is_symbol()) { // skip the symbol
-                targets.push_back(get_state(tmp_graph->children[0].node.name, state_map, delta));
+                targets.push_back(state_map.at(tmp_graph->children[0].node.name));
             }
             tmp_graph = &tmp_graph->children[1];
             num_of_children = tmp_graph->children.size();
@@ -67,25 +66,27 @@ std::tuple<State, std::string, std::vector<State>> get_transition(
 
         // final node - add both children
         if (num_of_children >= 1) {
-            targets.push_back(
-                get_state(tmp_graph->children[0].node.name, state_map, delta)
-            );
+            targets.push_back(state_map.at(tmp_graph->children[0].node.name));
         }
         if (num_of_children == 2) {
-            targets.push_back(
-                get_state(tmp_graph->children[1].node.name, state_map, delta)
-            );
+            targets.push_back(state_map.at(tmp_graph->children[1].node.name));
         }
     } // else if
     return {source, symbol, targets};
 }
 
+void add_states(NameStateMap& state_map, const std::vector<std::string>& state_names, Delta& delta) {
+    for (const std::string& state_name : state_names) {
+        state_map[state_name] = get_state(state_name, state_map, delta);
+    }
+}
 Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAlphabet *alphabet) {
     // this might cause memory leaks if not handled right
     if (alphabet == nullptr) { alphabet = new RankedOnTheFlyAlphabet(); }
     Nfta aut;
     aut.alphabet = alphabet;
     NameStateMap state_map = {};
+    add_states(state_map, inter_aut->states_names, aut.delta);
 
     // both initial and final states are added to final_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
@@ -105,8 +106,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
     // symbols maybe added with multiple arities regardless of whether they are enumerated
     for (const auto& [formula_node, formula_graph] : inter_aut->transitions) {
         auto [source, symbol_str, targets] = get_transition(
-            formula_node, formula_graph, state_map, aut.delta
-        );
+            formula_node, formula_graph, state_map);
         auto arity = static_cast<unsigned>(targets.size());
         Symbol symbol = alphabet->translate_ranked_symbol(symbol_str, arity);
         aut.delta.add(source, symbol, std::move(targets));
@@ -122,6 +122,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
 
     Nfta aut;
     aut.alphabet = alphabet;
+    add_states(state_map, inter_aut->states_names, aut.delta);
 
     // both initial and final states are added to final_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
@@ -136,7 +137,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
     // transitions
     // if symbols are not enumerated, they are added when first encountered, arity is set to match the transition
     for (const auto& [formula_node, formula_graph] : inter_aut->transitions) {
-        auto [source, symbol_str, targets] = get_transition(formula_node, formula_graph, state_map, aut.delta);
+        auto [source, symbol_str, targets] = get_transition(formula_node, formula_graph, state_map);
         Symbol symbol = alphabet->translate_symb(symbol_str); // this should throw
         aut.delta.add(source, symbol, std::move(targets));
     } // for transitions
@@ -144,7 +145,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
 } // construct_from_inter_aut
 
 Nfta construct_from_parsed_object(const parser::Parsed *parsed, Alphabet *alphabet) {
-    IntermediateAut ia = IntermediateAut::parse_from_mf(*parsed)[0];
+    const IntermediateAut ia = IntermediateAut::parse_from_mf(*parsed)[0];
     return construct_from_inter_aut(&ia, alphabet);
 }
 
