@@ -186,8 +186,23 @@ void Delta::remove(const State source, const Symbol symbol, const std::vector<St
     }
 }
 
+// todo throw or ignore?
+void Delta::remove(const State source, const Symbol symbol) {
+    auto throw_no_transition = [&]() {
+        throw std::invalid_argument(
+            "No transitions [" + std::to_string(source) + ", " + std::to_string(symbol) + " (...) ] exist."
+        );
+    };
+    if (source >= state_posts_.size()) { ; }
+    StatePost& state_transitions = state_posts_[source];
+    if (state_transitions.empty() || state_transitions.back().symbol < symbol) { ; }
+    const auto symbol_transitions = state_transitions.find(symbol);
+    if (symbol_transitions == state_transitions.end()) { throw_no_transition(); }
+    state_transitions.erase(*symbol_transitions);
+}
 
-bool Delta::contains(State single, Symbol symbol, std::vector<State> targets) const
+
+bool Delta::contains(State single, Symbol symbol, const std::vector<State>& targets) const
 { // {{{
     if (state_posts_.empty()) { return false; }
     if (state_posts_.size() <= single) { return false; }

@@ -346,7 +346,7 @@ public:
      * @return State post of @p source.
      */
     const StatePost& state_post(const State s) const {
-        if (s >= num_of_states()) {
+        if (s >= num_of_states()) { // todo maybe this should throw instead
             return empty_state_post;
         }
         return state_posts_[s];
@@ -364,7 +364,7 @@ public:
     const StatePost& operator[](const State s) const { return state_post(s); }
 
     /**
-     * @brief Get mutable (non-constant) reference to the state post of @p source.
+     * @brief Get mutable (non-constant) reference to the state post of @p source. todo
      *
      * The function allows modifying the state post.
      *
@@ -383,7 +383,7 @@ public:
     StatePost& mutable_state_post(State s);
 
     /**
-     * @brief Defragment the Delta.
+     * @brief Defragment the Delta. todo
      *
      * This function removes all state posts which are not in @p is_staying and renames the remaining state posts
      * according to @p renaming.
@@ -442,12 +442,13 @@ public:
     void add(State source, Symbol symbol, const std::vector<State>& targets);
     void add(const Transition& trans) { add(trans.source, trans.symbol, trans.targets); }
     void remove(State source, Symbol symbol, const std::vector<State>& targets);
+    void remove(State source, Symbol symbol); // remove all targets
     void remove(const Transition& transition) { remove(transition.source, transition.symbol, transition.targets); }
 
     /**
      * Check whether @c Delta contains a passed transition.
      */
-    bool contains(State source, Symbol symbol, std::vector<State> targets) const;
+    bool contains(State source, Symbol symbol, const std::vector<State>& targets) const;
     /**
      * Check whether @c Delta contains a transition passed as a triple.
      */
