@@ -53,7 +53,6 @@ public:
      * The result does not have to equal the list of symbols in the automaton using this alphabet.
      */
     virtual utils::OrdVector<Symbol> get_alphabet_symbols() const { throw std::runtime_error("Unimplemented"); }
-    virtual utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const { throw std::runtime_error("Unimplemented"); }
 
     /// complement of a set of symbols wrt the alphabet
     virtual utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const { // {{{
@@ -92,16 +91,7 @@ public:
 
     virtual void clear() { throw std::runtime_error("Unimplemented"); }
 
-    virtual Symbol translate_or_add_ranked_symbol(const std::string &str, unsigned arity) {
-        (void)str;
-        (void)arity;
-        throw std::runtime_error("Ranked symbols are not supported by this alphabet");
-    }
-    virtual Symbol translate_ranked_symbol(const std::string &str, unsigned arity) {
-        (void)str;
-        (void)arity;
-        throw std::runtime_error("Ranked symbols are not supported by this alphabet");
-    }
+    virtual void add_new_symbol(const std::string& symbol) { (void)symbol; throw std::runtime_error("Unimplemented"); }
 
 protected:
     virtual const void* address() const { return this; }
@@ -138,6 +128,11 @@ public:
 
     bool empty() const override { return false; }
 
+    /// This function only verifies the string is translatable, to allow working with an unknown type of alphabet easily.
+    void add_new_symbol(const std::string &symbol) override { translate_symb(symbol); }
+
+    // todo maybe this should simply do nothing instead?
+    // if an unknown type of alphabet needs to be cleared one could simply call clear
     void clear() override { throw std::runtime_error("Nonsensical use of clear() on IntAlphabet."); }
 
 protected:
@@ -236,7 +231,7 @@ public:
      * @param[in] symbol User-space representation of the symbol.
      * @return Result of the insertion as @c InsertionResult.
      */
-    void add_new_symbol(const std::string& symbol);
+    void add_new_symbol(const std::string& symbol) override;
 
     /**
      * @brief Add new symbol to the alphabet.
@@ -372,7 +367,14 @@ public:
      * @param[in] key User-space representation of the symbol.
      * @return Result of the insertion as @c InsertionResult.
      */
-    InsertionResult add_new_symbol(const std::string& key);
+    InsertionResult add_new_symbol_res(const std::string& key);
+
+   /**
+    * @brief Add new symbol to the alphabet with the value of @c next_symbol_value.
+    *
+    * Throws an exception when the adding fails.
+    */
+    void add_new_symbol(const std::string &symbol) override { add_new_symbol_res(symbol); }
 
     /**
      * @brief Add new symbol to the alphabet.
@@ -468,38 +470,30 @@ public:
 class RankedOnTheFlyAlphabet : public Alphabet {
 public:
     using StringArity = std::pair<std::string, unsigned>;
-    using SymbolMap = std::unordered_map<StringArity, Symbol>;
+    using SymbolArityMap = std::unordered_map<StringArity, Symbol>;
 
     explicit RankedOnTheFlyAlphabet(const Symbol init_symbol = 0) : next_symbol_value_(init_symbol) {};
     RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet& alphabet) = default;
     RankedOnTheFlyAlphabet(RankedOnTheFlyAlphabet&& alphabet) = default;
     explicit RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet* const alphabet): RankedOnTheFlyAlphabet(*alphabet) {}
-    explicit RankedOnTheFlyAlphabet(SymbolMap str_sym_map) : symbol_map_(std::move(str_sym_map)) {}
+    explicit RankedOnTheFlyAlphabet(SymbolArityMap str_sym_map) : symbol_map_(std::move(str_sym_map)) {}
 
     /**
      * @brief Translate a symbol, add if missing.
      */
-    Symbol translate_or_add_ranked_symbol(const std::string &str, unsigned arity) override;
+    Symbol translate_or_add_ranked_symbol(const std::string &str, unsigned arity);
 
     /**
      * @brief Translate a symbol.
      * @throws std::runtime_error if symbol is missing.
      */
-    Symbol translate_ranked_symbol(const std::string &str, unsigned arity) override;
+    Symbol translate_ranked_symbol(const std::string &str, unsigned arity);
 
     /**
-     * @brief Translate a symbol with implicit arity 0.
-     * @throws std::runtime_error if symbol is missing. !!! DIFFERS FROM OnTheFlyAlphabet
+     * @brief Translate a symbol with implicit arity 0. todo delete this?
+     * @throws std::runtime_error if symbol is missing.
      */
     Symbol translate_symb(const std::string &symb) override { return translate_ranked_symbol(symb, 0); }
-
-    /**
-     * @brief Translate a symbol with implicit arity 0. Add if missing.
-     *
-     * TODO It would make a lot of sense to implement this function to all alphabets
-     * (and have translate_symb beave the same for all aphabets)
-     */
-    Symbol translate_or_add_symb(const std::string &symb) { return translate_or_add_ranked_symbol(symb, 0); }
 
     /**
      * @brief Create alphabet from a list of StringArity instances.
@@ -519,7 +513,7 @@ public:
         const std::vector<std::string>& symbols, std::vector<unsigned> arities, const Symbol init_symbol = 0)
         : symbol_map_(), next_symbol_value_(init_symbol) {
         if (symbols.size() != arities.size()) { throw std::invalid_argument("symbols and arities sizes differ"); }
-        for (size_t i = 0; i < symbols.size(); ++i) { add_new_symbol({symbols[i], arities[i]}); }
+        for (size_t i = 0; i < symbols.size(); ++i) { add_new_symbol(StringArity{symbols[i], arities[i]}); }
     }
 
     /**
@@ -544,7 +538,7 @@ public:
      *
      * This operation is slow as a new OrdVector is built.
      */
-    utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const override;
+    utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const;
 
     utils::OrdVector<Symbol> get_alphabet_symbols() const override;
 
@@ -570,7 +564,15 @@ public:
      * The value of the already existing symbols will NOT be overwritten.
      * @param[in] symbol_map Map of strings + arities to symbols.
      */
-    void add_symbols_from(const SymbolMap& symbol_map);
+    void add_symbols_from(const SymbolArityMap& symbol_map);
+    /**
+     * @brief Add new symbol with implicit arity 0.
+     *
+     * @throws std::runtime_error If the symbol already exists.
+     */
+    void add_new_symbol(const std::string& symbol) override {
+      add_new_symbol(StringArity{symbol, 0}, next_symbol_value_);
+    }
 
     /**
      * @brief Add new symbol to the alphabet with the value of @c next_symbol_value.
@@ -586,7 +588,9 @@ public:
      * @param[in] str User-space representation of the symbol.
      * @param[in] arity of the symbol.
      */
-     void add_new_symbol(const std::string& str, unsigned arity) { add_new_symbol(StringArity{str, arity}, next_symbol_value_); }
+    void add_new_symbol(const std::string& str, unsigned arity) {
+       add_new_symbol(StringArity{str, arity}, next_symbol_value_);
+    }
 
     /**
      * @brief Add new symbol to the alphabet.
@@ -624,17 +628,21 @@ public:
      * Get the symbol map used in the alphabet.
      * @return Map mapping strings + arities to symbols used internally in Mata.
      */
-    const SymbolMap& get_symbol_map() const { return symbol_map_; }
+    const SymbolArityMap& get_symbol_map() const { return symbol_map_; }
 
     bool empty() const override { return symbol_map_.empty(); }
 
-    size_t  contains_symbol_name(const std::string& str);
+    size_t contains_symbol_name(const std::string& str);
 
     std::vector<unsigned> get_arity(Symbol symbol) const;
-    void set_arity(Symbol symbol, unsigned new_arity);
+
+    /**
+     * @brief Change arity of an existing symbol.
+     */
+    void change_arity(Symbol symbol, unsigned new_arity);
 
 private:
-    SymbolMap symbol_map_{}; ///< Map of string  and arity transition symbols to symbol values.
+    SymbolArityMap symbol_map_{}; ///< Map of string  and arity transition symbols to symbol values.
     Symbol next_symbol_value_{}; ///< Next value to be used for a newly added symbol.
 
 public:
@@ -666,149 +674,132 @@ public:
     /**
      * @brief Remove a symbol name value pair from the position @p pos from the alphabet.
      */
-    void erase(const SymbolMap::const_iterator pos) { symbol_map_.erase(pos); }
+    void erase(const SymbolArityMap::const_iterator pos) { symbol_map_.erase(pos); }
 
     /**
      * @brief Remove a symbol name value pair from the positions between @p first and @p last from the alphabet.
      */
-    void erase(const SymbolMap::const_iterator first, const SymbolMap::const_iterator last) {
+    void erase(const SymbolArityMap::const_iterator first, const SymbolArityMap::const_iterator last) {
         symbol_map_.erase(first, last);
     }
 
     void clear() override { symbol_map_.clear(); next_symbol_value_ = 0; }
 }; // class RankedOnTheFlyAlphabet.
-
-
-class RankedIntAlphabet : public IntAlphabet {
-public:
-    RankedIntAlphabet() : IntAlphabet(), arities_{} {}
-    Symbol translate_or_add_ranked_symbol(const std::string &symbol, unsigned arity) override;
-    Symbol translate_ranked_symbol(const std::string &symbol, unsigned arity) override;
-    void set_arity(Symbol symbol, unsigned arity) { if (arity > 0) { arities_[symbol] = arity; } }
-    unsigned get_arity(Symbol symbol) const { return arities_.contains(symbol) ? arities_.at(symbol) : 0; }
-    void clear() override { arities_.clear(); }
-
-protected:
-    const void* address() const override { return this; } // per-instance identity
-
-private:
-    std::unordered_map<Symbol, unsigned> arities_; ///< Maps function symbols to arities; constants not stored
-}; // RankedIntAlphabet
-
-/**
- * This alphabet needs some rethinking if it is to be used.
- */
-class RankedEnumAlphabet : public Alphabet {
-public:
-    using SymbolArity = std::pair<Symbol, unsigned>;
-    explicit RankedEnumAlphabet() = default;
-    RankedEnumAlphabet(const RankedEnumAlphabet& alphabet) = default;
-    explicit RankedEnumAlphabet(const RankedEnumAlphabet* const alphabet): RankedEnumAlphabet(*alphabet) {}
-    RankedEnumAlphabet(RankedEnumAlphabet&& rhs) = default;
-
-    utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const override;
-    utils::OrdVector<Symbol> get_alphabet_symbols() const override;
-    utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const override {
-        return get_alphabet_symbols().difference(symbols);
-    }
-
-    std::string reverse_translate_symbol(Symbol symbol) const override;
-
-    RankedEnumAlphabet& operator=(const RankedEnumAlphabet& rhs) = default;
-    RankedEnumAlphabet& operator=(RankedEnumAlphabet&& rhs) = default;
-
-    /**
-     * Add symbols from an iterable structure, ignore duplicates.
-     */
-    template <class InputIt> void add_symbols_from(InputIt first, InputIt last) {
-       for (; first != last; ++first) {
-          if (!symbols_.contains(first->first)) {
-              add_new_symbol(first->first, first->second);
-          }
-       }
-    }
-
-    /**
-     * @brief Expand alphabet by symbols from the passed @p alphabet. Ignore duplicates or invalid inputs.
-     */
-    void add_symbols_from(const RankedEnumAlphabet& alphabet) {
-        auto symbols_to_add = alphabet.get_alphabet_symbols_arities(); // keep it alive
-        add_symbols_from(symbols_to_add.begin(), symbols_to_add.end());
-    }
-
-    Symbol translate_symb(const std::string& str) override;
-
-    /**
-     * @brief Add new symbol to the alphabet with the value identical to its string representation.
-     *
-     * @param[in] symbol User-space representation of the symbol.
-     * @return Result of the insertion as @c InsertionResult.
-     */
-    void add_new_symbol(const std::string& str, unsigned arity);
-
-    /**
-     * @brief Add new symbol to the alphabet.
-     *
-     * @param[in] symbol Numeric value of the symbol.
-     * @param[in] arity of the symbol.
-     * @return Result of the insertion as @c InsertionResult.
-     */
-    void add_new_symbol(Symbol symbol, unsigned arity);
-
-
-    /**
-     * Get the next value for a potential new symbol.
-     * @return Next Symbol value.
-     */
-    Symbol get_next_value() const { return next_symbol_value_; }
-
-    /**
-     * Get the number of existing symbols, epsilon symbols excluded.
-     * @return The number of symbols.
-     */
-    size_t get_number_of_symbols() const { return symbols_.size(); }
-
-    bool empty() const override { return symbols_.empty(); }
-
-private:
-    std::unordered_map<Symbol, unsigned> symbols_{}; ///< Vector of symbol + arity pairs..
-    Symbol next_symbol_value_{ 0 }; ///< Next value to be used for a newly added symbol.
-
-public:
-    /**
-     * @brief Update next symbol value when appropriate.
-     *
-     * When the newly inserted value is larger or equal to the current next symbol value, update the next symbol
-     *  value to a value one larger than the new value.
-     * @param value The value of the newly added symbol.
-     */
-    void update_next_symbol_value(Symbol value) { next_symbol_value_ = std::max(next_symbol_value_, value + 1); }
-
-    /**
-     * @brief Erase a symbol from the alphabet.
-     * @return Number of symbols erased (0 or 1).
-     */
-    size_t erase(Symbol symbol) { return symbols_.erase(symbol); }
-
-    /**
-     * @brief Remove a symbol name value pair from the position @p pos from the alphabet.
-     * @return Iterator following the last removed element.
-     */
-    void erase(const std::unordered_map<Symbol, unsigned>::const_iterator pos) { symbols_.erase(pos); }
-
-    /**
-     * @brief Remove a symbol name value pair from the positions between @p first and @p last from the alphabet.
-     * @return Iterator following the last removed element.
-     */
-    void erase(const std::unordered_map<Symbol, unsigned>::const_iterator first,
-               const std::unordered_map<Symbol, unsigned>::const_iterator last) {
-        symbols_.erase(first, last);
-    }
-
-    void clear() override { symbols_.clear(); next_symbol_value_ = 0; }
-    Symbol translate_or_add_ranked_symbol(const std::string &str, unsigned arity) override;
-    Symbol translate_ranked_symbol(const std::string &str, unsigned arity) override;
-}; //RankedEnumAlphabet
+//
+// /**
+//  * This alphabet needs some rethinking if it is to be used.
+//  */
+// class RankedEnumAlphabet : public Alphabet {
+// public:
+//     using SymbolArity = std::pair<Symbol, unsigned>;
+//     explicit RankedEnumAlphabet() = default;
+//     RankedEnumAlphabet(const RankedEnumAlphabet& alphabet) = default;
+//     explicit RankedEnumAlphabet(const RankedEnumAlphabet* const alphabet): RankedEnumAlphabet(*alphabet) {}
+//     RankedEnumAlphabet(RankedEnumAlphabet&& rhs) = default;
+//
+//     utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const override;
+//     utils::OrdVector<Symbol> get_alphabet_symbols() const override;
+//     utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const override {
+//         return get_alphabet_symbols().difference(symbols);
+//     }
+//
+//     std::string reverse_translate_symbol(Symbol symbol) const override;
+//
+//     RankedEnumAlphabet& operator=(const RankedEnumAlphabet& rhs) = default;
+//     RankedEnumAlphabet& operator=(RankedEnumAlphabet&& rhs) = default;
+//
+//     /**
+//      * Add symbols from an iterable structure, ignore duplicates.
+//      */
+//     template <class InputIt> void add_symbols_from(InputIt first, InputIt last) {
+//        for (; first != last; ++first) {
+//           if (!symbols_.contains(first->first)) {
+//               add_new_symbol(first->first, first->second);
+//           }
+//        }
+//     }
+//
+//     /**
+//      * @brief Expand alphabet by symbols from the passed @p alphabet. Ignore duplicates or invalid inputs.
+//      */
+//     void add_symbols_from(const RankedEnumAlphabet& alphabet) {
+//         auto symbols_to_add = alphabet.get_alphabet_symbols_arities(); // keep it alive
+//         add_symbols_from(symbols_to_add.begin(), symbols_to_add.end());
+//     }
+//
+//     Symbol translate_symb(const std::string& str) override;
+//
+//     /**
+//      * @brief Add new symbol to the alphabet with the value identical to its string representation.
+//      *
+//      * @param[in] symbol User-space representation of the symbol.
+//      * @return Result of the insertion as @c InsertionResult.
+//      */
+//     void add_new_symbol(const std::string& str, unsigned arity);
+//
+//     /**
+//      * @brief Add new symbol to the alphabet.
+//      *
+//      * @param[in] symbol Numeric value of the symbol.
+//      * @param[in] arity of the symbol.
+//      * @return Result of the insertion as @c InsertionResult.
+//      */
+//     void add_new_symbol(Symbol symbol, unsigned arity);
+//
+//
+//     /**
+//      * Get the next value for a potential new symbol.
+//      * @return Next Symbol value.
+//      */
+//     Symbol get_next_value() const { return next_symbol_value_; }
+//
+//     /**
+//      * Get the number of existing symbols, epsilon symbols excluded.
+//      * @return The number of symbols.
+//      */
+//     size_t get_number_of_symbols() const { return symbols_.size(); }
+//
+//     bool empty() const override { return symbols_.empty(); }
+//
+// private:
+//     std::unordered_map<Symbol, unsigned> symbols_{}; ///< Vector of symbol + arity pairs..
+//     Symbol next_symbol_value_{ 0 }; ///< Next value to be used for a newly added symbol.
+//
+// public:
+//     /**
+//      * @brief Update next symbol value when appropriate.
+//      *
+//      * When the newly inserted value is larger or equal to the current next symbol value, update the next symbol
+//      *  value to a value one larger than the new value.
+//      * @param value The value of the newly added symbol.
+//      */
+//     void update_next_symbol_value(Symbol value) { next_symbol_value_ = std::max(next_symbol_value_, value + 1); }
+//
+//     /**
+//      * @brief Erase a symbol from the alphabet.
+//      * @return Number of symbols erased (0 or 1).
+//      */
+//     size_t erase(Symbol symbol) { return symbols_.erase(symbol); }
+//
+//     /**
+//      * @brief Remove a symbol name value pair from the position @p pos from the alphabet.
+//      * @return Iterator following the last removed element.
+//      */
+//     void erase(const std::unordered_map<Symbol, unsigned>::const_iterator pos) { symbols_.erase(pos); }
+//
+//     /**
+//      * @brief Remove a symbol name value pair from the positions between @p first and @p last from the alphabet.
+//      * @return Iterator following the last removed element.
+//      */
+//     void erase(const std::unordered_map<Symbol, unsigned>::const_iterator first,
+//                const std::unordered_map<Symbol, unsigned>::const_iterator last) {
+//         symbols_.erase(first, last);
+//     }
+//
+//     void clear() override { symbols_.clear(); next_symbol_value_ = 0; }
+//     Symbol translate_or_add_ranked_symbol(const std::string &str, unsigned arity) override;
+//     Symbol translate_ranked_symbol(const std::string &str, unsigned arity) override;
+// }; //RankedEnumAlphabet
 
 /**
  * @brief Encode a word using UTF-8 encoding.

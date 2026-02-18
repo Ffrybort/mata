@@ -41,7 +41,7 @@ std::string mata::OnTheFlyAlphabet::reverse_translate_symbol(const Symbol symbol
 
 void mata::OnTheFlyAlphabet::add_symbols_from(const std::vector<std::string>& symbol_names) {
     for (const std::string& symbol_name: symbol_names) {
-        add_new_symbol(symbol_name);
+        add_new_symbol_res(symbol_name);
     }
 }
 
@@ -77,7 +77,7 @@ mata::Word mata::OnTheFlyAlphabet::translate_word(const mata::WordName& word_nam
     return word;
 }
 
-OnTheFlyAlphabet::InsertionResult mata::OnTheFlyAlphabet::add_new_symbol(const std::string& key) {
+OnTheFlyAlphabet::InsertionResult mata::OnTheFlyAlphabet::add_new_symbol_res(const std::string& key) {
     InsertionResult insertion_result{ try_add_new_symbol(key, next_symbol_value_) };
     if (!insertion_result.second) { // If the insertion of key-value pair failed.
         throw std::runtime_error("multiple occurrences of the same symbol");
@@ -294,7 +294,7 @@ void mata::RankedOnTheFlyAlphabet::add_symbols_from(const std::vector<StringArit
     }
 }
 
-void mata::RankedOnTheFlyAlphabet::add_symbols_from(const SymbolMap& new_symbol_map) {
+void mata::RankedOnTheFlyAlphabet::add_symbols_from(const SymbolArityMap& new_symbol_map) {
     for (const auto& [key, value] : new_symbol_map) {
         // Only add if the symbol doesn't already exist
         if (!symbol_map_.contains(key)) {
@@ -348,7 +348,7 @@ std::vector<unsigned> mata::RankedOnTheFlyAlphabet::get_arity(Symbol symbol) con
     return result;
 }
 
-void mata::RankedOnTheFlyAlphabet::set_arity(Symbol symbol, unsigned new_arity) {
+void mata::RankedOnTheFlyAlphabet::change_arity(Symbol symbol, unsigned new_arity) {
     for (auto it = symbol_map_.begin(); it != symbol_map_.end(); ++it) {
         if (it->second == symbol) {
             StringArity new_key{it->first.first, new_arity};
@@ -376,100 +376,6 @@ Symbol mata::RankedOnTheFlyAlphabet::translate_ranked_symbol(const std::string &
     return it->second;
 }
 
-Symbol mata::RankedIntAlphabet::translate_or_add_ranked_symbol(const std::string &str, unsigned arity) {
-    Symbol symbol;
-    std::istringstream stream{ str };
-    stream >> symbol;
-    if (stream.fail() || !stream.eof()) {
-        throw std::runtime_error("Cannot translate string '" + str + "' int to symbol.");
-    }
-    set_arity(symbol, arity);
-    return symbol;
-}
-
-Symbol mata::RankedIntAlphabet::translate_ranked_symbol(const std::string &str, unsigned arity) {
-    Symbol symbol;
-    std::istringstream stream{ str };
-    stream >> symbol;
-    if (stream.fail() || !stream.eof()) {
-        throw std::runtime_error("Cannot translate string '" + str + "' int to symbol.");
-    }
-    if (get_arity(symbol) != arity) { throw std::runtime_error("Symbol '" + str + "' has a different arity."); }
-    return symbol;
-}
-
-
-mata::utils::OrdVector<Symbol> mata::RankedEnumAlphabet::get_alphabet_symbols() const {
-    utils::OrdVector<Symbol> result;
-    for (const auto& s : symbols_) {
-        result.insert(s.first);
-    }
-    return result;
-}
-
-
-std::string mata::RankedEnumAlphabet::reverse_translate_symbol(Symbol symbol) const {
-    for (const auto s : symbols_) {
-        if (s.first == symbol) { return std::to_string(symbol); }
-    }
-    throw std::runtime_error("Symbol '" + std::to_string(symbol) + "' does not exist.");
-}
-
-void mata::RankedEnumAlphabet::add_new_symbol(const std::string& str, unsigned arity) {
-    Symbol symbol;
-    std::istringstream stream{ str };
-    stream >> symbol;
-    if (stream.fail() || !stream.eof()) {
-        throw std::runtime_error("Cannot translate string '" + str + "' to enum symbol.");
-    }
-    add_new_symbol(symbol, arity);
-}
-
-void mata::RankedEnumAlphabet::add_new_symbol(Symbol symbol, unsigned arity) {
-    if (symbols_.contains(symbol)) { throw std::runtime_error("Symbol " + std::to_string(symbol) + " already exists"); }
-    symbols_[symbol] = arity;
-    update_next_symbol_value(symbol);
-}
-
-Symbol mata::RankedEnumAlphabet::translate_or_add_ranked_symbol(const std::string &str, unsigned arity) {
-    Symbol symbol;
-    std::istringstream stream{ str };
-    stream >> symbol;
-    if (stream.fail() || !stream.eof()) {
-        throw std::runtime_error("Cannot translate string '" + str + "' to enum symbol.");
-    }
-    symbols_.insert({symbol, arity});
-    return symbol;
-}
-
-Symbol mata::RankedEnumAlphabet::translate_symb(const std::string& str) {
-    Symbol symbol;
-    std::istringstream stream{ str };
-    stream >> symbol;
-    if (stream.fail() || !stream.eof()) {
-        throw std::runtime_error("Cannot translate string '" + str + "' to symbol.");
-    }
-    if (!symbols_.contains(symbol)) {
-        throw std::runtime_error("Unknown symbol'" + str + "' to be translated to Symbol.");
-    }
-    return symbol;
-}
-
-Symbol mata::RankedEnumAlphabet::translate_ranked_symbol(const std::string &str, unsigned arity) {
-    Symbol symbol = translate_symb(str);
-    if (symbols_[symbol] != arity) {
-        throw std::runtime_error("Symbol '" + str + "' has a different arity (" + std::to_string(arity) + ").");
-    }
-    return symbol;
-}
-
-mata::utils::OrdVector<std::pair<unsigned, unsigned>> mata::RankedEnumAlphabet::get_alphabet_symbols_arities() const{
-    utils::OrdVector<std::pair<unsigned, unsigned>> result;
-    for (const auto& s : symbols_) {
-        result.insert(RankedEnumAlphabet::SymbolArity{s.first, s.second});
-    }
-    return result;
-}
 
 
 
