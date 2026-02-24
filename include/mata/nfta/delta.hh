@@ -382,19 +382,6 @@ public:
      */
     StatePost& mutable_state_post(State s);
 
-    /**
-     * @brief Defragment the Delta. todo
-     *
-     * This function removes all state posts which are not in @p is_staying and renames the remaining state posts
-     * according to @p renaming.
-     *
-     * @param[in] is_staying Boolean vector indicating which states are staying in the Delta.
-     * @param[in] renaming Vector of states to rename the remaining state posts to.
-     * @return Self with defragmented delta.
-     */
-    Delta& defragment(const BoolVector& is_staying, const std::vector<State>& renaming);
-    friend Delta defragment(const Delta& delta, const BoolVector& is_staying, const std::vector<State>& renaming);
-
     template <typename... Args>
     StatePost& emplace_back(Args&&... args) {
     // Forwarding the variadic template pack of arguments to the emplace_back() of the underlying container.
@@ -483,7 +470,7 @@ public:
      * @param t_renumberer Monotonic lambda function mapping states to different states.
      * @return std::vector<Post> Copied posts.
      */
-    std::vector<StatePost> renumber_targets(std::function<std::vector<State>(const std::vector<State>&)> t_renumberer)  const;
+    std::vector<StatePost> renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)>& t_renumberer)  const;
 
     /**
      * @brief Add transitions to multiple destinations
@@ -517,7 +504,7 @@ public:
      *
      * Operation is slow, traverses over all symbol posts.
      */
-    std::vector<Transition> get_transitions_to(std::vector<State> states_to) const;
+    std::vector<Transition> get_transitions_to(const std::vector<State>& states_to) const;
 
     // all transitions to a state - may not be needed
     std::vector<Transition> get_transitions_to(State state_to) const;
@@ -589,7 +576,6 @@ public:
      * The value of the already existing symbols will NOT be overwritten.
      */
     void add_symbols_to(OnTheFlyAlphabet& target_alphabet) const;
-    // todo maybe the same with enum
 
     /**
      * @brief Get the set of symbols used on the transitions in the automaton.
@@ -609,6 +595,19 @@ public:
      * @brief Get the maximum non-epsilon used symbol.
      */
     Symbol get_max_symbol() const;
+
+    /**
+     * @brief Defragment the Delta. todo
+     *
+     * This function removes all state posts which are not in @p is_staying and renames the remaining state posts
+     * according to @p renaming.
+     *
+     * @param[in] is_staying Boolean vector indicating which states are staying in the Delta.
+     * @param[in] renaming Vector of states to rename the remaining state posts to.
+     * @return Self with defragmented delta.
+     */
+    void defragment(const BoolVector& is_staying, const std::vector<State>& renaming);
+    friend Delta defragment(const Delta& delta, const BoolVector& is_staying, const std::vector<State>& renaming);
 
 protected:
     std::vector<StatePost> state_posts_;

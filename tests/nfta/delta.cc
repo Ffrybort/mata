@@ -291,6 +291,99 @@ TEST_CASE("Delta basic functionality") {
         CHECK(it != delta.state_post(0).end());
         CHECK(it->symbol == EPSILON);
     }
+
+    SECTION("Defragment removes deleted states and renames correctly") {
+        delta.clear();
+
+        delta.add(0, 1, {1});
+        delta.add(1, 2, {2});
+        delta.add(2, 3, {0});
+
+        BoolVector is_staying{true, false, true};
+        std::vector<State> renaming{0, 0, 1};
+
+        delta.defragment(is_staying, renaming);
+
+        CHECK(delta.num_of_states() == 2);
+
+        CHECK_FALSE(delta.contains(0, 1, {1}));
+        CHECK(delta.contains(1, 3, {0}));
+
+        // Structural sanity
+        CHECK(delta.num_of_transitions() > 0);
+
+        for (const auto& t : delta.get_transitions()) {
+            CHECK(t.source < delta.num_of_states());
+
+            for (State target : t.targets) {
+                CHECK(target < delta.num_of_states());
+            }
+        }
+    }
+
+    SECTION("Defragment removes transitions containing removed targets") {
+        delta.clear();
+
+        delta.add(0, 1, {1,2});
+        delta.add(0, 2, {2});
+
+        BoolVector is_staying{true, false, true};
+        std::vector<State> renaming{0, 0, 1};
+
+        delta.defragment(is_staying, renaming);
+
+        CHECK_FALSE(delta.contains(0, 1, {0,1}));
+        CHECK(delta.contains(0, 2, {1}));
+
+        auto transitions = delta.get_transitions();
+
+        for (const auto& t : transitions) {
+            CHECK(t.targets.size() > 0);
+
+            for (State s : t.targets) {
+                CHECK(s < delta.num_of_states());
+            }
+        }
+    }
+
+    SECTION("Defragment compacts source states") {
+        delta.clear();
+
+        delta.add(0, 1, {1});
+        delta.add(2, 2, {0});
+
+        BoolVector is_staying{true, false, true};
+        std::vector<State> renaming{0, 0, 1};
+
+        delta.defragment(is_staying, renaming);
+
+        CHECK(delta.num_of_states() == 2);
+        CHECK(delta.contains(1, 2, {0}));
+
+        for (const auto& t : delta.get_transitions()) {
+            CHECK(t.source < delta.num_of_states());
+
+            for (State target : t.targets) {
+                CHECK(target < delta.num_of_states());
+            }
+        }
+    }
+
+    SECTION("Defragment all states removed results in empty delta") {
+        delta.clear();
+
+        delta.add(0, 1, {1});
+        delta.add(1, 2, {0});
+
+        BoolVector is_staying{false, false};
+        std::vector<State> renaming{0,0};
+
+        delta.defragment(is_staying, renaming);
+
+        CHECK(delta.num_of_states() == 0);
+        CHECK(delta.is_empty());
+    }
+
 }
 
 

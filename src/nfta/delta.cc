@@ -2,7 +2,6 @@
 
 /** @file
  * @brief Implementation of the @c mata::nfta::Delta class and related functions.
- *
  */
 using namespace mata::utils;
 using namespace mata::nfta;
@@ -30,11 +29,8 @@ void SymbolPost::insert(const std::vector<State> s) {
     }
 }
 
-//TODO: slow! This should be doing merge, not inserting one by one.
 void SymbolPost::insert(const StateVectorSet& states) {
-    for (const std::vector<State>& s : states) {
-        insert(s);
-    }
+    target_tuples.insert(states); // union function already in OrdVector
 }
 
 StatePost::const_iterator Delta::epsilon_symbol_posts(const State s, const Symbol epsilon) const {
@@ -95,7 +91,7 @@ std::vector<Transition> Delta::get_transitions() const {
     return all_transitions;
 }
 
-std::vector<Transition> Delta::get_transitions_to(std::vector<State> states_to) const {
+std::vector<Transition> Delta::get_transitions_to(const std::vector<State>& states_to) const {
     std::vector<Transition> transitions_to_state{};
     const std::size_t num_of_states{ this->num_of_states() };
     for (State state_from{ 0 }; state_from < num_of_states; ++state_from) {
@@ -202,12 +198,11 @@ void Delta::remove(const State source, const Symbol symbol) {
 }
 
 
-bool Delta::contains(State single, Symbol symbol, const std::vector<State>& targets) const
-{ // {{{
+bool Delta::contains(const State source, const Symbol symbol, const std::vector<State>& targets) const {
     if (state_posts_.empty()) { return false; }
-    if (state_posts_.size() <= single) { return false; }
+    if (state_posts_.size() <= source) { return false; }
 
-    const StatePost& tl = state_posts_[single];
+    const StatePost& tl = state_posts_[source];
     if (tl.empty()) { return false; }
     const auto symbol_transitions{ tl.find(SymbolPost{ symbol} ) };
     if (symbol_transitions == tl.cend()) {
@@ -217,10 +212,8 @@ bool Delta::contains(State single, Symbol symbol, const std::vector<State>& targ
     return symbol_transitions->target_tuples.find(targets) != symbol_transitions->target_tuples.end();
 }
 
-
-
 size_t Delta::num_of_transitions() const {
-    size_t number_of_transitions{ 0 };
+    size_t number_of_transitions = 0;
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost& symbol_post: state_post) {
             number_of_transitions += symbol_post.num_of_target_tuples();
@@ -313,18 +306,15 @@ Delta::Transitions::const_iterator Delta::Transitions::const_iterator::operator+
     return tmp;
 }
 
-bool Delta::Transitions::const_iterator::operator==(const Delta::Transitions::const_iterator& other) const {
-    if (is_end_ && other.is_end_) {
-        return true;
-    } else if ((is_end_ && !other.is_end_) || (!is_end_ && other.is_end_)) {
-        return false;
-    } else {
-        return current_state_ == other.current_state_ && state_post_it_ == other.state_post_it_
-               && symbol_post_it_ == other.symbol_post_it_;
-    }
+bool Delta::Transitions::const_iterator::operator==(const const_iterator& other) const {
+    if (is_end_ && other.is_end_) { return true; }
+    if (is_end_ != other.is_end_) { return false; }
+    return current_state_ == other.current_state_ &&
+        state_post_it_ == other.state_post_it_ &&
+        symbol_post_it_ == other.symbol_post_it_;
 }
 
-std::vector<StatePost> Delta::renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)> t_renumberer) const {
+std::vector<StatePost> Delta::renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)>& t_renumberer) const {
     std::vector<StatePost> copied_state_posts;
     copied_state_posts.reserve(num_of_states());
     for(const StatePost& state_post: state_posts_) {
@@ -353,61 +343,84 @@ StatePost& Delta::mutable_state_post(const State q) {
     return state_posts_[q];
 }
 
-// todo will i need this?
-//Delta mata::nfa::defragment(const Delta &delta, const BoolVector &is_staying, const std::vector<std::vector<State>> &renaming) {
-//    auto filter_rename_symbol_post = [&](const SymbolPost& symbol_post) {
-//        SymbolPost new_symbol_post{ symbol_post.symbol };
-//        for (const std:vector<State>& tuple : symbol_post.tuples) {
-//            if (!is_staying[tuple]) { continue; }
-//            new_symbol_post.push_back(renaming[tuple]);
-//        }
-//        return new_symbol_post;
-//    };
-//    auto filter_rename_state_post = [&](const StatePost& state_post, const std::function<SymbolPost(const SymbolPost&)>& transform_symbol_post) {
-//        StatePost result{};
-//        for (const SymbolPost& symbol_post : state_post) {
-//            SymbolPost new_symbol_post = transform_symbol_post(symbol_post);
-//            if (new_symbol_post.empty()) { continue; }
-//            result.push_back(std::move(new_symbol_post));
-//        }
-//        return result;
-//    };
+// todo defragment that builds a new delta
+// Delta mata::nfa::defragment(const Delta &delta, const BoolVector &is_staying, const std::vector<State> &renaming) {
+//     auto filter_rename_symbol_post = [&](const SymbolPost& symbol_post) {
+//         SymbolPost new_symbol_post{ symbol_post.symbol };
+//         for (const State& target : symbol_post.targets) {
+//             if (!is_staying[target]) { continue; }
+//             new_symbol_post.push_back(renaming[target]);
+//         }
+//         return new_symbol_post;
+//     };
+//     auto filter_rename_state_post = [&](const StatePost& state_post, const std::function<SymbolPost(const SymbolPost&)>& transform_symbol_post) {
+//         StatePost result{};
+//         for (const SymbolPost& symbol_post : state_post) {
+//             SymbolPost new_symbol_post = transform_symbol_post(symbol_post);
+//             if (new_symbol_post.empty()) { continue; }
+//             result.push_back(std::move(new_symbol_post));
+//         }
+//         return result;
+//     };
 //
-//    Delta delta_defragmented{};
-//    for (State s{ 0 }; s < delta.num_of_states(); ++s) {
-//        if (!is_staying[s]) { continue; }
-//        delta_defragmented.emplace_back(filter_rename_state_post(delta[s], filter_rename_symbol_post));
-//    }
-//    return delta_defragmented;
-//}
+//     Delta delta_defragmented{};
+//     for (State source{ 0 }; source < delta.num_of_states(); ++source) {
+//         if (!is_staying[source]) { continue; }
+//         delta_defragmented.emplace_back(filter_rename_state_post(delta[source], filter_rename_symbol_post));
+//     }
+//     return delta_defragmented;
+// }
 
-//Delta& Delta::defragment(const BoolVector& is_staying, const std::vector<std::vector<State>> &renaming) {
-//    size_t from_new{ 0 };
-//    for (size_t from_orig{ 0 }, num_of_states{ this->num_of_states() }; from_orig < num_of_states; ++from_orig) {
-//        if (!is_staying[from_orig]) { continue; } // Skip states not staying.
-//        StatePost& state_post = state_posts_[from_orig];
-//        for (auto state_post_it{ state_post.begin() }; state_post_it != state_post.end();) {
-//            StateVectorSet& tuples{ state_post_it->tuples };
-//            tuples.erase_if([&is_staying](const State& target) { return !is_staying[target]; });
-//            tuples.rename(renaming);
-//            if (tuples.empty()) { state_post_it = state_post.erase(state_post_it); } else { ++state_post_it; }
-//        }
-//        // Move the filtered state post to the new position, if needed.
-//        if (from_new != from_orig) { state_posts_[from_new] = std::move(state_post); }
-//        ++from_new;
-//    }
-//    // Resize to remove filtered-out state posts.
-//    state_posts_.resize(from_new);
-//    return *this;
-//}
+void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& renaming) {
+    #ifndef NDEBUG
+    assert(is_staying.size() == num_of_states());
+    State staying_states_count = 0;
+    for (State s = 0; s < num_of_states(); ++s) { if (is_staying[s]) { ++staying_states_count; } }
+    // Check renaming validity
+    for (State s = 0; s < num_of_states(); ++s) {
+        if (!is_staying[s]) { continue; }
+        assert(s < renaming.size());
+        assert(renaming[s] < staying_states_count);
+    }
+    #endif
+
+    // lambda to determine whether a state post is staying or not
+    auto not_staying = [&is_staying](const std::vector<State>& targets) {
+        return !std::ranges::all_of(targets.begin(), targets.end(),
+            [&](const State s) { return is_staying[s]; });
+    };
+
+    size_t source_new = 0 ;
+    for (size_t source_orig = 0 , num_of_states = this->num_of_states(); source_orig < num_of_states; ++source_orig) {
+        if (!is_staying[source_orig]) { continue; }
+        StatePost& state_post = state_posts_[source_orig];
+        for (auto state_post_it = state_post.begin(); state_post_it != state_post.end();) {
+            StateVectorSet& target_tuples = state_post_it->target_tuples;
+            target_tuples.erase_if(not_staying);
+            // rename manually
+            // renaming[old_value] => new_value
+            for (auto& targets : target_tuples) {
+                for (State& state : targets) {
+                    state = renaming[state];
+                }
+            }
+            if (target_tuples.empty()) { state_post_it = state_post.erase(state_post_it); } else { ++state_post_it; }
+        }
+        // Move the filtered state post to the new position, if needed.
+        if (source_new != source_orig) { state_posts_[source_new] = std::move(state_post); }
+        ++source_new;
+    }
+    // Resize to remove filtered-out state posts.
+    state_posts_.resize(source_new);
+}
 
 bool Delta::operator==(const Delta& other) const {
-    const Delta::Transitions this_transitions{ transitions() };
-    Delta::Transitions::const_iterator this_transitions_it{ this_transitions.begin() };
-    const Delta::Transitions::const_iterator this_transitions_end{ this_transitions.end() };
-    const Delta::Transitions other_transitions{ other.transitions() };
-    Delta::Transitions::const_iterator other_transitions_it{ other_transitions.begin() };
-    const Delta::Transitions::const_iterator other_transitions_end{ other_transitions.end() };
+    const Transitions this_transitions{ transitions() };
+    Transitions::const_iterator this_transitions_it{ this_transitions.begin() };
+    const Transitions::const_iterator this_transitions_end{ this_transitions.end() };
+    const Transitions other_transitions{ other.transitions() };
+    Transitions::const_iterator other_transitions_it{ other_transitions.begin() };
+    const Transitions::const_iterator other_transitions_end{ other_transitions.end() };
     while (this_transitions_it != this_transitions_end) {
         if (other_transitions_it == other_transitions_end || *this_transitions_it != *other_transitions_it) {
             return false;

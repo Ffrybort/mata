@@ -112,6 +112,27 @@ void Nfta::print_mata(std::ostream& os) const
         os << "\n================================================\n";
     }
 
+    void Nfta::defragment(const BoolVector& is_staying) {
+        std::vector<State> renaming(is_staying.size());
+        State next_new_state = 0;
+        for (State i = 0; i < is_staying.size(); ++i) {
+            if (is_staying[i]) {
+                renaming[i] = next_new_state;
+                next_new_state++;
+            }
+        }
+        delta.defragment(is_staying, renaming);
+
+        utils::SparseSet<State> new_final_states;
+        for (const State s : final_states) {
+            if (is_staying[s]) {
+                assert(s < renaming.size());
+                new_final_states.insert(renaming[s]);
+            }
+        }
+        final_states = std::move(new_final_states);
+    }
+
     /**
      * @brief Check if the two automata are identical. Alphabets are not compared -
      * only that transitions use the same symbol representations.

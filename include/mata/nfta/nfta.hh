@@ -22,23 +22,6 @@
 
 namespace mata::nfta
 {
-	// /**
- //     * @brief A mapping of symbols to arities. Constants (arity 0) are not stored. Every symbol not stored is considered a constant.
- //     */
- //    struct ArityMap
- //    {
- //    public:
- //        std::unordered_map<Symbol, unsigned> arities_; ///< Maps function symbols to arities; constants not stored
- //
- //        ArityMap() : arities_() {}
- //        void set_arity(Symbol symbol, unsigned arity) { if (arity > 0) { arities_[symbol] = arity; } }
- //        unsigned get_arity(Symbol symbol) const { return arities_.contains(symbol) ? arities_.at(symbol) : 0; }
- //
- //        bool operator==(const ArityMap& other) const {
- //            return arities_ == other.arities_;
- //        }
- //    };
-
     class Nfta
     {
     public:
@@ -112,6 +95,11 @@ namespace mata::nfta
          * @brief Get the set of final states.
          */
         const utils::SparseSet<State>& get_final_states() const { return final_states; }
+
+        /**
+         * @brief Remove unused states and rename the rest.
+         */
+        void defragment(const BoolVector& is_staying);
 
 
         // comparing delta and final states, ignoring alphabet

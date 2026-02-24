@@ -15,8 +15,8 @@ using namespace mata;
 TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
     OnTheFlyAlphabet alphabet;
     // populate the alphabet
-    alphabet.add_new_symbol("f"); // function symbol
-    alphabet.add_new_symbol("a"); // constant symbol
+    alphabet.add_new_symbol_res("f"); // function symbol
+    alphabet.add_new_symbol_res("a"); // constant symbol
 
     SECTION("AddState") {
         Nfta aut({}, &alphabet, {});
@@ -97,5 +97,54 @@ TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
         CHECK_NOTHROW(aut.print_mata(std::cout));
         CHECK_NOTHROW(aut.print_readable(std::cout, "bottom-up"));
         CHECK_NOTHROW(aut.print_readable(std::cout, "top-down"));
+    }
+
+    SECTION("DefragmentBasic") {
+        Nfta aut({}, &alphabet, {});
+        State s0 = aut.delta.add_state();
+        State s1 = aut.delta.add_state();
+        State s2 = aut.delta.add_state();
+
+        aut.delta.add(alphabet["f"], s0, {s1, s2});
+        aut.delta.add(alphabet["f"], s1, {s2});
+        aut.delta.add(alphabet["a"], s2, {s0});
+
+        aut.add_final_state(2);
+
+        BoolVector is_staying{true, false, true};
+        aut.defragment(is_staying);
+
+        CHECK(aut.delta.num_of_states() == 2);
+        CHECK(aut.delta.contains(0, alphabet["f"], {1,2}) == false);
+        CHECK(aut.is_state_final(1));
+    }
+
+    SECTION("DefragmentAllStatesRemoved") {
+        Nfta aut({}, &alphabet, {});
+
+        aut.delta.add_state();
+        aut.delta.add_state();
+        aut.add_final_state(1);
+
+        BoolVector is_staying{false, false};
+        aut.defragment(is_staying);
+
+        CHECK(aut.delta.num_of_states() == 0);
+        CHECK(aut.get_final_states().empty());
+    }
+
+    SECTION("DefragmentIdentityCase") {
+        Nfta aut({}, &alphabet, {});
+
+        State s0 = aut.delta.add_state();
+        State s1 = aut.delta.add_state();
+
+        aut.delta.add(alphabet["f"], s0, {s1});
+
+        BoolVector is_staying{true, true};
+        aut.defragment(is_staying);
+
+        CHECK(aut.delta.num_of_states() == 2);
+        CHECK(aut.delta.contains(0, alphabet["f"], {1}));
     }
 }
