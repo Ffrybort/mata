@@ -12,7 +12,7 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
-TEST_CASE("Nfta: OnTheFlyAlphabet setup") {
+TEST_CASE("mata::nfta") {
     OnTheFlyAlphabet alphabet;
     // populate the alphabet
     alphabet.add_new_symbol_res("f"); // function symbol

@@ -20,10 +20,8 @@
 #include <mata/utils/sparse-set.hh>
 #include <mata/nfta/delta.hh>
 
-namespace mata::nfta
-{
-    class Nfta
-    {
+namespace mata::nfta {
+    class Nfta {
     public:
         utils::SparseSet<State> final_states; // a set of final (or initial) states
         Alphabet* alphabet;
@@ -104,6 +102,8 @@ namespace mata::nfta
 
         // comparing delta and final states, ignoring alphabet
         bool operator== (const Nfta& other) const;
+
+
     }; // class Nfta
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

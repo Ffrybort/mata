@@ -17,29 +17,29 @@
 #define NFTA_ALGORITHMS_HH
 
 #include <mata/nfta/nfta.hh>
+#include <mata/nft/types.hh>
 #include <stdexcept>
-namespace mata::nfta
-{
+namespace mata::nfta {
 
     /**
      * @brief Checks if the automaton is deterministic.
      */
-    bool isDeterministic(Nfta automaton);
+    bool is_deterministic(Nfta automaton);
 
     /**
      * @brief Checks if the automaton is minimal.
      */
-    bool isMinimal(Nfta automaton);
+    bool is_minimal(Nfta automaton);
 
     /**
      * @brief Checks if the automaton is complete.
      */
-    bool isComplete(Nfta automaton);
+    bool is_complete(Nfta automaton);
 
     /**
      * @brief Minimizes the automaton.
      */
-    void minimize(Nfta automaton);
+    void minimise(Nfta automaton);
 
     /**
      * @brief Determinizes the automaton.
@@ -54,17 +54,17 @@ namespace mata::nfta
     /**
      * @brief Returns the union of two automata.
      */
-    Nfta automatonUnion(Nfta aut1, Nfta aut2);
+    Nfta automaton_union(Nfta aut1, Nfta aut2);
 
     /**
      * @brief Returns the complementation of an automaton.
      */
-    Nfta automatonComplementation(Nfta aut1, Nfta aut2);
+    Nfta automaton_complementation(Nfta aut1, Nfta aut2);
 
     /**
      * @brief Returns the intersection of two automata.
      */
-    Nfta automatonIntersection(Nfta aut1, Nfta aut2);
+    Nfta automaton_intersection(Nfta aut1, Nfta aut2);
 }
 
 #endif //NFTA_ALGORITHMS_HH

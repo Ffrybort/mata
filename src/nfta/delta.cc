@@ -137,26 +137,21 @@ void Delta::add(State single, Symbol symbol, const std::vector<State>& targets) 
     }
 }
 
-void Delta::add_multiple(const State single, const Symbol symbol, const StateVectorSet& target_tuples) {
-    if(target_tuples.empty()) { return; }
-    resize_for_states(single);
-    resize_for_states(target_tuples.back());
 
-    if (StatePost& state_transitions{ state_posts_[single] }; state_transitions.empty()) {
-        state_transitions.insert({ symbol, target_tuples });
-    } else if (state_transitions.back().symbol < symbol) {
-        state_transitions.insert({ symbol, target_tuples });
+void Delta::add(const State source, const SymbolPost& symbol_post) {
+    if(symbol_post.target_tuples.empty()) { return; }
+    resize_for_states(source);
+    for (const auto& targets : symbol_post.target_tuples) {
+        resize_for_states(targets);
+    }
+
+    StatePost& state_post = state_posts_[source];
+    if (const auto it = state_post.find(symbol_post.symbol); it != state_post.end()) {
+        // Symbol already exists - merge targets
+        it->insert(symbol_post.target_tuples);
     } else {
-        if (const auto symbol_transitions{ state_transitions.find(symbol) };
-            symbol_transitions != state_transitions.end()) {
-            // Add transition with symbolOnTransition already used on transitions from state_from.
-            symbol_transitions->insert(target_tuples);
-
-        } else {
-            // Add transition to a new Move struct with symbol yet unused on transitions from state_from.
-            // Move new_symbol_transitions{ symbol, states };
-            state_transitions.insert(SymbolPost{ symbol, target_tuples});
-        }
+        // New symbol - insert whole SymbolPost
+        state_post.insert(symbol_post);
     }
 }
 
@@ -301,7 +296,7 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
 }
 
 Delta::Transitions::const_iterator Delta::Transitions::const_iterator::operator++(int) {
-    const Delta::Transitions::const_iterator tmp{ *this };
+    const const_iterator tmp{ *this };
     ++(*this);
     return tmp;
 }
@@ -342,34 +337,6 @@ StatePost& Delta::mutable_state_post(const State q) {
 
     return state_posts_[q];
 }
-
-// todo defragment that builds a new delta
-// Delta mata::nfa::defragment(const Delta &delta, const BoolVector &is_staying, const std::vector<State> &renaming) {
-//     auto filter_rename_symbol_post = [&](const SymbolPost& symbol_post) {
-//         SymbolPost new_symbol_post{ symbol_post.symbol };
-//         for (const State& target : symbol_post.targets) {
-//             if (!is_staying[target]) { continue; }
-//             new_symbol_post.push_back(renaming[target]);
-//         }
-//         return new_symbol_post;
-//     };
-//     auto filter_rename_state_post = [&](const StatePost& state_post, const std::function<SymbolPost(const SymbolPost&)>& transform_symbol_post) {
-//         StatePost result{};
-//         for (const SymbolPost& symbol_post : state_post) {
-//             SymbolPost new_symbol_post = transform_symbol_post(symbol_post);
-//             if (new_symbol_post.empty()) { continue; }
-//             result.push_back(std::move(new_symbol_post));
-//         }
-//         return result;
-//     };
-//
-//     Delta delta_defragmented{};
-//     for (State source{ 0 }; source < delta.num_of_states(); ++source) {
-//         if (!is_staying[source]) { continue; }
-//         delta_defragmented.emplace_back(filter_rename_state_post(delta[source], filter_rename_symbol_post));
-//     }
-//     return delta_defragmented;
-// }
 
 void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& renaming) {
     #ifndef NDEBUG

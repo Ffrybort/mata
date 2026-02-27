@@ -12,7 +12,7 @@
 using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
-TEST_CASE("Delta basic functionality") {
+TEST_CASE("mata::nfta::delta") {
     Delta delta;
 
     SECTION("Add and Contains transitions") {
@@ -37,7 +37,7 @@ TEST_CASE("Delta basic functionality") {
     }
 
     SECTION("Number of transitions") {
-        delta.add_multiple(0, 1, {{2},{3}});
+        delta.add(0, SymbolPost{ 1, StateVectorSet{{2},{3}} });
         delta.add(1, 2, {3});
         delta.add(1, 2, {4}); // same symbol, added separately
 

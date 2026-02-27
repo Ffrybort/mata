@@ -13,7 +13,7 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
-TEST_CASE("Nfta builder tests") {
+TEST_CASE("mata::nfta::builder") {
     OnTheFlyAlphabet alphabet = OnTheFlyAlphabet();
     IntAlphabet i_alphabet = IntAlphabet();
     RankedOnTheFlyAlphabet ranked_alphabet = RankedOnTheFlyAlphabet();

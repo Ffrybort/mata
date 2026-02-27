@@ -1,29 +1,22 @@
 #include "mata/nfta/algorithms.hh"
 
-namespace mata::nfta
-{
 
-    bool isDeterministic(const Nfta& /*automaton*/)
+namespace mata::nfta {
+    bool is_deterministic(const Nfta& /*automaton*/)
     {
         throw std::runtime_error("not implemented");
     }
 
-    bool isMinimal(const Nfta& /*automaton*/)
+    bool is_complete(const Nfta& automaton, Alphabet& shared_alphabet) {
+        throw std::runtime_error("not implemented");
+    }
+
+    void minimise(Nfta /*automaton*/)
     {
         throw std::runtime_error("not implemented");
     }
 
-    bool isComplete(const Nfta& /*automaton*/)
-    {
-        throw std::runtime_error("not implemented");
-    }
-
-    void minimize(Nfta /*automaton*/)
-    {
-        throw std::runtime_error("not implemented");
-    }
-
-    void determinize(Nfta /*automaton*/)
+    void determinise(Nfta /*automaton*/)
     {
         throw std::runtime_error("not implemented");
     }
@@ -33,17 +26,17 @@ namespace mata::nfta
         throw std::runtime_error("not implemented");
     }
 
-    Nfta automatonUnion(Nfta /*aut1*/, Nfta /*aut2*/)
+    Nfta automaton_union(Nfta /*aut1*/, Nfta /*aut2*/)
     {
         throw std::runtime_error("not implemented");
     }
 
-    Nfta automatonComplementation(Nfta /*aut1*/, Nfta /*aut2*/)
+    Nfta automaton_complementation(Nfta /*aut1*/, Nfta /*aut2*/)
     {
         throw std::runtime_error("not implemented");
     }
 
-    Nfta automatonIntersection(Nfta /*aut1*/, Nfta /*aut2*/)
+    Nfta automaton_intersection(Nfta /*aut1*/, Nfta /*aut2*/)
     {
         throw std::runtime_error("not implemented");
     }

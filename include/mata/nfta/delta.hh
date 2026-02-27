@@ -426,11 +426,28 @@ public:
      */
     size_t num_of_transitions() const;
 
+    /**
+     * @brief Add a single transition.
+     */
     void add(State source, Symbol symbol, const std::vector<State>& targets);
     void add(const Transition& trans) { add(trans.source, trans.symbol, trans.targets); }
+
+    /**
+     * @brief Add multiple transitions from the same source and symbol.
+     */
+    void add(State source, const  SymbolPost& symbol_post);
+    void add_multiple(State source, Symbol symbol, const StateVectorSet& target_tuples);
+
+    /**
+     * @brief Remove a single transition.
+     */
     void remove(State source, Symbol symbol, const std::vector<State>& targets);
-    void remove(State source, Symbol symbol); // remove all targets
     void remove(const Transition& transition) { remove(transition.source, transition.symbol, transition.targets); }
+
+    /**
+     * @brief Remove an entire SymbolPost.
+     */
+    void remove(State source, Symbol symbol); // remove all targets
 
     /**
      * Check whether @c Delta contains a passed transition.
@@ -471,15 +488,6 @@ public:
      * @return std::vector<Post> Copied posts.
      */
     std::vector<StatePost> renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)>& t_renumberer)  const;
-
-    /**
-     * @brief Add transitions to multiple destinations
-     *
-     * @param source From
-     * @param symbol Symbol
-     * @param target_tuples Set of state vectors to
-     */
-    void add_multiple(State source, Symbol symbol, const StateVectorSet& target_tuples);
 
     using const_iterator = std::vector<StatePost>::const_iterator;
     const_iterator cbegin() const { return state_posts_.cbegin(); }
@@ -536,7 +544,7 @@ public:
     }
     Delta& resize_for_states(const std::vector<State>& states) {
     if (!states.empty()) {
-        State max_state = *std::max_element(states.begin(), states.end());
+        const State max_state = *std::ranges::max_element(states);
         resize_for_states(max_state);
     }
     return *this;
