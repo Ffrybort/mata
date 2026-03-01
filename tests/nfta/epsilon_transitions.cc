@@ -2,7 +2,6 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include "mata/nfta/nfta.hh"
-#include "mata/nfta/operations.hh"
 #include "mata/nfta/builder.hh"
 #include "mata/alphabet.hh"
 
@@ -128,9 +127,9 @@ TEST_CASE("mata::nfta::remove_epsilon") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
 
-        Nfta new_aut = remove_epsilon(aut, eps);
+        aut.remove_epsilon(eps);
 
-        auto transitions = new_aut.delta.get_transitions();
+        auto transitions = aut.delta.get_transitions();
 
         REQUIRE(std::none_of(transitions.begin(), transitions.end(),
             [eps](const auto& t){ return t.symbol == eps; }));
@@ -157,7 +156,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        aut = remove_epsilon(aut, eps);
+        aut.remove_epsilon(eps);
         auto transitions = aut.delta.get_transitions();
 
         REQUIRE(std::none_of(transitions.begin(), transitions.end(),
@@ -187,7 +186,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
 
-        aut = remove_epsilon(aut, eps);
+        aut.remove_epsilon(eps);
 
         auto transitions = aut.delta.get_transitions();
 

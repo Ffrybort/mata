@@ -1,7 +1,7 @@
-#include "mata/nfta/operations.hh"
-namespace mata::nfta {
+#include "mata/nfta/nfta.hh"
 
-std::vector<StateSet> get_epsilon_closures( const Delta& delta,const Symbol epsilon) {
+namespace mata::nfta {
+std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon) {
     const size_t num_of_states = delta.num_of_states();
     std::vector<StateSet> result{ num_of_states };
     std::vector<StateSet> epsilon_successors { num_of_states };
@@ -45,21 +45,21 @@ std::vector<StateSet> get_epsilon_closures( const Delta& delta,const Symbol epsi
 }
 
 
-Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) {
-    const auto num_of_states = static_cast<unsigned>(aut.delta.num_of_states());
-    std::vector<StateSet> epsilon_closures = get_epsilon_closures(aut.delta, epsilon);
+void Nfta::remove_epsilon(const Symbol epsilon) {
+    const auto num_of_states = static_cast<unsigned>(delta.num_of_states());
+    std::vector<StateSet> epsilon_closures = get_epsilon_closures(delta, epsilon);
 
-    Nfta result { aut.final_states, aut.alphabet, Delta { num_of_states } };
+    Nfta result { final_states, alphabet, Delta { num_of_states } };
     for (size_t i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
-            if (aut.is_state_final(closure_of_i)) { result.add_final_state(i); }
-            for (const SymbolPost& symbol_post : aut.delta[closure_of_i]) {
+            if (is_state_final(closure_of_i)) { result.add_final_state(i); }
+            for (const SymbolPost& symbol_post : delta[closure_of_i]) {
                 if (symbol_post.symbol == epsilon) { continue; }
                 result.delta.add(i, symbol_post);
             }
         }
     }
-    return result;
+    *this = std::move(result);
 }
 
 

@@ -19,6 +19,7 @@
 #include <mata/alphabet.hh>
 #include <mata/utils/sparse-set.hh>
 #include <mata/nfta/delta.hh>
+#include "operations.hh"
 
 namespace mata::nfta {
     class Nfta {
@@ -103,7 +104,46 @@ namespace mata::nfta {
         // comparing delta and final states, ignoring alphabet
         bool operator== (const Nfta& other) const;
 
+        /**
+         * @brief Remove epsilon transitions from an automaton. todo validate
+         *
+         * A new automaton is build and replaces this one.
+         */
+        void remove_epsilon(Symbol epsilon);
+
+        /**
+         * @brief Remove epsilon transitions from an automaton. todo
+         *
+         * The automaton is modified in-place.
+         */
+        void remove_epsilon_in_place(Symbol epsilon);
+
+        /**
+         * @brief In-place union. Does not preserve determinism. todo
+         */
+        void union_nondet_with(const Nfta& aut);
 
     }; // class Nfta
+
+    /**
+     * @brief Compute epsilon closures for each state. todo move to delta?
+     */
+    std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon);
+
+    /**
+     * @brief Union of two automata not preserving determinism. todo
+     */
+    Nfta union_nondet(const Nfta& A, const Nfta& B);
+
+    /**
+     * @brief Union preserving determinism, computed by product construction. todo
+     */
+    Nfta union_product(const Nfta& A, const Nfta& B);
+
+    /**
+     * @brief Intersection. todo
+     */
+    Nfta intersection(const Nfta& A, const Nfta& B);
+
 } // namespace mata::nfta
 #endif // MATA_NFTA_H
