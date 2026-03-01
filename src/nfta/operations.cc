@@ -1,14 +1,14 @@
 #include "mata/nfta/nfta.hh"
 
 namespace mata::nfta {
-std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon) {
+std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon, const bool include_state) {
     const size_t num_of_states = delta.num_of_states();
     std::vector<StateSet> result{ num_of_states };
     std::vector<StateSet> epsilon_successors { num_of_states };
 
     // adding immediate successors
     for (State i = 0; i < static_cast<State>(num_of_states); i++) {
-        result[i] = {i};
+        if (include_state) { result[i] = {i}; }
         const auto& state_post = delta[i];
         const SymbolPost* symbol_post_ptr = nullptr;
 
@@ -47,7 +47,7 @@ std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsi
 
 void Nfta::remove_epsilon(const Symbol epsilon) {
     const auto num_of_states = static_cast<unsigned>(delta.num_of_states());
-    std::vector<StateSet> epsilon_closures = get_epsilon_closures(delta, epsilon);
+    std::vector<StateSet> epsilon_closures = get_epsilon_closures(delta, epsilon, true);
 
     Nfta result { final_states, alphabet, Delta { num_of_states } };
     for (size_t i = 0; i < num_of_states; i++) {
@@ -62,6 +62,21 @@ void Nfta::remove_epsilon(const Symbol epsilon) {
     *this = std::move(result);
 }
 
+void Nfta::remove_epsilon_in_place(Symbol epsilon) {
+    ;
+}
 
+// void Nfta::union_nondet_in_place(const Nfta& aut) {}
+//
+//
+// std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon);
+//
+//
+// Nfta union_nondet(const Nfta& A, const Nfta& B);
+//
+//
+// Nfta union_product(const Nfta& A, const Nfta& B);
+//
+// Nfta intersection(const Nfta& A, const Nfta& B);
 
 }

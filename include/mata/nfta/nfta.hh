@@ -19,7 +19,6 @@
 #include <mata/alphabet.hh>
 #include <mata/utils/sparse-set.hh>
 #include <mata/nfta/delta.hh>
-#include "operations.hh"
 
 namespace mata::nfta {
     class Nfta {
@@ -121,14 +120,14 @@ namespace mata::nfta {
         /**
          * @brief In-place union. Does not preserve determinism. todo
          */
-        void union_nondet_with(const Nfta& aut);
+        void union_nondet_in_place(const Nfta& aut);
 
     }; // class Nfta
 
     /**
      * @brief Compute epsilon closures for each state. todo move to delta?
      */
-    std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon);
+    std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon, bool include_state);
 
     /**
      * @brief Union of two automata not preserving determinism. todo
