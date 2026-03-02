@@ -162,6 +162,6 @@ Nfa mata::nfa::algorithms::product(
         }
     }
     return product;
-} // intersection().
+} // product().
 
 } // namespace mata::nfa.
