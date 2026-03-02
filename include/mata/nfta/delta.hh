@@ -89,7 +89,7 @@ public:
 
     size_t count(const std::vector<State> s) const { return target_tuples.count(s); }
     bool empty() const { return target_tuples.empty(); }
-    size_t num_of_target_tuples() const { return target_tuples.size(); }
+    // size_t num_of_target_tuples() const { return target_tuples.size(); }
 
 
     void insert(std::vector<State> s);
@@ -332,9 +332,8 @@ public:
 
     bool operator==(const Delta& other) const;
 
-    void reserve(const size_t n) {
-        state_posts_.reserve(n);
-    };
+    void reserve(const size_t n) { state_posts_.reserve(n); }
+    void resize(const size_t n) { state_posts_.resize(n); }
 
     /**
      * @brief Get constant reference to the state post of @p source.
@@ -358,10 +357,20 @@ public:
      * If we try to access a state post of a @p source which is present in the automaton as an initial/final state,
      *  yet does not have allocated space in @c Delta, an @c empty_post is returned. Hence, the function has no side
      *  effects (no allocation is performed; iterators remain valid).
-     * @param source[in] Source state of a state post to access.
+     * @param s[in] Source state of a state post to access.
      * @return State post of @p source.
      */
     const StatePost& operator[](const State s) const { return state_post(s); }
+
+    /**
+     * @brief Renumber targets by adding an offset to each state.
+     */
+    std::vector<StatePost> renumber_targets(State offset) const;
+
+    /**
+     * @brief Renumber targets by a monotonic lambda function.
+     */
+    std::vector<StatePost> renumber_targets(const std::function<State(State)>& renumberer) const;
 
     /**
      * @brief Get mutable (non-constant) reference to the state post of @p source. todo
@@ -447,7 +456,7 @@ public:
     /**
      * @brief Remove an entire SymbolPost.
      */
-    void remove(State source, Symbol symbol); // remove all targets
+    void try_remove(State source, Symbol symbol); // remove all targets
 
     /**
      * Check whether @c Delta contains a passed transition.
@@ -478,17 +487,12 @@ public:
     }
 
     /**
-     * @brief Copy posts of delta and apply a lambda update function on each state from
-     * targets.
-     *
-     * IMPORTANT: In order to work properly, the lambda function needs to be
-     * monotonic, that is, the order of states in targets cannot change.
-     *
-     * @param t_renumberer Monotonic lambda function mapping states to different states.
-     * @return std::vector<Post> Copied posts.
-     */
-    std::vector<StatePost> renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)>& t_renumberer)  const;
+     * @brief Change targets by an offset.
 
+     * @param offset
+     * @return std::vector<StatePost> Copied posts.
+     */
+    std::vector<StatePost> renumber_targets(State offset);
     using const_iterator = std::vector<StatePost>::const_iterator;
     const_iterator cbegin() const { return state_posts_.cbegin(); }
     const_iterator cend() const { return state_posts_.cend(); }

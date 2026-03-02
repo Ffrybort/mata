@@ -178,18 +178,13 @@ void Delta::remove(const State source, const Symbol symbol, const std::vector<St
 }
 
 // todo throw or ignore?
-void Delta::remove(const State source, const Symbol symbol) {
-    auto throw_no_transition = [&]() {
-        throw std::invalid_argument(
-            "No transitions [" + std::to_string(source) + ", " + std::to_string(symbol) + " (...) ] exist."
-        );
-    };
+void Delta::try_remove(const State source, const Symbol symbol) {
     if (source >= state_posts_.size()) { ; }
     StatePost& state_transitions = state_posts_[source];
     if (state_transitions.empty() || state_transitions.back().symbol < symbol) { ; }
-    const auto symbol_transitions = state_transitions.find(symbol);
-    if (symbol_transitions == state_transitions.end()) { throw_no_transition(); }
-    state_transitions.erase(*symbol_transitions);
+    if (const auto symbol_transitions = state_transitions.find(symbol); symbol_transitions != state_transitions.end()) {
+        state_transitions.erase(*symbol_transitions);
+    }
 }
 
 
@@ -211,7 +206,7 @@ size_t Delta::num_of_transitions() const {
     size_t number_of_transitions = 0;
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost& symbol_post: state_post) {
-            number_of_transitions += symbol_post.num_of_target_tuples();
+            number_of_transitions += symbol_post.target_tuples.size();
         }
     }
     return number_of_transitions;
@@ -309,33 +304,72 @@ bool Delta::Transitions::const_iterator::operator==(const const_iterator& other)
         symbol_post_it_ == other.symbol_post_it_;
 }
 
-std::vector<StatePost> Delta::renumber_targets(const std::function<std::vector<State>(const std::vector<State>&)>& t_renumberer) const {
-    std::vector<StatePost> copied_state_posts;
-    copied_state_posts.reserve(num_of_states());
-    for(const StatePost& state_post: state_posts_) {
-        StatePost copied_state_post;
-        copied_state_post.reserve(state_post.size());
-        for(const SymbolPost& symbol_post: state_post) {
-            StateVectorSet copied_tuples;
-            copied_tuples.reserve(symbol_post.num_of_target_tuples());
-            for(const std::vector<State>& states: symbol_post.target_tuples) {
-                copied_tuples.push_back(t_renumberer(states));
+std::vector<StatePost> Delta::renumber_targets(const State offset) const {
+    std::vector<StatePost> result;
+    result.reserve(state_posts_.size());
+
+    for (const StatePost& state_post : state_posts_) {
+        StatePost new_state_post;
+        new_state_post.reserve(state_post.size());
+        for (const SymbolPost& symbol_post : state_post) {
+            StateVectorSet new_target_tuples;
+            new_target_tuples.reserve(symbol_post.target_tuples.size());
+            for (const auto& targets : symbol_post.target_tuples) {
+                std::vector<State> new_targets;
+                new_targets.reserve(targets.size());
+
+                for (const State s : targets) {
+                    new_targets.push_back(s + offset);
+                }
+                new_target_tuples.emplace_back(std::move(new_targets));
             }
-            copied_state_post.push_back(SymbolPost(symbol_post.symbol, copied_tuples));
+            new_state_post.emplace_back(
+                symbol_post.symbol,
+                std::move(new_target_tuples)
+            );
         }
-        copied_state_posts.emplace_back(copied_state_post);
+        result.emplace_back(std::move(new_state_post));
     }
-    return copied_state_posts;
+    return result;
 }
 
-StatePost& Delta::mutable_state_post(const State q) {
-    if (q >= state_posts_.size()) {
-        utils::reserve_on_insert(state_posts_, q);
-        const size_t new_size{ q + 1 };
+std::vector<StatePost> Delta::renumber_targets(const std::function<State(State)>& renumberer) const {
+    std::vector<StatePost> result;
+    result.reserve(num_of_states());
+    for (const StatePost& state_post : state_posts_) {
+        StatePost new_state_post;
+        new_state_post.reserve(state_post.size());
+        for (const SymbolPost& symbol_post : state_post) {
+            StateVectorSet new_target_tuples;
+            new_target_tuples.reserve(symbol_post.target_tuples.size());
+            for (const auto& targets : symbol_post.target_tuples) {
+                std::vector<State> new_targets;
+                new_targets.reserve(targets.size());
+                std::ranges::transform(targets
+                    ,
+                    std::back_inserter(new_targets),
+                    renumberer
+                );
+                new_target_tuples.emplace_back(std::move(new_targets));
+            }
+            new_state_post.emplace_back(
+                symbol_post.symbol,
+                std::move(new_target_tuples)
+            );
+        }
+        result.emplace_back(std::move(new_state_post));
+    }
+    return result;
+}
+
+StatePost& Delta::mutable_state_post(const State s) {
+    if (s >= state_posts_.size()) {
+        utils::reserve_on_insert(state_posts_, s);
+        const size_t new_size{ s + 1 };
         state_posts_.resize(new_size);
     }
 
-    return state_posts_[q];
+    return state_posts_[s];
 }
 
 void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& renaming) {
@@ -483,7 +517,7 @@ bool StatePost::Moves::const_iterator::operator==(const StatePost::Moves::const_
 size_t StatePost::num_of_moves() const {
     size_t counter{ 0 };
     for (const SymbolPost& symbol_post: *this) {
-        counter += symbol_post.num_of_target_tuples();
+        counter += symbol_post.target_tuples.size();
     }
     return counter;
 }

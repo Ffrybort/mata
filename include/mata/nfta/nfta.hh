@@ -29,20 +29,19 @@ namespace mata::nfta {
 
     public:
         explicit Nfta(
-            const utils::SparseSet<State>& final_states = {},
+            utils::SparseSet<State> final_states = {},
             Alphabet* alphabet = nullptr,
-            Delta  delta = {}
+            Delta delta = {}
         )
             :
-              final_states(final_states),
+              final_states(std::move(final_states)),
               alphabet(alphabet),
               delta(std::move(delta))
-        {
-        }
-        explicit Nfta(size_t num_of_states) : final_states({}), alphabet(nullptr), delta(num_of_states) {}
+        {}
+        explicit Nfta(const size_t num_of_states) : final_states({}), alphabet(nullptr), delta(num_of_states) {}
 
-        Nfta(const Nfta&) = delete; // todo copy with a null alphabet? or explicitly copy the pointer?
-        Nfta& operator=(const Nfta&) = delete;
+        Nfta(const Nfta& other) = default;
+        Nfta& operator=(const Nfta&) = default;
 
         Nfta(Nfta&&) noexcept = default;
         Nfta& operator=(Nfta&&) noexcept = default;
@@ -122,6 +121,16 @@ namespace mata::nfta {
          */
         void union_nondet_in_place(const Nfta& aut);
 
+        /**
+         * @brief Check if the automaton is deterministic. todo
+         */
+        bool is_deterministic() const { return true; }
+
+        /**
+         * @brief Check if the automaton is complete. todo
+         */
+        bool is_complete() const { return true; }
+
     }; // class Nfta
 
     /**
@@ -132,7 +141,7 @@ namespace mata::nfta {
     /**
      * @brief Union of two automata not preserving determinism. todo
      */
-    Nfta union_nondet(const Nfta& A, const Nfta& B);
+    inline Nfta union_nondet(const Nfta& A, const Nfta& B) { Nfta result{A}; result.union_nondet_in_place(B); return result; }
 
     /**
      * @brief Union preserving determinism, computed by product construction. todo

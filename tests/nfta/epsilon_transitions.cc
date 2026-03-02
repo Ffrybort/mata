@@ -106,6 +106,49 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         check_set(closures[6], {6});
         check_set(closures[7], {7});
     }
+
+    SECTION("No reflexivity when include_state is false") {
+        Delta delta;
+
+        // 0 -> 1 -> 2
+        delta.add(0, eps, {1});
+        delta.add(1, eps, {2});
+
+        auto closures = get_epsilon_closures(delta, eps, false);
+
+        REQUIRE(closures[0].count(0) == 0);
+        REQUIRE(closures[1].count(1) == 0);
+        REQUIRE(closures[2].count(2) == 0);
+
+        REQUIRE(closures[0].contains(1));
+        REQUIRE(closures[0].contains(2));
+
+        REQUIRE(closures[1].contains(2));
+        REQUIRE(closures[1].size() == 1);
+
+        REQUIRE(closures[2].empty());
+    }
+
+    SECTION("Cycle still includes state even if include_state is false") {
+        Delta delta;
+
+        // 0 <-> 1, and 1 -> 2
+        delta.add(0, eps, {1});
+        delta.add(1, eps, {0});
+        delta.add(1, eps, {2});
+
+        auto closures = get_epsilon_closures(delta, eps, false);
+
+        REQUIRE(closures[0].contains(1));
+        REQUIRE(closures[0].contains(0));
+        REQUIRE(closures[0].contains(2));
+
+        REQUIRE(closures[1].contains(0));
+        REQUIRE(closures[1].contains(1));
+        REQUIRE(closures[1].contains(2));
+
+        REQUIRE(closures[2].empty());
+    }
 }
 
 TEST_CASE("mata::nfta::remove_epsilon") {
@@ -203,4 +246,157 @@ TEST_CASE("mata::nfta::remove_epsilon") {
             }));
     }
 }
+
+TEST_CASE("mata::nfta::remove_epsilon_in_place") {
+
+    Delta delta;
+    OnTheFlyAlphabet alphabet;
+    alphabet.add_new_symbol("eps");
+    Symbol eps = alphabet.translate_symb("eps");
+
+    SECTION("Single epsilon transition") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 eps q1
+            q1 a0 q2
+        )";
+
+        Nfta aut = parse_from_mata(input, &alphabet);
+
+        aut.remove_epsilon_in_place(eps);
+
+        auto transitions = aut.delta.get_transitions();
+
+        // no epsilon transitions remain
+        REQUIRE(std::none_of(transitions.begin(), transitions.end(),
+            [eps](const auto& t){ return t.symbol == eps; }));
+
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
+            [&](const auto& t){
+                return t.source == 0 &&
+                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
+            }));
+    }
+
+    SECTION("Multiple epsilon transitions from same source") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 eps q1
+            q0 eps (q2)
+            q1 a0 q3
+            q2 a0 q4
+        )";
+
+        Nfta aut = parse_from_mata(input, &alphabet);
+
+        aut.remove_epsilon_in_place(eps);
+
+        auto transitions = aut.delta.get_transitions();
+
+        REQUIRE(std::none_of(transitions.begin(), transitions.end(),
+            [eps](const auto& t){ return t.symbol == eps; }));
+
+        auto count = std::ranges::count_if(transitions,
+            [&](const auto& t){
+                return t.source == 0 &&
+                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
+            });
+
+        REQUIRE(count == 2);
+    }
+
+    SECTION("Epsilon cycle") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 eps q1
+            q1 eps q0
+            q1 a0 q2
+        )";
+
+        Nfta aut = parse_from_mata(input, &alphabet);
+
+        aut.remove_epsilon_in_place(eps);
+
+        auto transitions = aut.delta.get_transitions();
+
+        REQUIRE(std::none_of(transitions.begin(), transitions.end(),
+            [eps](const auto& t){ return t.symbol == eps; }));
+
+        // transition from q1 must also appear on q0
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
+            [&](const auto& t){
+                return t.source == 0 &&
+                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
+            }));
+    }
+
+    SECTION("Final state propagation") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Final q1
+            q0 eps q1
+        )";
+
+        Nfta aut = parse_from_mata(input, &alphabet);
+
+        aut.remove_epsilon_in_place(eps);
+
+        // q0 should become final
+        REQUIRE(aut.is_state_final(0));
+    }
+
+    SECTION("Mixed epsilon and normal transitions") {
+        std::string input = R"(
+            @NFTA-explicit
+            %States-marked
+            %Alphabet-auto
+            %Initial q0
+            q0 eps q1
+            q0 a1 q2
+            q1 a0 q3
+            q1 eps q4
+            q4 a2 q5
+        )";
+
+        Nfta aut = parse_from_mata(input, &alphabet);
+
+        aut.remove_epsilon_in_place(eps);
+
+        auto transitions = aut.delta.get_transitions();
+
+        REQUIRE(std::none_of(transitions.begin(), transitions.end(),
+            [eps](const auto& t){ return t.symbol == eps; }));
+
+        // original non-epsilon transition must stay
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
+            [&](const auto& t){
+                return t.source == 0 &&
+                       alphabet.reverse_translate_symbol(t.symbol) == "a1";
+            }));
+
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
+            [&](const auto& t){
+                return t.source == 0 &&
+                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
+            }));
+
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
+            [&](const auto& t){
+                return t.source == 0 &&
+                       alphabet.reverse_translate_symbol(t.symbol) == "a2";
+            }));
+    }
+}
+
 
