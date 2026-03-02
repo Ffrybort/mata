@@ -73,7 +73,7 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     }
 
     // add new transitions
-    for (size_t i = 0; i < num_of_states; i++) {
+    for (State i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
             if (is_state_final(closure_of_i)) { add_final_state(i); } // should work right?
             for (const SymbolPost& symbol_post : delta[closure_of_i]) {
@@ -85,15 +85,13 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
 }
 
 void Nfta::union_nondet_in_place(const Nfta& aut) {
-    const size_t orig_num_of_states{ delta.num_of_states() };
-    const size_t aut_num_of_states{ aut.delta.num_of_states() };
-    const size_t new_num_of_states{ orig_num_of_states + aut_num_of_states };
-
     if (this == &aut) { return; }
-
     if (final_states.empty()) { *this = aut; return; }
     if (aut.final_states.empty()) { return; }
 
+    const size_t orig_num_of_states{ delta.num_of_states() };
+    const size_t aut_num_of_states{ aut.delta.num_of_states() };
+    const size_t new_num_of_states{ orig_num_of_states + aut_num_of_states };
     this->delta.reserve(new_num_of_states);
 
     auto renumber_states = [&](const State st) {
@@ -108,12 +106,21 @@ void Nfta::union_nondet_in_place(const Nfta& aut) {
     }
 }
 
+Nfta union_nondet(const Nfta& A, const Nfta& B) {
+    if (A.final_states.empty() && B.final_states.empty()) {return Nfta();}
+    Nfta result{A}; result.union_nondet_in_place(B); return result;
+}
+
 /// nfta must be epsilon free (for now)
 Nfta union_product(const Nfta& A, const Nfta& B) {
     assert(A.is_deterministic());
     assert(B.is_deterministic());
     assert(A.is_complete());
     assert(B.is_complete());
+
+    if (A.final_states.empty() || B.final_states.empty()) { return union_nondet(A, B); }
+    if (A == B) {return A; }
+
     Nfta result;
     utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
     std::deque<State> worklist{}; // Set of product states to process.
@@ -122,6 +129,19 @@ Nfta union_product(const Nfta& A, const Nfta& B) {
         return A.is_state_final(state_A) || B.is_state_final(state_B);
     };
 
+    // Initialize pairs to process with final state pairs (initial states from top-down perspective)
+    for (const State initial_A : A.final_states) {
+        for (const State initial_B : B.final_states) {
+            // Update product with initial state pairs.
+            const State product_initial_state = result.delta.add_state();
+            state_mapping.insert(initial_A, initial_B, product_initial_state);
+            worklist.push_back(product_initial_state);
+            if (final_condition(initial_A, initial_B)) { // this is redundant todo
+                result.final_states.insert(product_initial_state);
+            }
+        }
+    }
+
     auto create_product_state_and_symbol_post = [&](
         const std::vector<State>& targets_A, const std::vector<State>& targets_B, SymbolPost& product_symbol_post) {
         assert(targets_A.size() == targets_B.size());
@@ -129,7 +149,7 @@ Nfta union_product(const Nfta& A, const Nfta& B) {
         result_targets.reserve(targets_A.size());
         for (size_t i = 0; i < targets_A.size(); i++) {
             State product_target = state_mapping.get(targets_A[i], targets_B[i] );
-            if ( product_target == Limits::max_state) {
+            if (product_target == Limits::max_state) {
                 product_target = result.delta.add_state();
                 assert(product_target < Limits::max_state);
                 state_mapping.insert(targets_A[i],targets_B[i], product_target);
@@ -137,9 +157,11 @@ Nfta union_product(const Nfta& A, const Nfta& B) {
                 if (final_condition(targets_A[i], targets_B[i])) {
                     result.add_final_state(product_target);
                 }
+
             }
+            result_targets.push_back(product_target);
         }
-        //TODO: Push_back all of them and sort at the could be faster.
+        //TODO: Push_back all of them and sort later could be faster.
         product_symbol_post.insert(std::move(result_targets));
     };
 

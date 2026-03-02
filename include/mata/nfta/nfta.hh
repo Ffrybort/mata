@@ -141,7 +141,7 @@ namespace mata::nfta {
     /**
      * @brief Union of two automata not preserving determinism. todo
      */
-    inline Nfta union_nondet(const Nfta& A, const Nfta& B) { Nfta result{A}; result.union_nondet_in_place(B); return result; }
+    Nfta union_nondet(const Nfta& A, const Nfta& B);
 
     /**
      * @brief Union preserving determinism, computed by product construction. todo
