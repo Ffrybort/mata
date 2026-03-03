@@ -88,7 +88,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
     NameStateMap state_map = {};
     add_states(state_map, inter_aut->states_names, aut.delta);
 
-    // both initial and final states are added to final_states in nfta
+    // both initial and final states are added to initial_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
 
     // symbols (and arities)
@@ -124,7 +124,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
     aut.alphabet = alphabet;
     add_states(state_map, inter_aut->states_names, aut.delta);
 
-    // both initial and final states are added to final_states in nfta
+    // both initial and final states are added to initial_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
 
     // symbols

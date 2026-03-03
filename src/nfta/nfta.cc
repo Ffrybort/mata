@@ -43,7 +43,7 @@ void Nfta::print_mata(std::ostream& os) const
         os << "%States-marked " << std::endl;
         os << "%Alphabet-auto " << std::endl;
         os << "%Initial ";
-        for (State state : final_states) { os << "q" << state << " "; }
+        for (State state : initial_states) { os << "q" << state << " "; }
         os << std::endl;
 
         for (const auto& transition : delta.get_transitions())
@@ -85,7 +85,7 @@ void Nfta::print_mata(std::ostream& os) const
         if (type == "bottom-up") {os << "Final states: "; }
         else { os << "Initial states: "; }
 
-        for (State s : final_states) {
+        for (State s : initial_states) {
             os << "q" << s << " ";
         }
         os << std::endl;
@@ -124,26 +124,26 @@ void Nfta::print_mata(std::ostream& os) const
         delta.defragment(is_staying, renaming);
 
         utils::SparseSet<State> new_final_states;
-        for (const State s : final_states) {
+        for (const State s : initial_states) {
             if (is_staying[s]) {
                 assert(s < renaming.size());
                 new_final_states.insert(renaming[s]);
             }
         }
-        final_states = std::move(new_final_states);
+        initial_states = std::move(new_final_states);
     }
 
 
     bool Nfta::operator== (const Nfta& other) const {
         return delta.num_of_states() == other.delta.num_of_states()
-            && final_states == other.final_states
+            && initial_states == other.initial_states
             && delta == other.delta
             && alphabet == other.alphabet;
     }
 
     bool Nfta::has_equal_structure (const Nfta& other) const {
         return delta.num_of_states() == other.delta.num_of_states()
-            && final_states == other.final_states
+            && initial_states == other.initial_states
             && delta == other.delta;
     }
 

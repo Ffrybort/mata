@@ -23,7 +23,7 @@
 namespace mata::nfta {
     class Nfta {
     public:
-        utils::SparseSet<State> final_states; // a set of final (or initial) states
+        utils::SparseSet<State> initial_states; // a set of final (or initial) states
         Alphabet* alphabet;
         Delta delta; // states live in delta, so do functions like add_state()
 
@@ -34,11 +34,11 @@ namespace mata::nfta {
             Delta delta = {}
         )
             :
-              final_states(std::move(final_states)),
+              initial_states(std::move(final_states)),
               alphabet(alphabet),
               delta(std::move(delta))
         {}
-        explicit Nfta(const size_t num_of_states) : final_states({}), alphabet(nullptr), delta(num_of_states) {}
+        explicit Nfta(const size_t num_of_states) : initial_states({}), alphabet(nullptr), delta(num_of_states) {}
 
         Nfta(const Nfta& other) = default;
         Nfta& operator=(const Nfta&) = default;
@@ -51,7 +51,7 @@ namespace mata::nfta {
          */
         void add_final_state(const State state) {
             delta.add_state(state);
-            final_states.insert(state);
+            initial_states.insert(state);
 		}
 
         /**
@@ -61,7 +61,7 @@ namespace mata::nfta {
         void add_final_states(const Iterable& states)
         {
             add_state(*std::max_element(states.begin(), states.end()));
-            final_states.insert(states.begin(), states.end());
+            initial_states.insert(states.begin(), states.end());
         }
 
         /**
@@ -70,13 +70,13 @@ namespace mata::nfta {
         void add_final_states(const std::initializer_list<State> states)
         {
             delta.add_state(*std::ranges::max_element(states));
-            final_states.insert(states);
+            initial_states.insert(states);
         }
 
         /**
          * @brief Check whether a state is final (or initial).
          */
-        bool is_state_final(const State& state) const { return final_states.contains(state); }
+        bool is_state_final(const State& state) const { return initial_states.contains(state); }
 
         /**
          * @brief Print the automaton in a parsable mata format.
@@ -91,12 +91,12 @@ namespace mata::nfta {
         /**
          * @brief Get the set of final states.
          */
-        const utils::SparseSet<State>& get_final_states() const { return final_states; }
+        const utils::SparseSet<State>& get_final_states() const { return initial_states; }
 
         /**
          * @brief Check if the automaton is empty - no final states and no transitions in delta.
          */
-        bool is_empty() const { return final_states.empty() || delta.is_empty(); }
+        bool is_empty() const { return initial_states.empty() || delta.is_empty(); }
 
         /**
          * @brief Remove unused states and rename the rest.
@@ -136,7 +136,8 @@ namespace mata::nfta {
         /**
          * @brief Check if the automaton is deterministic. todo
          */
-        bool is_deterministic() const { return true; }
+        bool is_bottom_up_deterministic() const;
+        bool is_top_down_deterministic() const;
 
         /**
          * @brief Check if the automaton is complete. todo
@@ -161,7 +162,7 @@ namespace mata::nfta {
     Nfta union_product(const Nfta& A, const Nfta& B);
 
     /**
-     * @brief Intersection. todo
+     * @brief Intersection.
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
 
