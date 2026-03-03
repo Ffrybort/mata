@@ -399,14 +399,37 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(d.is_sorted());
     }
 
-    SECTION("Delta detects unsorted target tuples") {
+    SECTION("Delta detects duplicate symbol posts") {
         Delta d;
 
-        d.add(5, 1, {2});
+        d.add(0, 5, {2});
 
-        // Break invariant manually
-        auto& sp = d.mutable_state_post(5);
-        sp.push_back(SymbolPost{0, StateVectorSet{ {2},  {3, 2}}});
+        auto& sp = d.mutable_state_post(0); // another symbol post with source 0 symbol 5
+        sp.push_back(SymbolPost{5, StateVectorSet{ {2},  {3}}});
+
+        CHECK_FALSE(d.is_sorted());
+    }
+
+    SECTION("Delta detects unsorted target tuples") {
+        Delta d {1};
+
+        auto& sp = d.mutable_state_post(0);
+        StateVectorSet targets;
+        targets.push_back({3});
+        targets.push_back({2});
+        targets.push_back({1});
+        sp.push_back(SymbolPost{5, std::move(targets)});
+
+        CHECK_FALSE(d.is_sorted());
+    }
+
+    SECTION("Delta detects unsorted SymbolPosts") {
+        Delta d;
+
+        auto& sp = d.mutable_state_post(0);
+
+        sp.push_back(SymbolPost{2, StateVectorSet{{1}}});
+        sp.push_back(SymbolPost{1, StateVectorSet{{1}}});
 
         CHECK_FALSE(d.is_sorted());
     }

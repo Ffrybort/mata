@@ -220,10 +220,6 @@ bool SymbolPost::is_sorted() const {
     if (!utils::is_sorted(target_tuples.to_vector())) {
         return false;
     }
-    // Must not contain duplicates
-    if (std::ranges::adjacent_find(target_tuples) != target_tuples.end()) {
-        return false;
-    }
     return true;
 }
 
@@ -233,7 +229,7 @@ bool Delta::is_sorted() {
             return false;
         }
         for (const SymbolPost& symbol_post : state_post) {
-            if (!symbol_post.is_sorted()) { return false;}
+            if (!symbol_post.is_sorted()) { return false; }
         }
     }
     return true;
