@@ -104,8 +104,15 @@ namespace mata::nfta {
         void defragment(const BoolVector& is_staying);
 
 
-        // comparing delta and final states, ignoring alphabet
+        /**
+         * @brief Check if the two automata are identical. Alphabets are compared as pointers.
+         */
         bool operator== (const Nfta& other) const;
+
+        /**
+         * @brief Check if the two automata are identical. Alphabets are ignored.
+         */
+        bool has_equal_structure (const Nfta& other) const;
 
         /**
          * @brief Remove epsilon transitions from an automaton. todo validate

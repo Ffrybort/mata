@@ -133,14 +133,19 @@ void Nfta::print_mata(std::ostream& os) const
         final_states = std::move(new_final_states);
     }
 
-    /**
-     * @brief Check if the two automata are identical. Alphabets are not compared -
-     * only that transitions use the same symbol representations.
-     *
-     */
+
     bool Nfta::operator== (const Nfta& other) const {
+        return delta.num_of_states() == other.delta.num_of_states()
+            && final_states == other.final_states
+            && delta == other.delta
+            && alphabet == other.alphabet;
+    }
+
+    bool Nfta::has_equal_structure (const Nfta& other) const {
         return delta.num_of_states() == other.delta.num_of_states()
             && final_states == other.final_states
             && delta == other.delta;
     }
+
+
 }

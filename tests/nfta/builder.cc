@@ -291,7 +291,7 @@ TEST_CASE("mata::nfta::builder") {
         OnTheFlyAlphabet alphabet2;
         Nfta aut2 = parse_from_mata(printed, &alphabet2);
 
-        bool check = aut1 == aut2;
+        bool check = aut1.has_equal_structure(aut2);
         CHECK(check);
     }
 
