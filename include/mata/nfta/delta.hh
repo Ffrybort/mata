@@ -98,18 +98,19 @@ public:
     // THIS BREAKS THE SORTEDNESS INVARIANT,
     // dangerous,
     // but useful for adding states in a random order to sort later (supposedly more efficient than inserting in a random order)
-    void push_back(const std::vector<State> s) { target_tuples.push_back(s); }
+    void push_back(const std::vector<State>& s) { target_tuples.push_back(s); }
 
     template <typename... Args>
     StateVectorSet& emplace_back(Args&&... args) {
-    // Forwardinng the variadic template pack of arguments to the emplace_back() of the underlying container.
+    // Forwarding the variadic template pack of arguments to the emplace_back() of the underlying container.
         return target_tuples.emplace_back(std::forward<Args>(args)...);
     }
 
-    void erase(const std::vector<State> s) { target_tuples.erase(s); }
+    void erase(const std::vector<State>& s) { target_tuples.erase(s); }
 
     StateVectorSet::const_iterator find(const std::vector<State> s) const { return target_tuples.find(s); }
     StateVectorSet::iterator find(const std::vector<State> s) { return target_tuples.find(s); }
+    bool is_sorted() const;
 }; // class mata::nfta::SymbolPost.
 
 /**
@@ -140,10 +141,9 @@ public:
     using super::pop_back;
     using super::filter;
     using super::clear;
-
     using super::erase;
-
     using super::find;
+
     iterator find(const Symbol symbol) {
         static SymbolPost symbol_post{};
         symbol_post.symbol = symbol;
@@ -229,6 +229,7 @@ public:
      * Count the number of all moves in @c StatePost.
      */
     size_t num_of_moves() const;
+
 }; // class StatePost.
 
 /**
@@ -485,6 +486,8 @@ public:
             this->state_posts_.push_back(pst);
         }
     }
+
+    bool is_sorted();
 
     /**
      * @brief Change targets by an offset.

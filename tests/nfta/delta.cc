@@ -384,6 +384,32 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(delta.is_empty());
     }
 
+    SECTION("Delta is_sorted on empty delta") {
+        Delta d;
+        CHECK(d.is_sorted());
+    }
+
+    SECTION("Delta remains sorted after normal insertions") {
+        Delta d;
+
+        d.add(0, 1, {2, 5, 6});
+        d.add(0, 2, {3});
+        d.add(1, 1, {});
+
+        CHECK(d.is_sorted());
+    }
+
+    SECTION("Delta detects unsorted target tuples") {
+        Delta d;
+
+        d.add(5, 1, {2});
+
+        // Break invariant manually
+        auto& sp = d.mutable_state_post(5);
+        sp.push_back(SymbolPost{0, StateVectorSet{ {2},  {3, 2}}});
+
+        CHECK_FALSE(d.is_sorted());
+    }
 }
 
 

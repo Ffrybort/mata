@@ -216,6 +216,30 @@ bool Delta::is_empty() const {
     return std::ranges::all_of(state_posts_, [](const StatePost& state_post) { return state_post.empty(); });
 }
 
+bool SymbolPost::is_sorted() const {
+    if (!utils::is_sorted(target_tuples.to_vector())) {
+        return false;
+    }
+    // Must not contain duplicates
+    if (std::ranges::adjacent_find(target_tuples) != target_tuples.end()) {
+        return false;
+    }
+    return true;
+}
+
+bool Delta::is_sorted() {
+    for (const StatePost& state_post : state_posts_) {
+        if (!utils::is_sorted(state_post.to_vector())) {
+            return false;
+        }
+        for (const SymbolPost& symbol_post : state_post) {
+            if (!symbol_post.is_sorted()) { return false;}
+        }
+    }
+    return true;
+}
+
+
 Delta::Transitions::const_iterator::const_iterator(const Delta& delta): delta_{ &delta } {
     const size_t post_size = delta_->num_of_states();
     for (size_t i = 0; i < post_size; ++i) {
