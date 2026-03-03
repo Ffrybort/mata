@@ -1,7 +1,8 @@
 file (GLOB_RECURSE MATA_TEST_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
 add_executable (tests ${MATA_TEST_SOURCES}
         nfta/epsilon_transitions.cc
-        nfta/union.cc)
+        nfta/union.cc
+        nfta/intersection.cc)
 
 target_link_libraries (tests PRIVATE libmata Catch2::Catch2WithMain)
 

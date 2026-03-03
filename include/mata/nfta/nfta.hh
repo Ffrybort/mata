@@ -94,6 +94,11 @@ namespace mata::nfta {
         const utils::SparseSet<State>& get_final_states() const { return final_states; }
 
         /**
+         * @brief Check if the automaton is empty - no final states and no transitions in delta.
+         */
+        bool is_empty() const { return final_states.empty() || delta.is_empty(); }
+
+        /**
          * @brief Remove unused states and rename the rest.
          */
         void defragment(const BoolVector& is_staying);
@@ -110,14 +115,14 @@ namespace mata::nfta {
         void remove_epsilon(Symbol epsilon);
 
         /**
-         * @brief Remove epsilon transitions from an automaton. todo
+         * @brief Remove epsilon transitions from an automaton.
          *
          * The automaton is modified in-place.
          */
         void remove_epsilon_in_place(Symbol epsilon);
 
         /**
-         * @brief In-place union. Does not preserve determinism. todo
+         * @brief In-place union. Does not preserve determinism.
          */
         void union_nondet_in_place(const Nfta& aut);
 
@@ -134,17 +139,17 @@ namespace mata::nfta {
     }; // class Nfta
 
     /**
-     * @brief Compute epsilon closures for each state. todo move to delta?
+     * @brief Compute epsilon closures for each state.
      */
     std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon, bool include_state);
 
     /**
-     * @brief Union of two automata not preserving determinism. todo
+     * @brief Union of two automata not preserving determinism.
      */
     Nfta union_nondet(const Nfta& A, const Nfta& B);
 
     /**
-     * @brief Union preserving determinism, computed by product construction. todo
+     * @brief Union preserving determinism, computed by product construction.
      */
     Nfta union_product(const Nfta& A, const Nfta& B);
 
@@ -152,6 +157,9 @@ namespace mata::nfta {
      * @brief Intersection. todo
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
+
+    template<typename FinalCondition>
+    Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition);
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

@@ -111,7 +111,7 @@ Nfta union_nondet(const Nfta& A, const Nfta& B) {
     Nfta result{A}; result.union_nondet_in_place(B); return result;
 }
 
-/// nfta must be epsilon free (for now)
+/// nfta must be epsilon free
 Nfta union_product(const Nfta& A, const Nfta& B) {
     assert(A.is_deterministic());
     assert(B.is_deterministic());
@@ -121,13 +121,18 @@ Nfta union_product(const Nfta& A, const Nfta& B) {
     if (A.final_states.empty() || B.final_states.empty()) { return union_nondet(A, B); }
     if (A == B) {return A; }
 
+    auto result = product(A, B,[&](const State a, const State b){
+            return A.is_state_final(a) || B.is_state_final(b); });
+    return result;
+}
+
+template<typename FinalCondition>
+Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition) {
     Nfta result;
-    utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
+        utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
     std::deque<State> worklist{}; // Set of product states to process.
 
-    auto final_condition = [&](const State state_A, const State state_B) {
-        return A.is_state_final(state_A) || B.is_state_final(state_B);
-    };
+    bool result_delta_empty = true;
 
     // Initialize pairs to process with final state pairs (initial states from top-down perspective)
     for (const State initial_A : A.final_states) {
@@ -136,7 +141,7 @@ Nfta union_product(const Nfta& A, const Nfta& B) {
             const State product_initial_state = result.delta.add_state();
             state_mapping.insert(initial_A, initial_B, product_initial_state);
             worklist.push_back(product_initial_state);
-            if (final_condition(initial_A, initial_B)) { // this is redundant todo
+            if (final_condition(initial_A, initial_B)) {
                 result.final_states.insert(product_initial_state);
             }
         }
@@ -160,43 +165,54 @@ Nfta union_product(const Nfta& A, const Nfta& B) {
 
             }
             result_targets.push_back(product_target);
+            result_delta_empty = false;
         }
         //TODO: Push_back all of them and sort later could be faster.
         product_symbol_post.insert(std::move(result_targets));
     };
 
     while (!worklist.empty()) {
-        const State product_source = worklist.back();;
+        const State product_source = worklist.back();
         worklist.pop_back();
         const State source_A = state_mapping.get_first_inverted(product_source);
         const State source_B = state_mapping.get_second_inverted(product_source);
 
-        // Compute classic product for current state pair.
         utils::SynchronizedUniversalIterator<utils::OrdVector<SymbolPost>::const_iterator> sync_iterator(2);
         push_back(sync_iterator, A.delta[source_A]);
         push_back(sync_iterator, B.delta[source_B]);
 
         while (sync_iterator.advance()) {
             const std::vector<StatePost::const_iterator>& same_symbol_posts{ sync_iterator.get_current() };
-            assert(same_symbol_posts.size() == 2); // One move per state in the pair.
+            assert(same_symbol_posts.size() == 2);
 
             const Symbol symbol = same_symbol_posts[0]->symbol;
-            SymbolPost product_symbol_post{ symbol };
+            SymbolPost product_symbol_post { symbol };
             for (const auto& targets_A : same_symbol_posts[0]->target_tuples) {
                 for (const auto& targets_B : same_symbol_posts[1]->target_tuples) {
                     create_product_state_and_symbol_post(targets_A, targets_B, product_symbol_post);
                 }
             }
-            StatePost &product_state_post{result.delta.mutable_state_post(product_source)};
+            StatePost &product_state_post = result.delta.mutable_state_post(product_source);
             //Here we are sure that we are working with the largest symbol so far, since we iterate through
             //the symbol posts of the lhs and rhs in order. So we can just push_back (not insert).
             product_state_post.push_back(std::move(product_symbol_post));
         }
     }
-
+    assert(result.delta.is_sorted());
+    if (result_delta_empty) { return Nfta(); }
     return result;
 }
 
-// Nfta intersection(const Nfta& A, const Nfta& B);
+Nfta intersection(const Nfta& A, const Nfta& B) {
+    assert(A.is_complete());
+    assert(B.is_complete());
+
+    if (A.final_states.empty() || B.final_states.empty()) { return Nfta(); }
+    if (A == B) {return A; }
+
+    auto result = product(A, B,[&](const State a, const State b){
+            return A.is_state_final(a) && B.is_state_final(b); });
+    return result;
+}
 
 }

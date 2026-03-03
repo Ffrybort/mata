@@ -212,7 +212,7 @@ size_t Delta::num_of_transitions() const {
     return number_of_transitions;
 }
 
-bool Delta::is_empty() const {
+bool Delta::is_empty() const { // todo should this check the symbol posts if they actually contain any targets?
     return std::ranges::all_of(state_posts_, [](const StatePost& state_post) { return state_post.empty(); });
 }
 

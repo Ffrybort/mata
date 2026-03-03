@@ -7,8 +7,8 @@
 #include <mata/alphabet.hh>
 
 using namespace mata::nfta;
-
 using namespace mata;
+
 TEST_CASE("mata::nfta::union_nondet") {
 
     OnTheFlyAlphabet alphabet;
