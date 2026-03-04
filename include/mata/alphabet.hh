@@ -470,7 +470,7 @@ public:
 class RankedOnTheFlyAlphabet : public Alphabet {
 public:
     using StringArity = std::pair<std::string, unsigned>;
-    using SymbolArityMap = std::unordered_map<StringArity, Symbol>;
+    using SymbolArityMap = std::unordered_map<StringArity, Symbol>; // todo see if the 2d map is usable
 
     explicit RankedOnTheFlyAlphabet(const Symbol init_symbol = 0) : next_symbol_value_(init_symbol) {};
     RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet& alphabet) = default;
@@ -501,7 +501,7 @@ public:
      * @param init_symbol Start of a sequence of values to use for new symbols.
      */
     explicit RankedOnTheFlyAlphabet(const std::vector<StringArity>& symbols, const Symbol init_symbol = 0)
-        : symbol_map_(), next_symbol_value_(init_symbol) { add_symbols_from(symbols); }
+        :  next_symbol_value_(init_symbol) { add_symbols_from(symbols); }
 
     /**
      * Create alphabet from a list of symbol names and arities.
@@ -511,7 +511,7 @@ public:
      */
     explicit RankedOnTheFlyAlphabet(
         const std::vector<std::string>& symbols, std::vector<unsigned> arities, const Symbol init_symbol = 0)
-        : symbol_map_(), next_symbol_value_(init_symbol) {
+        :  next_symbol_value_(init_symbol) {
         if (symbols.size() != arities.size()) { throw std::invalid_argument("symbols and arities sizes differ"); }
         for (size_t i = 0; i < symbols.size(); ++i) { add_new_symbol(StringArity{symbols[i], arities[i]}); }
     }
@@ -527,7 +527,7 @@ public:
     /**
      * @brief Add symbols from an iterable of StringArity (pair of std::string and unsigned).
      */
-    RankedOnTheFlyAlphabet(std::initializer_list<std::pair<StringArity, Symbol>> name_symbol_map) : symbol_map_{} {
+    RankedOnTheFlyAlphabet(std::initializer_list<std::pair<StringArity, Symbol>> name_symbol_map)  {
         for (auto&& [name, symbol]: name_symbol_map) {
             add_new_symbol(name, symbol);
         }

@@ -3,7 +3,6 @@
 
 #include <mata/nfta/nfta.hh>
 #include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 
 using namespace mata::nfta;
@@ -49,32 +48,30 @@ TEST_CASE("mata::nfta::intersection_product") {
         Nfta C = intersection(A, B);
 
         CHECK(C.delta.num_of_states() == 1);
-        CHECK(C.is_state_final(0));
+        CHECK(C.is_state_initial(0));
         CHECK(C.delta.contains(0, alphabet["a"], {}));
     }
 
-    SECTION("Intersection – 3-state reachable product") {
+    SECTION("Intersection 3-state product") {
 
         Nfta A({1}, &alphabet, Delta(2));
         Nfta B({0}, &alphabet, Delta(2));
-
-         // A: final = {1}
-         // 0 --f--> 1
-         // 1 --f--> 0
-         //
-         // B: final = {0}
-         // 0 --f--> 1
-         // 1 --f--> 1
-
+        // A: final = {1}
+        // 0 --f--> 1
+        // 1 --f--> 0
+        //
+        // B: final = {0}
+        // 0 --f--> 1
+        // 1 --f--> 1
         A.delta.add(0, alphabet["f"], {1});
         A.delta.add(1, alphabet["f"], {0});
         A.delta.add(1, alphabet["a"], {});
-        A.add_final_state(1);
+        A.add_initial_state(1);
 
         B.delta.add(0, alphabet["f"], {1});
         B.delta.add(1, alphabet["f"], {1});
         B.delta.add(1, alphabet["a"], {});
-        B.add_final_state(0);
+        B.add_initial_state(0);
 
         Nfta C = intersection(A, B);
 
@@ -84,7 +81,7 @@ TEST_CASE("mata::nfta::intersection_product") {
         // (1, 1) 2
         // (0, 0) is unreachable
         REQUIRE(C.delta.num_of_states() == 3);
-        CHECK(C.is_state_final(0));
+        CHECK(C.is_state_initial(0));
 
         // Transition checks
         CHECK(C.delta.contains(0, alphabet["f"], {1}));

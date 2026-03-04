@@ -50,10 +50,10 @@ void Nfta::remove_epsilon(const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(delta.num_of_states());
     std::vector<StateSet> epsilon_closures = get_epsilon_closures(delta, epsilon);
 
-    Nfta result { final_states, alphabet, Delta { num_of_states } };
+    Nfta result { initial_states, alphabet, Delta { num_of_states } };
     for (State i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
-            if (is_state_final(closure_of_i)) { result.add_final_state(i); }
+            if (is_state_initial(closure_of_i)) { result.add_initial_state(i); }
             for (const SymbolPost& symbol_post : delta[closure_of_i]) {
                 if (symbol_post.symbol == epsilon) { continue; }
                 result.delta.add(i, symbol_post);
@@ -75,7 +75,7 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     // add new transitions
     for (State i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
-            if (is_state_final(closure_of_i)) { add_final_state(i); } // should work right?
+            if (is_state_initial(closure_of_i)) { add_initial_state(i); } // should work right?
             for (const SymbolPost& symbol_post : delta[closure_of_i]) {
                 if (symbol_post.symbol == epsilon) { continue; }
                 delta.add(i, symbol_post);
@@ -86,8 +86,8 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
 
 void Nfta::union_nondet_in_place(const Nfta& aut) {
     if (this == &aut) { return; }
-    if (final_states.empty()) { *this = aut; return; }
-    if (aut.final_states.empty()) { return; }
+    if (initial_states.empty()) { *this = aut; return; }
+    if (aut.initial_states.empty()) { return; }
 
     const size_t orig_num_of_states{ delta.num_of_states() };
     const size_t aut_num_of_states{ aut.delta.num_of_states() };
@@ -100,34 +100,34 @@ void Nfta::union_nondet_in_place(const Nfta& aut) {
     this->delta.append(aut.delta.renumber_targets(renumber_states));
 
     // Set accepting states.
-    this->final_states.reserve(new_num_of_states);
-    for(const State& aut_fin: aut.final_states) {
-        this->final_states.insert(renumber_states(aut_fin));
+    this->initial_states.reserve(new_num_of_states);
+    for(const State& aut_fin: aut.initial_states) {
+        this->initial_states.insert(renumber_states(aut_fin));
     }
 }
 
 Nfta union_nondet(const Nfta& A, const Nfta& B) {
-    if (A.final_states.empty() && B.final_states.empty()) {return Nfta();}
+    if (A.initial_states.empty() && B.initial_states.empty()) {return Nfta();}
     Nfta result{A}; result.union_nondet_in_place(B); return result;
 }
 
 /// nfta must be epsilon free
 Nfta union_product(const Nfta& A, const Nfta& B) {
-    assert(A.is_deterministic());
-    assert(B.is_deterministic());
+    assert(A.is_bottom_up_deterministic());
+    assert(B.is_bottom_up_deterministic());
     assert(A.is_complete());
     assert(B.is_complete());
 
-    if (A.final_states.empty() || B.final_states.empty()) { return union_nondet(A, B); }
+    if (A.initial_states.empty() || B.initial_states.empty()) { return union_nondet(A, B); }
     if (A == B) {return A; }
 
     auto result = product(A, B,[&](const State a, const State b){
-            return A.is_state_final(a) || B.is_state_final(b); });
+            return A.is_state_initial(a) || B.is_state_initial(b); });
     return result;
 }
 
 template<typename FinalCondition>
-Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition) {
+Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& condition) {
     Nfta result;
         utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
     std::deque<State> worklist{}; // Set of product states to process.
@@ -135,14 +135,17 @@ Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition) {
     bool result_delta_empty = true;
 
     // Initialize pairs to process with final state pairs (initial states from top-down perspective)
-    for (const State initial_A : A.final_states) {
-        for (const State initial_B : B.final_states) {
+    // todo is this correct for union?
+    // union -> all possible combinations with at least one state final
+    // intersection -> A.final x B.final
+    for (const State initial_A : A.initial_states) {
+        for (const State initial_B : B.initial_states) {
             // Update product with initial state pairs.
             const State product_initial_state = result.delta.add_state();
             state_mapping.insert(initial_A, initial_B, product_initial_state);
             worklist.push_back(product_initial_state);
-            if (final_condition(initial_A, initial_B)) {
-                result.final_states.insert(product_initial_state);
+            if (condition(initial_A, initial_B)) {
+                result.initial_states.insert(product_initial_state);
             }
         }
     }
@@ -159,8 +162,8 @@ Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition) {
                 assert(product_target < Limits::max_state);
                 state_mapping.insert(targets_A[i],targets_B[i], product_target);
                 worklist.push_back(product_target);
-                if (final_condition(targets_A[i], targets_B[i])) {
-                    result.add_final_state(product_target);
+                if (condition(targets_A[i], targets_B[i])) {
+                    result.add_initial_state(product_target);
                 }
 
             }
@@ -193,11 +196,10 @@ Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition) {
                 }
             }
             StatePost &product_state_post = result.delta.mutable_state_post(product_source);
-            //Here we are sure that we are working with the largest symbol so far, since we iterate through
-            //the symbol posts of the lhs and rhs in order. So we can just push_back (not insert).
             product_state_post.push_back(std::move(product_symbol_post));
         }
     }
+
     assert(result.delta.is_sorted());
     if (result_delta_empty) { return Nfta(); }
     return result;
@@ -207,12 +209,48 @@ Nfta intersection(const Nfta& A, const Nfta& B) {
     assert(A.is_complete());
     assert(B.is_complete());
 
-    if (A.final_states.empty() || B.final_states.empty()) { return Nfta(); }
+    if (A.initial_states.empty() || B.initial_states.empty()) { return Nfta(); }
     if (A == B) {return A; }
 
     auto result = product(A, B,[&](const State a, const State b){
-            return A.is_state_final(a) && B.is_state_final(b); });
+            return A.is_state_initial(a) && B.is_state_initial(b); });
     return result;
 }
+
+bool Nfta::is_bottom_up_deterministic() const {
+    if (delta.is_empty()) { return true; }
+
+    // todo this could be more efficient
+    std::vector<Move> moves;
+
+    for (const auto& state_post : delta) {
+        for (const auto& symbol_post : state_post) {
+            for (const auto& targets : symbol_post.target_tuples) {
+                // every combination of symbol + target must be unique
+                Move current  { symbol_post.symbol, targets };
+                if (std::ranges::find(moves, current) != moves.end()) { return false; }
+                moves.push_back( current );
+            }
+        }
+    }
+    return true;
+}
+
+bool Nfta::is_top_down_deterministic() const {
+    if (initial_states.size() > 1) { return false; }
+    if (delta.is_empty()) { return true; }
+
+    const auto num_of_states = static_cast<State>(delta.num_of_states());
+    for (State i = 0; i < num_of_states; ++i) {
+        for (const auto& symbol_post : delta[i]) { if (symbol_post.target_tuples.size() != 1) { return false; } }
+    }
+    return true;
+}
+
+bool Nfta::is_complete() const {
+
+    return true;
+}
+
 
 }

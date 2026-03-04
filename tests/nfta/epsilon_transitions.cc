@@ -353,7 +353,7 @@ TEST_CASE("mata::nfta::remove_epsilon_in_place") {
         aut.remove_epsilon_in_place(eps);
 
         // q0 should become final
-        REQUIRE(aut.is_state_final(0));
+        REQUIRE(aut.is_state_initial(0));
     }
 
     SECTION("Mixed epsilon and normal transitions") {

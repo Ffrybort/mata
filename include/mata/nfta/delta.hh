@@ -1,7 +1,8 @@
 /**
  * @file delta.hh
- * @brief A set of all transition rules.
+ * @brief A structure to hold transitions similar to the nfa delta.
  *
+ * The structures are named as top-down transitions.
  */
 
 #ifndef NFTA_DELTA_HH
@@ -23,6 +24,7 @@
 
 namespace mata::nfta
 {
+
 /**
  * @brief Structure to hold a nfta transition, top-down format (single source and multiple targets).
  */
@@ -46,8 +48,8 @@ struct Transition
         return source == other.source
         && symbol == other.symbol
         && targets == other.targets;
-        }
-    };
+    }
+};
 
 /**
  * @brief Move from a @c StatePost for a single state, represented as a pair of @c symbol and @c targets.
@@ -56,9 +58,15 @@ class Move {
 public:
     Symbol symbol;
     std::vector<State> targets;
-    explicit Move(Symbol symbol = {}, std::vector<State> targets = {}) : symbol{symbol}, targets{std::move(targets)} {}
+    explicit Move(const Symbol symbol = {}, std::vector<State> targets = {}) : symbol{symbol}, targets{std::move(targets)} {}
 
     bool operator==(const Move&) const = default;
+
+    /// sorted by targets first
+    bool operator < (const Move& other) const {
+      if (targets != other.targets) { return targets < other.targets; }
+      return symbol < other.symbol;
+    }
 }; // class Move.
 
 /**

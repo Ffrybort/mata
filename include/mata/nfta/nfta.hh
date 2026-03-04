@@ -23,18 +23,18 @@
 namespace mata::nfta {
     class Nfta {
     public:
-        utils::SparseSet<State> initial_states; // a set of final (or initial) states
+        utils::SparseSet<State> initial_states; // a set of initial/final states
         Alphabet* alphabet;
         Delta delta; // states live in delta, so do functions like add_state()
 
     public:
         explicit Nfta(
-            utils::SparseSet<State> final_states = {},
+            utils::SparseSet<State> initial_states = {},
             Alphabet* alphabet = nullptr,
             Delta delta = {}
         )
             :
-              initial_states(std::move(final_states)),
+              initial_states(std::move(initial_states)),
               alphabet(alphabet),
               delta(std::move(delta))
         {}
@@ -47,19 +47,18 @@ namespace mata::nfta {
         Nfta& operator=(Nfta&&) noexcept = default;
 
         /**
-         * @brief Add a final state, the state itself is also added if it didn't exist already.
+         * @brief Add an initial state, the state itself is also added if it didn't exist already.
          */
-        void add_final_state(const State state) {
+        void add_initial_state(const State state) {
             delta.add_state(state);
             initial_states.insert(state);
 		}
 
         /**
-         * @brief Add multiple final states from an iterable structure.
+         * @brief Add multiple initial states from an iterable structure.
          */
         template <typename Iterable>
-        void add_final_states(const Iterable& states)
-        {
+        void add_initial_states(const Iterable& states) {
             add_state(*std::max_element(states.begin(), states.end()));
             initial_states.insert(states.begin(), states.end());
         }
@@ -67,16 +66,15 @@ namespace mata::nfta {
         /**
          * @brief Add multiple final states from an initializer list.
          */
-        void add_final_states(const std::initializer_list<State> states)
-        {
+        void add_initial_states(const std::initializer_list<State> states) {
             delta.add_state(*std::ranges::max_element(states));
             initial_states.insert(states);
         }
 
         /**
-         * @brief Check whether a state is final (or initial).
+         * @brief Check whether a state is initial.
          */
-        bool is_state_final(const State& state) const { return initial_states.contains(state); }
+        bool is_state_initial(const State& state) const { return initial_states.contains(state); }
 
         /**
          * @brief Print the automaton in a parsable mata format.
@@ -89,12 +87,12 @@ namespace mata::nfta {
         void print_readable(std::ostream& os, const std::string& type = "") const;
 
         /**
-         * @brief Get the set of final states.
+         * @brief Get the set of initial states.
          */
-        const utils::SparseSet<State>& get_final_states() const { return initial_states; }
+        const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
 
         /**
-         * @brief Check if the automaton is empty - no final states and no transitions in delta.
+         * @brief Check if the automaton is empty - no initial states and no transitions in delta.
          */
         bool is_empty() const { return initial_states.empty() || delta.is_empty(); }
 
@@ -133,16 +131,35 @@ namespace mata::nfta {
          */
         void union_nondet_in_place(const Nfta& aut);
 
+        /** todo
+         *
+         */
+        void complement();
+
         /**
-         * @brief Check if the automaton is deterministic. todo
+         * @brief Check if the automaton is bottom-up deterministic. todo optimise
+         *
+         * Every combination of symbol + set of targets appears at most once in delta.
+         * This function is expensive.
          */
         bool is_bottom_up_deterministic() const;
+
+        /**
+         * @brief Check if the automaton is top-down deterministic.
+         *
+         * For every source and symbol there is at most one set of targets.
+         */
         bool is_top_down_deterministic() const;
 
         /**
          * @brief Check if the automaton is complete. todo
          */
-        bool is_complete() const { return true; }
+        bool is_complete() const;
+
+        /**
+         * todo
+         */
+        void make_complete();
 
     }; // class Nfta
 
@@ -166,8 +183,8 @@ namespace mata::nfta {
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
 
-    template<typename FinalCondition>
-    Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& final_condition);
+    template<typename Condition>
+    Nfta product(const Nfta& A, const Nfta& B, Condition&& condition);
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

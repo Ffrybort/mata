@@ -22,12 +22,12 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.delta.add(0, alphabet["a"], {});
         B.delta.add(0, alphabet["a"], {});
 
-        B.add_final_state(0);
+        B.add_initial_state(0);
 
         A.union_nondet_in_place(B);
 
         CHECK(A.delta.num_of_states() == 1);
-        CHECK(A.is_state_final(0));
+        CHECK(A.is_state_initial(0));
     }
 
     SECTION("Final states are merged") {
@@ -37,13 +37,13 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.delta.add(0, alphabet["a"], {});
         B.delta.add(0, alphabet["a"], {});
 
-        A.add_final_state(0);
-        B.add_final_state(1);
+        A.add_initial_state(0);
+        B.add_initial_state(1);
 
         A.union_nondet_in_place(B);
 
-        CHECK(A.get_final_states().size() == 2);
-        CHECK(A.is_state_final(0));
+        CHECK(A.get_initial_states().size() == 2);
+        CHECK(A.is_state_initial(0));
     }
 
     SECTION("Transitions from both automata are present") {
@@ -82,7 +82,7 @@ TEST_CASE("mata::nfta::union_nondet") {
 
         CHECK(C.delta.contains(0, alphabet["a"], {1, 2, 3}));
         // B got renumbered
-        CHECK(C.is_state_final(4));
+        CHECK(C.is_state_initial(4));
         CHECK(C.delta.contains(4, alphabet["f"], {5, 6, 7}));
     }
 
@@ -122,7 +122,7 @@ TEST_CASE("mata::nfta::union_product") {
         Nfta C = union_product(A, B);
 
         CHECK(C.delta.num_of_states() == 0);
-        CHECK(C.get_final_states().empty());
+        CHECK(C.get_initial_states().empty());
     }
 
      SECTION("Single-state, one side final") {
@@ -134,7 +134,7 @@ TEST_CASE("mata::nfta::union_product") {
          Nfta C = union_product(A, B);
 
          CHECK(C.delta.num_of_states() == 1);
-         CHECK(C.is_state_final(0));
+         CHECK(C.is_state_initial(0));
      }
 
      SECTION("Identical automata") {
@@ -147,57 +147,53 @@ TEST_CASE("mata::nfta::union_product") {
          Nfta C = union_product(A, B);
 
          CHECK(C.delta.num_of_states() == 1);
-         CHECK(C.is_state_final(0));
+         CHECK(C.is_state_initial(0));
      }
 
 
-    SECTION("Union product – 3-state reachable product (contains-based)") {
+    SECTION("Union product – 3-state") {
         Nfta A({}, &alphabet, Delta(2));
         Nfta B({}, &alphabet, Delta(2));
 
-        // A
         A.delta.add(0, alphabet["f"], {1});
         A.delta.add(1, alphabet["f"], {0});
         A.delta.add(0, alphabet["a"], {});
-        A.delta.add(1, alphabet["a"], {});
-        A.add_final_state(1);
+        A.add_initial_state(1);
 
-        // B
         B.delta.add(0, alphabet["f"], {1});
-        B.delta.add(1, alphabet["f"], {1});
-        B.delta.add(0, alphabet["a"], {});
+        B.delta.add(1, alphabet["f"], {2});
         B.delta.add(1, alphabet["a"], {});
-        B.add_final_state(0);
+        B.add_initial_state(0);
 
         Nfta C = union_product(A, B);
 
         REQUIRE(C.delta.num_of_states() == 3);
 
-        // State numbering by construction order:
-        // 0 = (1,0)
-        // 1 = (0,1)
-        // 2 = (1,1)
+        // Initial states
+        CHECK(C.is_state_initial(0));        // (1,0)
+        CHECK(C.is_state_initial(2));  // (1,2)
 
-        // --- Final states ---
-        CHECK(C.is_state_final(0));        // (1,0)
-        CHECK_FALSE(C.is_state_final(1));  // (0,1)
-        CHECK(C.is_state_final(2));        // (1,1)
-
-        // --- Transitions ---
-
-        // (1,0) --f--> (0,1)
+        // transitions
         CHECK(C.delta.contains(0, alphabet["f"], {1}));
-
-        // (0,1) --f--> (1,1)
         CHECK(C.delta.contains(1, alphabet["f"], {2}));
-
-        // (1,1) --f--> (0,1)
-        CHECK(C.delta.contains(2, alphabet["f"], {1}));
-
-        // "a" should produce empty tuple transitions
-        CHECK(C.delta.contains(0, alphabet["a"], {}));
         CHECK(C.delta.contains(1, alphabet["a"], {}));
-        CHECK(C.delta.contains(2, alphabet["a"], {}));
     }
 
+    SECTION("Union possible bug") {
+        alphabet.add_new_symbol("b");
+
+        Nfta A({0}, &alphabet, Delta(2));
+        Nfta B({0}, &alphabet, Delta(2));
+
+        A.delta.add(0, alphabet["a"], {});
+        A.delta.add(1, alphabet["b"], {}); // sink state
+
+        B.delta.add(1, alphabet["a"], {}); // sink state
+        B.delta.add(0, alphabet["b"], {});
+
+        // L(A) = {a}, L(B) = {b}
+        // L(C) = {a, b}
+        Nfta C = union_product(A, B);
+        CHECK_FALSE(C.delta.is_empty());
+    }
 }

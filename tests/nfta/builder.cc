@@ -87,7 +87,7 @@ TEST_CASE("mata::nfta::builder") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.delta.num_of_states() == 1);
-        CHECK(aut.get_final_states().size() == 1);
+        CHECK(aut.get_initial_states().size() == 1);
     }
 
     SECTION("Alphabet-marked, states-marked") {
@@ -103,7 +103,7 @@ TEST_CASE("mata::nfta::builder") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_final_states().size() == 2);
+        CHECK(aut.get_initial_states().size() == 2);
     }
 
     SECTION("Multiple transitions from same source and symbol 1") {
@@ -255,7 +255,7 @@ TEST_CASE("mata::nfta::builder") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.delta.num_of_states() >= 104);
-        CHECK(aut.get_final_states().size() == 3);
+        CHECK(aut.get_initial_states().size() == 3);
     }
 
     SECTION("Single state using IntAlphabet") {
@@ -433,7 +433,7 @@ TEST_CASE("mata::nfta::builder") {
         Nfta generic_aut = parse_from_mata(input, &alphabet);
 
         CHECK(ranked_aut.delta.num_of_states() == generic_aut.delta.num_of_states());
-        CHECK(ranked_aut.get_final_states() == generic_aut.get_final_states());
+        CHECK(ranked_aut.get_initial_states() == generic_aut.get_initial_states());
         CHECK(ranked_aut.delta == generic_aut.delta);
     }
 

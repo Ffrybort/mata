@@ -17,8 +17,8 @@ static State get_state(const std::string& state_str, std::unordered_map<std::str
 void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap &state_map, Nfta &aut) {
     auto add_states = [&](const auto& states) {
         for (const auto& state_str : states) {
-            State state = get_state(state_str, state_map, aut.delta);
-            aut.add_final_state(state);
+            const State state = get_state(state_str, state_map, aut.delta);
+            aut.add_initial_state(state);
         }
     };
     add_states(inter_aut->initial_formula.collect_node_names());
