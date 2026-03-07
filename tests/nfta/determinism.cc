@@ -138,7 +138,7 @@ TEST_CASE("mata::nfta determinism") {
     }
 
     SECTION("Big boy bottom-up deterministic") {
-        alphabet.add_new_symbol_res("h"); // arity 4
+        alphabet.add_new_symbol("h"); // arity 4
 
         Nfta aut({0}, &alphabet, Delta(5));
 

@@ -15,8 +15,8 @@ using namespace mata;
 TEST_CASE("mata::nfta") {
     OnTheFlyAlphabet alphabet;
     // populate the alphabet
-    alphabet.add_new_symbol_res("f"); // function symbol
-    alphabet.add_new_symbol_res("a"); // constant symbol
+    alphabet.add_new_symbol("f"); // function symbol
+    alphabet.add_new_symbol("a"); // constant symbol
 
     SECTION("AddState") {
         Nfta aut({}, &alphabet, {});
