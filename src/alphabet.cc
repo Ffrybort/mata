@@ -41,7 +41,7 @@ std::string mata::OnTheFlyAlphabet::reverse_translate_symbol(const Symbol symbol
 
 void mata::OnTheFlyAlphabet::add_symbols_from(const std::vector<std::string>& symbol_names) {
     for (const std::string& symbol_name: symbol_names) {
-        add_new_symbol_res(symbol_name);
+        add_new_symbol(symbol_name);
     }
 }
 
