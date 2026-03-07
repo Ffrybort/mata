@@ -19,6 +19,7 @@
 #include <mata/alphabet.hh>
 #include <mata/utils/sparse-set.hh>
 #include <mata/nfta/delta.hh>
+#include <mata/utils/two-dimensional-map.hh>
 
 namespace mata::nfta {
     class Nfta {
@@ -154,7 +155,8 @@ namespace mata::nfta {
         /**
          * @brief Check if the automaton is complete. todo
          */
-        bool is_complete() const;
+        bool is_bottom_up_complete() const;
+        bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
 
         /**
          * todo
@@ -176,15 +178,17 @@ namespace mata::nfta {
     /**
      * @brief Union preserving determinism, computed by product construction.
      */
-    Nfta union_product(const Nfta& A, const Nfta& B);
+    Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
      * @brief Intersection.
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
 
-    template<typename Condition>
-    Nfta product(const Nfta& A, const Nfta& B, Condition&& condition);
+    /**
+    * @brief Create a product automaton.
+    */
+    Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

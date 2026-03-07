@@ -23,9 +23,10 @@ namespace mata::nfta
     };
 
     constexpr Symbol EPSILON{ Limits::max_symbol };
-    enum class ProductFinalStateCondition {
-        And, ///< Both original states have to be final.
-        Or,  ///< At least one of the original states has to be final.
+
+    enum class Condition {
+        And,
+        Or,
     };
 
 using StateRenaming = std::unordered_map<State, State>;

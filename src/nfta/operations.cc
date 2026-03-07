@@ -112,41 +112,72 @@ Nfta union_nondet(const Nfta& A, const Nfta& B) {
 }
 
 /// nfta must be epsilon free
-Nfta union_product(const Nfta& A, const Nfta& B) {
-    assert(A.is_bottom_up_deterministic());
-    assert(B.is_bottom_up_deterministic());
-    assert(A.is_complete());
-    assert(B.is_complete());
+Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
+
+    // assert(A.is_top_down_complete(TODO));
+    // assert(B.is_top_down_complete(TODO));
 
     if (A.initial_states.empty() || B.initial_states.empty()) { return union_nondet(A, B); }
     if (A == B) {return A; }
 
-    auto result = product(A, B,[&](const State a, const State b){
-            return A.is_state_initial(a) || B.is_state_initial(b); });
+    auto result = product(A, B, Condition::Or, state_mapping_out);
     return result;
 }
 
-template<typename FinalCondition>
-Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& condition) {
-    Nfta result;
-        utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
+/// automata must be top down complete over the same set of symbols
+Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensionalMap<State> *state_mapping_out) {
+    #ifndef NDEBUG
+    auto symbols = A.delta.get_used_symbols(true);
+    symbols.insert(B.delta.get_used_symbols(true));
+    assert((A.is_top_down_complete(symbols) && B.is_top_down_complete(symbols)) && "Automata must be top-down complete for intersection");
+    #endif
+
+    Nfta product;
+    utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
     std::deque<State> worklist{}; // Set of product states to process.
+    
+    std::vector<std::vector<Symbol>> leaf_tr_A(A.delta.num_of_states());
+    std::vector<std::vector<Symbol>> leaf_tr_B(B.delta.num_of_states());
+    std::vector<std::vector<Symbol>> product_leaf_tr;
 
-    bool result_delta_empty = true;
+    if (cond == Condition::Or) {
+        // find all leaf transitions to add later
+        for (State source = 0; source < A.delta.num_of_states(); source++) {
+            for (const auto& symbol_post : A.delta[source]) {
+                assert(!symbol_post.target_tuples.empty());
+                if (symbol_post.target_tuples.at(0).empty()) { leaf_tr_A[source].emplace_back(symbol_post.symbol); }
+            }
+        }
+        for (State source = 0; source < B.delta.num_of_states(); source++) {
+            for (const auto& symbol_post : B.delta[source]) {
+                assert(!symbol_post.target_tuples.empty());
+                if (symbol_post.target_tuples.at(0).empty()) { leaf_tr_B[source].emplace_back(symbol_post.symbol); }
+            }
+        }
+    }
 
-    // Initialize pairs to process with final state pairs (initial states from top-down perspective)
-    // todo is this correct for union?
-    // union -> all possible combinations with at least one state final
-    // intersection -> A.final x B.final
+    // a lambda to create a new product state,
+    auto add_product_state = [&](const State source_A, const State source_B) {
+        State product_state = product.delta.add_state();
+        state_mapping.insert(source_A, source_B, product_state);
+        if (state_mapping_out) { state_mapping_out->insert(source_A, source_B, product_state); }
+
+        if (cond == Condition::Or) { // union
+            // if one of the sources has a leaf transition, the product state gets that transition
+            product_leaf_tr.resize(product_state + 1);
+            for (const Symbol symbol : leaf_tr_A[source_A]) { product_leaf_tr[product_state].push_back(symbol); }
+            for (const Symbol symbol : leaf_tr_B[source_B]) { product_leaf_tr[product_state].push_back(symbol); }
+        }
+        return product_state;
+    };
+
+    // Initialize worklist with initial state pairs
     for (const State initial_A : A.initial_states) {
         for (const State initial_B : B.initial_states) {
             // Update product with initial state pairs.
-            const State product_initial_state = result.delta.add_state();
-            state_mapping.insert(initial_A, initial_B, product_initial_state);
+            const State product_initial_state = add_product_state(initial_A, initial_B);
             worklist.push_back(product_initial_state);
-            if (condition(initial_A, initial_B)) {
-                result.initial_states.insert(product_initial_state);
-            }
+            product.initial_states.insert(product_initial_state);
         }
     }
 
@@ -158,15 +189,10 @@ Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& condition) {
         for (size_t i = 0; i < targets_A.size(); i++) {
             State product_target = state_mapping.get(targets_A[i], targets_B[i] );
             if (product_target == Limits::max_state) {
-                product_target = result.delta.add_state();
-                assert(product_target < Limits::max_state);
-                state_mapping.insert(targets_A[i],targets_B[i], product_target);
+                product_target = add_product_state(targets_A[i], targets_B[i]);
                 worklist.push_back(product_target);
-                if (condition(targets_A[i], targets_B[i])) {
-                    result.add_initial_state(product_target);
-                }
-
             }
+            assert(product_target < Limits::max_state);
             result_targets.push_back(product_target);
             result_delta_empty = false;
         }
@@ -174,6 +200,11 @@ Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& condition) {
         product_symbol_post.insert(std::move(result_targets));
     };
 
+    std::vector<std::pair<State, Symbol>> constant_tr_A = {};
+    std::vector<std::pair<State, Symbol>> constant_tr_B = {};
+
+    // get constant tr first, then iterate and add product states
+    // fuck this shit
     while (!worklist.empty()) {
         const State product_source = worklist.back();
         worklist.pop_back();
@@ -195,25 +226,34 @@ Nfta product(const Nfta& A, const Nfta& B, FinalCondition&& condition) {
                     create_product_state_and_symbol_post(targets_A, targets_B, product_symbol_post);
                 }
             }
-            StatePost &product_state_post = result.delta.mutable_state_post(product_source);
+            StatePost &product_state_post = product.delta.mutable_state_post(product_source);
+            // adding constants before this means we need to insert and not push back
             product_state_post.push_back(std::move(product_symbol_post));
         }
     }
-
-    assert(result.delta.is_sorted());
-    if (result_delta_empty) { return Nfta(); }
-    return result;
+    if (cond == Condition::Or) {
+        std::cout <<"HERE" << std::endl; // print the leaves
+        for (State source = 0; source < product_leaf_tr.size(); source++) {
+            result_delta_empty = false;
+            std::cout << "leaf source: " << source << std::endl;
+            for (const auto& symbol : product_leaf_tr[source]) {
+                std::cout  << " symbol: " << symbol << std::endl;
+                product.delta.add(source, symbol, {});
+            }
+            std::cout << std::endl;
+        }
+    }
+    product.alphabet = A.alphabet;
+    assert(product.delta.is_sorted());
+    if (product.delta.is_empty()) { return Nfta(); }
+    return product;
 }
 
 Nfta intersection(const Nfta& A, const Nfta& B) {
-    assert(A.is_complete());
-    assert(B.is_complete());
-
     if (A.initial_states.empty() || B.initial_states.empty()) { return Nfta(); }
     if (A == B) {return A; }
 
-    auto result = product(A, B,[&](const State a, const State b){
-            return A.is_state_initial(a) && B.is_state_initial(b); });
+    auto result = product(A, B, Condition::And, nullptr);
     return result;
 }
 
@@ -247,10 +287,31 @@ bool Nfta::is_top_down_deterministic() const {
     return true;
 }
 
-bool Nfta::is_complete() const {
+bool Nfta::is_bottom_up_complete() const {
 
     return true;
 }
 
+bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
+    // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
+    for (const auto& state_post : delta) {
+        unsigned n = 0; // counting present non-constant symbols
+        for (const auto& symbol_post : state_post) {
+            if (symbol_post.target_tuples.empty() || symbol_post.target_tuples.at(0).empty()) {
+                // symbol is not a constant
+                // todo use arity instead if it is implemented
+                continue;
+            } else if (symbols.contains(symbol_post.symbol)) { n++; }
+            else {
+                throw std::runtime_error("Unknown non-constant symbol in delta.");
+            }
+            if (n != symbols.size()) {
+                std::cout << "n: " << n << " symbols size: " << symbols.size() << std::endl;
+                return false;
+            }
+        }
+    }
+    return true;
+}
 
 }

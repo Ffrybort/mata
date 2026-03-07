@@ -116,12 +116,12 @@ std::vector<Transition> Delta::get_transitions_between(State state_from, const s
     return transitions_between;
 }
 
-void Delta::add(const State source, Symbol symbol, const std::vector<State>& targets) {
+void Delta::add(const State source, const Symbol symbol, const std::vector<State>& targets) {
     resize_for_states(targets);
     resize_for_states(source);
 
     if (StatePost& state_post{ state_posts_[source] }; state_post.empty() || state_post.back().symbol < symbol) {
-        state_post.insert({ symbol, targets });
+        state_post.insert(SymbolPost{ symbol, targets });
     } else {
         if (const auto symbol_post{ state_post.find(SymbolPost{ symbol }) };
             symbol_post != state_post.end()) {
@@ -597,22 +597,15 @@ void Delta::add_symbols_to(OnTheFlyAlphabet& target_alphabet) const {
     }
 }
 
-OrdVector<Symbol> Delta::get_used_symbols() const { // todo test variants
-    return get_used_symbols_vec();
-}
-
-// Other versions, maybe an interesting experiment with speed of data structures.
-// Returns symbols appearing in Delta, pushes back to vector and then sorts
-mata::utils::OrdVector<Symbol> Delta::get_used_symbols_vec() const {
-#ifdef _STATIC_STRUCTURES_
-    static std::vector<Symbol> symbols{};
-    symbols.clear();
-#else
+OrdVector<Symbol> Delta::get_used_symbols(const bool exclude_constants) const {
     std::vector<Symbol> symbols{};
-#endif
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost & symbol_post: state_post) {
-            utils::reserve_on_insert(symbols);
+            if (exclude_constants && (symbol_post.target_tuples.empty() || symbol_post.target_tuples.at(0).empty())) {
+                // constant todo
+                continue;
+            }
+            reserve_on_insert(symbols);
             symbols.push_back(symbol_post.symbol);
         }
     }
@@ -620,63 +613,77 @@ mata::utils::OrdVector<Symbol> Delta::get_used_symbols_vec() const {
     return sorted_symbols;
 }
 
-// returns symbols appearing in Delta, inserts to a std::set
-std::set<Symbol> Delta::get_used_symbols_set() const {
-    //static should prevent reallocation, seems to speed things up a little
-#ifdef _STATIC_STRUCTURES_
-    static std::set<Symbol>  symbols;
-    symbols.clear();
-#else
-    static std::set<Symbol>  symbols{};
-#endif
-    for (const StatePost& state_post: state_posts_) {
-        for (const SymbolPost& symbol_post: state_post) {
-            symbols.insert(symbol_post.symbol);
-        }
-    }
-    return symbols;
-}
-
-// returns symbols appearing in Delta, adds to NumberPredicate,
-// Seems to be the fastest option, but could have problems with large maximum symbols
-mata::utils::SparseSet<Symbol> Delta::get_used_symbols_sps() const {
-#ifdef _STATIC_STRUCTURES_
-    //static seems to speed things up a little
-    static utils::SparseSet<Symbol> symbols(64);
-    symbols.clear();
-#else
-    utils::SparseSet<Symbol> symbols(64);
-#endif
-    //symbols.dont_track_elements();
-    for (const StatePost& state_post: state_posts_) {
-        for (const SymbolPost & symbol_post: state_post) {
-            symbols.insert(symbol_post.symbol);
-        }
-    }
-    return symbols;
-}
-
-// returns symbols appearing in Delta, adds to NumberPredicate,
-// Seems to be the fastest option, but could have problems with large maximum symbols
-std::vector<bool> Delta::get_used_symbols_bv() const {
-#ifdef _STATIC_STRUCTURES_
-    //static seems to speed things up a little
-    static std::vector<bool> symbols(64, false);
-    symbols.clear();
-#else
-    std::vector<bool> symbols(64, false);
-#endif
-    //symbols.dont_track_elements();
-    for (const StatePost& state_post: state_posts_) {
-        for (const SymbolPost& symbol_post: state_post) {
-            if (const size_t capacity{ symbol_post.symbol + 1 }; symbols.size() < capacity) {
-                symbols.resize(capacity);
-            }
-            symbols[symbol_post.symbol] = true;
-        }
-    }
-    return symbols;
-}
+// // Other versions, maybe an interesting experiment with speed of data structures.
+// // Returns symbols appearing in Delta, pushes back to vector and then sorts
+// mata::utils::OrdVector<Symbol> Delta::get_used_symbols_vec() const {
+//     std::vector<Symbol> symbols{};
+//     for (const StatePost& state_post: state_posts_) {
+//         for (const SymbolPost & symbol_post: state_post) {
+//             utils::reserve_on_insert(symbols);
+//             symbols.push_back(symbol_post.symbol);
+//         }
+//     }
+//     OrdVector<Symbol> sorted_symbols(symbols);
+//     return sorted_symbols;
+// }
+//
+// // returns symbols appearing in Delta, inserts to a std::set
+// std::set<Symbol> Delta::get_used_symbols_set() const {
+//     //static should prevent reallocation, seems to speed things up a little
+// #ifdef _STATIC_STRUCTURES_
+//     static std::set<Symbol>  symbols;
+//     symbols.clear();
+// #else
+//     static std::set<Symbol>  symbols{};
+// #endif
+//     for (const StatePost& state_post: state_posts_) {
+//         for (const SymbolPost& symbol_post: state_post) {
+//             symbols.insert(symbol_post.symbol);
+//         }
+//     }
+//     return symbols;
+// }
+//
+// // returns symbols appearing in Delta, adds to NumberPredicate,
+// // Seems to be the fastest option, but could have problems with large maximum symbols
+// mata::utils::SparseSet<Symbol> Delta::get_used_symbols_sps() const {
+// #ifdef _STATIC_STRUCTURES_
+//     //static seems to speed things up a little
+//     static utils::SparseSet<Symbol> symbols(64);
+//     symbols.clear();
+// #else
+//     utils::SparseSet<Symbol> symbols(64);
+// #endif
+//     //symbols.dont_track_elements();
+//     for (const StatePost& state_post: state_posts_) {
+//         for (const SymbolPost & symbol_post: state_post) {
+//             symbols.insert(symbol_post.symbol);
+//         }
+//     }
+//     return symbols;
+// }
+//
+// // returns symbols appearing in Delta, adds to NumberPredicate,
+// // Seems to be the fastest option, but could have problems with large maximum symbols
+// std::vector<bool> Delta::get_used_symbols_bv() const {
+// #ifdef _STATIC_STRUCTURES_
+//     //static seems to speed things up a little
+//     static std::vector<bool> symbols(64, false);
+//     symbols.clear();
+// #else
+//     std::vector<bool> symbols(64, false);
+// #endif
+//     //symbols.dont_track_elements();
+//     for (const StatePost& state_post: state_posts_) {
+//         for (const SymbolPost& symbol_post: state_post) {
+//             if (const size_t capacity{ symbol_post.symbol + 1 }; symbols.size() < capacity) {
+//                 symbols.resize(capacity);
+//             }
+//             symbols[symbol_post.symbol] = true;
+//         }
+//     }
+//     return symbols;
+// }
 
 Symbol Delta::get_max_symbol() const {
     Symbol max{ 0 };

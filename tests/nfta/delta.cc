@@ -397,6 +397,7 @@ TEST_CASE("mata::nfta::delta") {
         d.add(1, 1, {});
 
         CHECK(d.is_sorted());
+        CHECK(d.num_of_transitions() == 3);
     }
 
     SECTION("Delta detects duplicate symbol posts") {

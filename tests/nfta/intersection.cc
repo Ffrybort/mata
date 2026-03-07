@@ -8,7 +8,7 @@
 using namespace mata::nfta;
 using namespace mata;
 
-TEST_CASE("mata::nfta::intersection_product") {
+TEST_CASE("mata::nfta::intersection") {
 
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("f");

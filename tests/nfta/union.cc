@@ -119,7 +119,8 @@ TEST_CASE("mata::nfta::union_product") {
         A.delta.add(0, alphabet["a"], {});
         B.delta.add(0, alphabet["a"], {});
 
-        Nfta C = union_product(A, B);
+        utils::TwoDimensionalMap<State> map(A.delta.num_of_states(), B.delta.num_of_states());
+        Nfta C = union_product(A, B, &map);
 
         CHECK(C.delta.num_of_states() == 0);
         CHECK(C.get_initial_states().empty());
@@ -130,11 +131,11 @@ TEST_CASE("mata::nfta::union_product") {
          Nfta B({}, &alphabet, Delta(1));
 
          A.delta.add(0, alphabet["a"], {});
+         B.delta.add(0, alphabet["a"], {});
 
          Nfta C = union_product(A, B);
 
-         CHECK(C.delta.num_of_states() == 1);
-         CHECK(C.is_state_initial(0));
+         CHECK(C == A);
      }
 
      SECTION("Identical automata") {
@@ -146,53 +147,49 @@ TEST_CASE("mata::nfta::union_product") {
 
          Nfta C = union_product(A, B);
 
-         CHECK(C.delta.num_of_states() == 1);
-         CHECK(C.is_state_initial(0));
+         CHECK(C == A);
      }
 
 
     SECTION("Union product – 3-state") {
-        Nfta A({}, &alphabet, Delta(2));
-        Nfta B({}, &alphabet, Delta(2));
+        Nfta A({1}, &alphabet, Delta(2));
+        Nfta B({0}, &alphabet, Delta(2));
 
+        A.delta.add(0, alphabet["a"], {});
         A.delta.add(0, alphabet["f"], {1});
         A.delta.add(1, alphabet["f"], {0});
-        A.delta.add(0, alphabet["a"], {});
-        A.add_initial_state(1);
 
         B.delta.add(0, alphabet["f"], {1});
         B.delta.add(1, alphabet["f"], {2});
         B.delta.add(1, alphabet["a"], {});
-        B.add_initial_state(0);
 
-        Nfta C = union_product(A, B);
+        utils::TwoDimensionalMap<State> map(A.delta.num_of_states(), B.delta.num_of_states());
+        Nfta C = union_product(A, B, &map);
 
         REQUIRE(C.delta.num_of_states() == 3);
 
-        // Initial states
-        CHECK(C.is_state_initial(0));        // (1,0)
-        CHECK(C.is_state_initial(2));  // (1,2)
+        State s10 = map.get(1,0);
+        CHECK(C.is_state_initial(s10));
 
-        // transitions
-        CHECK(C.delta.contains(0, alphabet["f"], {1}));
-        CHECK(C.delta.contains(1, alphabet["f"], {2}));
-        CHECK(C.delta.contains(1, alphabet["a"], {}));
+        State s01 = map.get(0,1);
+        State s12 = map.get(1,2);
+        CHECK(C.delta.contains(s10, alphabet["f"], {s01}));
+        CHECK(C.delta.contains(s01, alphabet["f"], {s12}));
+        CHECK(C.delta.contains(s01, alphabet["a"], {}));
     }
 
-    SECTION("Union possible bug") {
+    SECTION("Union leaves only") {
         alphabet.add_new_symbol("b");
 
-        Nfta A({0}, &alphabet, Delta(2));
-        Nfta B({0}, &alphabet, Delta(2));
+        Nfta A({0}, &alphabet, Delta(1));
+        Nfta B({0}, &alphabet, Delta(1));
 
         A.delta.add(0, alphabet["a"], {});
-        A.delta.add(1, alphabet["b"], {}); // sink state
-
-        B.delta.add(1, alphabet["a"], {}); // sink state
         B.delta.add(0, alphabet["b"], {});
 
-        // L(A) = {a}, L(B) = {b}
-        // L(C) = {a, b}
+            // L(A) = {a}, L(B) = {b}
+            // L(C) = {a, b}
+
         Nfta C = union_product(A, B);
         CHECK_FALSE(C.delta.is_empty());
     }

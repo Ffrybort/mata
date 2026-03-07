@@ -606,7 +606,7 @@ public:
      * Does not necessarily have to equal the set of symbols in the alphabet used by the automaton.
      * @return Set of symbols used on the transitions.
      */
-    utils::OrdVector<Symbol> get_used_symbols() const;
+    utils::OrdVector<Symbol> get_used_symbols(bool exclude_constants = false) const;
 
     utils::OrdVector<Symbol> get_used_symbols_vec() const;
     std::set<Symbol> get_used_symbols_set() const;
