@@ -116,23 +116,21 @@ std::vector<Transition> Delta::get_transitions_between(State state_from, const s
     return transitions_between;
 }
 
-void Delta::add(State single, Symbol symbol, const std::vector<State>& targets) {
+void Delta::add(const State source, Symbol symbol, const std::vector<State>& targets) {
     resize_for_states(targets);
-    resize_for_states(single);
+    resize_for_states(source);
 
-    if (StatePost& state_transitions{ state_posts_[single] }; state_transitions.empty()) {
-        state_transitions.insert({ symbol, targets });
-    } else if (state_transitions.back().symbol < symbol) {
-        state_transitions.insert({ symbol, targets });
+    if (StatePost& state_post{ state_posts_[source] }; state_post.empty() || state_post.back().symbol < symbol) {
+        state_post.insert({ symbol, targets });
     } else {
-        if (const auto symbol_transitions{ state_transitions.find(SymbolPost{ symbol }) };
-            symbol_transitions != state_transitions.end()) {
+        if (const auto symbol_post{ state_post.find(SymbolPost{ symbol }) };
+            symbol_post != state_post.end()) {
             // Add transition with symbol already used on transitions from state_from.
-            symbol_transitions->insert(targets);
+            symbol_post->insert(targets);
         } else {
             // Add transition to a new Move struct with symbol yet unused on transitions from state_from.
             const SymbolPost new_symbol_transitions{ symbol, targets };
-            state_transitions.insert(new_symbol_transitions);
+            state_post.insert(new_symbol_transitions);
         }
     }
 }
