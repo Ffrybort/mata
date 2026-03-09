@@ -34,10 +34,7 @@ void SymbolPost::insert(const StateVectorSet& states) {
 }
 
 StatePost::const_iterator Delta::epsilon_symbol_posts(const State s, const Symbol epsilon) const {
-    return epsilon_symbol_posts(state_post(s), epsilon);
-}
-
-StatePost::const_iterator Delta::epsilon_symbol_posts(const StatePost& state_post, const Symbol epsilon) {
+    const auto& state_post = state_posts_[s];
     if (!state_post.empty()) {
         if (epsilon == EPSILON) {
             if (const auto& back = state_post.back(); back.symbol == epsilon) { return std::prev(state_post.end()); }
@@ -433,6 +430,30 @@ void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& 
     state_posts_.resize(source_new);
 }
 
+Delta::ReversedDelta Delta::get_reversed() const {
+    ReversedDelta result;
+
+    for (State q = 0; q < state_posts_.size(); ++q) {
+        for (const auto& symbol_post : state_posts_[q]) {
+            SymbolTransitions sym{symbol_post.symbol};
+
+            auto sym_it = result.symbol_transitions.find(sym);
+            if (sym_it == result.symbol_transitions.end())
+                sym_it = result.symbol_transitions.insert(sym).first;
+
+            for (const auto& tuple : symbol_post.target_tuples) {
+                SourceTransitions src{tuple};
+                auto src_it = sym_it->sources_transitions.find(src);
+
+                if (src_it == sym_it->sources_transitions.end())
+                    src_it = sym_it->sources_transitions.insert(src).first;
+                src_it->targets.insert(q);
+            }
+        }
+    }
+    return result;
+}
+
 bool Delta::operator==(const Delta& other) const {
     const Transitions this_transitions{ transitions() };
     Transitions::const_iterator this_transitions_it{ this_transitions.begin() };
@@ -685,7 +706,7 @@ OrdVector<Symbol> Delta::get_used_symbols(const bool exclude_constants) const {
 //     return symbols;
 // }
 
-Symbol Delta::get_max_symbol() const {
+Symbol Delta::get_largest_symbol() const {
     Symbol max{ 0 };
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost& symbol_post: state_post) {
