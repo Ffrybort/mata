@@ -6,14 +6,14 @@
 namespace mata::nfta {
     void print_transitions(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
         for (const auto& transition : transitions) {
-            os <<  "q" <<  transition.source << " -> ";
+            os <<  transition.source << " -> ";
             if (alphabet) { os << alphabet->reverse_translate_symbol(transition.symbol); }
             else { os << transition.symbol; }
             if (!transition.targets.empty()) {
 
                 os <<"(";
                 for (std::size_t i = 0; i < transition.targets.size(); ++i) {
-                    os << "q" << transition.targets[i];
+                    os << transition.targets[i];
                     if (i + 1 < transition.targets.size()) os << ",";
                 }
                 os << ")";
@@ -53,22 +53,18 @@ void Nfta::print_mata(std::ostream& os) const {
     }
 
 
-    void Nfta::print_readable(std::ostream& os, const std::string& type) const {
-        if (type == "bottom-up") {os << "Bottom-up NFTA"; }
-        else { os << "Top-down NFTA\n"; }
-
-
+    void Nfta::print_readable(std::ostream& os) const {
+        os << "NFTA";
         os << "================================================" << std::endl;
 
         // States
         os << "States (" << delta.num_of_states() << "): ";
 
         // Initial states
-        if (type == "bottom-up") {os << "Final states: "; }
-        else { os << "Initial states: "; }
+        os << "Initial states: ";
 
-        for (State s : initial_states) {
-            os << "q" << s << " ";
+        for (const State s : initial_states) {
+            os << s << " ";
         }
         os << std::endl;
 

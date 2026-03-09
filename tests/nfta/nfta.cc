@@ -95,8 +95,8 @@ TEST_CASE("mata::nfta") {
         Nfta aut({0}, &alphabet, {});
         aut.delta.add(alphabet["f"], 0, {0,1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
-        CHECK_NOTHROW(aut.print_readable(std::cout, "bottom-up"));
-        CHECK_NOTHROW(aut.print_readable(std::cout, "top-down"));
+        CHECK_NOTHROW(aut.print_readable(std::cout));
+        CHECK_NOTHROW(aut.print_readable(std::cout));
     }
 
     SECTION("DefragmentBasic") {

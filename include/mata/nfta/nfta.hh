@@ -80,12 +80,12 @@ namespace mata::nfta {
         /**
          * @brief Print the automaton in a parsable mata format.
          */
-        void print_mata(std::ostream& os) const;
+        void print_mata(std::ostream& os = std::cout) const;
 
         /**
          * @brief Print the automaton in an easy-to-read format.
          */
-        void print_readable(std::ostream& os, const std::string& type = "") const;
+        void print_readable(std::ostream& os = std::cout) const;
 
         /**
          * @brief Get the set of initial states.
@@ -114,7 +114,7 @@ namespace mata::nfta {
         bool has_equal_structure (const Nfta& other) const;
 
         /**
-         * @brief Remove epsilon transitions from an automaton. todo validate
+         * @brief Remove epsilon transitions from an automaton.
          *
          * A new automaton is build and replaces this one.
          */
@@ -138,7 +138,7 @@ namespace mata::nfta {
         void complement();
 
         /**
-         * @brief Check if the automaton is bottom-up deterministic. todo optimise
+         * @brief Check if the automaton is bottom-up deterministic.
          *
          * Every combination of symbol + set of targets appears at most once in delta.
          * This function is expensive.
@@ -155,13 +155,14 @@ namespace mata::nfta {
         /**
          * @brief Check if the automaton is complete. todo
          */
-        bool is_bottom_up_complete() const;
+        bool is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const;
         bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
 
         /**
          * todo
          */
-        void make_complete();
+        void make_bottom_up_complete();
+        void make_top_down_complete();
 
     }; // class Nfta
 
@@ -177,16 +178,20 @@ namespace mata::nfta {
 
     /**
      * @brief Union preserving determinism, computed by product construction.
+     *
+     * Both input automata must be epsilon free.
      */
     Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
      * @brief Intersection.
+     *
+     * Both input automata must be epsilon free.
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
 
     /**
-    * @brief Create a product automaton.
+    * @brief Create a product automaton. Used for union and intersection.
     */
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
