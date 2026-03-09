@@ -529,9 +529,6 @@ public:
      */
     std::vector<Transition> get_transitions_to(const std::vector<State>& states_to) const;
 
-    // all transitions to a state - may not be needed
-    std::vector<Transition> get_transitions_to(State state_to) const;
-
     /**
      * Get transitions from @p state_from to @p state_to.
      * @param state_from[in] Source state.
@@ -574,24 +571,13 @@ public:
 
     const StateVectorSet& get_successors(State state, Symbol symbol) const;
 
-    // TODO(nfa): Implement.
-//    StateVectorSet get_successors(State state, Symbol symbol, EpsilonClosureOpt epsilon_closure_opt) const;
-
     /**
      * Iterate over @p epsilon symbol posts under the given @p state.
-     * @param[in] state State from which epsilon transitions are checked.
-     * @param[in] epsilon User can define his favourite epsilon or used default.
+     * @param[in] s State from which epsilon transitions are checked.
+     * @param[in] epsilon User defined epsilon default.
      * @return An iterator to @c SymbolPost with epsilon symbol. End iterator when there are no epsilon transitions.
      */
     StatePost::const_iterator epsilon_symbol_posts(State s, Symbol epsilon = EPSILON) const;
-
-    /**
-     * Iterate over @p epsilon symbol posts under the given @p state_post.
-     * @param[in] state_post State post from which epsilon transitions are checked.
-     * @param[in] epsilon User can define his favourite epsilon or used default.
-     * @return An iterator to @c SymbolPost with epsilon symbol. End iterator when there are no epsilon transitions.
-     */
-    static StatePost::const_iterator epsilon_symbol_posts(const StatePost& state_post, Symbol epsilon = EPSILON);
 
     /**
      * @brief Expand @p target_alphabet by symbols from this delta.
@@ -608,16 +594,10 @@ public:
      */
     utils::OrdVector<Symbol> get_used_symbols(bool exclude_constants = false) const;
 
-    utils::OrdVector<Symbol> get_used_symbols_vec() const;
-    std::set<Symbol> get_used_symbols_set() const;
-    utils::SparseSet<Symbol> get_used_symbols_sps() const;
-    std::vector<bool> get_used_symbols_bv() const;
-    BoolVector get_used_symbols_chv() const;
-
     /**
      * @brief Get the maximum non-epsilon used symbol.
      */
-    Symbol get_max_symbol() const;
+    Symbol get_largest_symbol() const;
 
     /**
      * @brief Defragment the Delta. todo
@@ -630,7 +610,45 @@ public:
      * @return Self with defragmented delta.
      */
     void defragment(const BoolVector& is_staying, const std::vector<State>& renaming);
-    friend Delta defragment(const Delta& delta, const BoolVector& is_staying, const std::vector<State>& renaming);
+
+    /**
+     * Reversed delta for bottom-up operations.
+     *
+     * symbols -> sources -> targets
+     */
+public:
+    struct SourceTransitions { /// source tuple and all possible targets
+        std::vector<State> sources;
+        utils::OrdVector<State> targets;
+
+        SourceTransitions() : sources{}, targets{} {}
+
+        explicit SourceTransitions(std::vector<State> s)
+            : sources(std::move(s)), targets{} {}
+        std::weak_ordering operator<=>(const SourceTransitions& other) const { return sources <=> other.sources; }
+        bool operator==(const SourceTransitions& other) const { return sources == other.sources; }
+    };
+
+    struct SymbolTransitions { /// all transitions from a given symbol
+        Symbol symbol{};
+        utils::OrdVector<SourceTransitions> sources_transitions;
+
+        SymbolTransitions() : symbol{}, sources_transitions{} {}
+
+        explicit SymbolTransitions(Symbol s)
+            : symbol(s), sources_transitions{} {}
+
+        std::weak_ordering operator<=>(const SymbolTransitions& other) const { return symbol <=> other.symbol; }
+        bool operator==(const SymbolTransitions& other) const { return symbol == other.symbol; }
+    };
+
+    struct ReversedDelta {
+        utils::OrdVector<SymbolTransitions> symbol_transitions{};
+
+        ReversedDelta() : symbol_transitions{} {}
+    };
+
+    ReversedDelta get_reversed() const;
 
 protected:
     std::vector<StatePost> state_posts_;
