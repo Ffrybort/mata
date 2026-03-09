@@ -1,5 +1,6 @@
 #include "mata/nfta/nfta.hh"
 #include "mata/utils/two-dimensional-map.hh"
+#include <cmath>
 
 namespace mata::nfta {
 std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon, const bool include_state = true) {
@@ -113,10 +114,6 @@ Nfta union_nondet(const Nfta& A, const Nfta& B) {
 
 /// nfta must be epsilon free
 Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
-
-    // assert(A.is_top_down_complete(TODO));
-    // assert(B.is_top_down_complete(TODO));
-
     if (A.initial_states.empty() || B.initial_states.empty()) { return union_nondet(A, B); }
     if (A == B) {return A; }
 
@@ -129,13 +126,15 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
     #ifndef NDEBUG
     auto symbols = A.delta.get_used_symbols(true);
     symbols.insert(B.delta.get_used_symbols(true));
-    assert((A.is_top_down_complete(symbols) && B.is_top_down_complete(symbols)) && "Automata must be top-down complete for intersection");
+    assert(A.is_top_down_complete(symbols) && B.is_top_down_complete(symbols) &&
+        "Automata must be top-down complete for product");
     #endif
 
+    bool product_contains_leaf_tr = false;
     Nfta product;
     utils::TwoDimensionalMap<State> state_mapping{ A.delta.num_of_states(), B.delta.num_of_states() };
     std::deque<State> worklist{}; // Set of product states to process.
-    
+
     std::vector<std::vector<Symbol>> leaf_tr_A(A.delta.num_of_states());
     std::vector<std::vector<Symbol>> leaf_tr_B(B.delta.num_of_states());
     std::vector<std::vector<Symbol>> product_leaf_tr;
@@ -184,6 +183,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
     auto create_product_state_and_symbol_post = [&](
         const std::vector<State>& targets_A, const std::vector<State>& targets_B, SymbolPost& product_symbol_post) {
         assert(targets_A.size() == targets_B.size());
+        if (targets_A.empty()) { product_contains_leaf_tr = true; }
         std::vector<State> result_targets{};
         result_targets.reserve(targets_A.size());
         for (size_t i = 0; i < targets_A.size(); i++) {
@@ -194,7 +194,6 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
             }
             assert(product_target < Limits::max_state);
             result_targets.push_back(product_target);
-            result_delta_empty = false;
         }
         //TODO: Push_back all of them and sort later could be faster.
         product_symbol_post.insert(std::move(result_targets));
@@ -232,20 +231,16 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
         }
     }
     if (cond == Condition::Or) {
-        std::cout <<"HERE" << std::endl; // print the leaves
         for (State source = 0; source < product_leaf_tr.size(); source++) {
-            result_delta_empty = false;
-            std::cout << "leaf source: " << source << std::endl;
             for (const auto& symbol : product_leaf_tr[source]) {
-                std::cout  << " symbol: " << symbol << std::endl;
+                product_contains_leaf_tr = true;
                 product.delta.add(source, symbol, {});
             }
-            std::cout << std::endl;
         }
     }
     product.alphabet = A.alphabet;
-    assert(product.delta.is_sorted());
-    if (product.delta.is_empty()) { return Nfta(); }
+    assert(product.delta.is_sorted() && "Delta not sorted after product");
+    if (!product_contains_leaf_tr) { return Nfta(); }
     return product;
 }
 
@@ -259,8 +254,6 @@ Nfta intersection(const Nfta& A, const Nfta& B) {
 
 bool Nfta::is_bottom_up_deterministic() const {
     if (delta.is_empty()) { return true; }
-
-    // todo this could be more efficient
     std::vector<Move> moves;
 
     for (const auto& state_post : delta) {
@@ -287,31 +280,52 @@ bool Nfta::is_top_down_deterministic() const {
     return true;
 }
 
-bool Nfta::is_bottom_up_complete() const {
+// todo symbols optional and default to alphabet?
+bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const {
+    const size_t num_of_states = delta.num_of_states();
+    Delta::ReversedDelta rev_delta = delta.get_reversed();
+    if (rev_delta.symbol_transitions.size() != symbols.size()) { return false; }
+    for (const auto& symbol_tr : rev_delta.symbol_transitions) {
+        if (!symbols.contains(symbol_tr.symbol)) { throw std::runtime_error("Unknown symbol in delta"); }
+        assert(!symbol_tr.sources_transitions.empty() && "Symbol transitions not empty");
+        const size_t arity = symbol_tr.sources_transitions.at(0).sources.size(); // todo use arity
+        if (symbol_tr.sources_transitions.size() != static_cast<size_t>(std::pow(num_of_states, arity))) { return false; }
 
-    return true;
-}
-
-bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
-    // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
-    for (const auto& state_post : delta) {
-        unsigned n = 0; // counting present non-constant symbols
-        for (const auto& symbol_post : state_post) {
-            if (symbol_post.target_tuples.empty() || symbol_post.target_tuples.at(0).empty()) {
-                // symbol is not a constant
-                // todo use arity instead if it is implemented
-                continue;
-            } else if (symbols.contains(symbol_post.symbol)) { n++; }
-            else {
-                throw std::runtime_error("Unknown non-constant symbol in delta.");
-            }
-            if (n != symbols.size()) {
-                std::cout << "n: " << n << " symbols size: " << symbols.size() << std::endl;
-                return false;
-            }
+        for (const auto& source_tr : symbol_tr.sources_transitions) {
+            assert(source_tr.sources.size() == arity);
         }
     }
     return true;
+}
+
+// todo symbols optional and default to alphabet?
+/// symbols need to exclude constants
+bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
+    // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
+    for (const auto& state_post : delta) {
+        unsigned n = 0; // counting present symbols
+        for (const auto& symbol_post : state_post) {
+            if (symbols.contains(symbol_post.symbol)) { n++; }
+            else if (symbol_post.target_tuples.empty() || symbol_post.target_tuples.at(0).empty()) {
+                // symbol is a constant
+                // todo use arity instead if it is implemented
+                continue;
+            } else {
+                throw std::runtime_error("Unknown non-constant symbol in delta");
+            }
+        }
+        if (n != symbols.size()) {
+            return false;
+        }
+    }
+    return true;
+}
+
+void Nfta::make_bottom_up_complete() {
+
+}
+void Nfta::make_top_down_complete() {
+
 }
 
 }

@@ -1,6 +1,6 @@
 /**
-* Basic delta functionality
-*/
+ * Basic delta functionality
+ */
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
@@ -12,6 +12,7 @@
 using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
+
 TEST_CASE("mata::nfta::delta") {
     Delta delta;
 
@@ -434,6 +435,183 @@ TEST_CASE("mata::nfta::delta") {
 
         CHECK_FALSE(d.is_sorted());
     }
+
+    SECTION("Reversed delta basic case") {
+        delta.clear();
+
+        delta.add(0, 1, {2,3});
+        delta.add(1, 1, {2,3});
+
+        auto rev = delta.get_reversed();
+
+        REQUIRE(rev.symbol_transitions.size() == 1);
+        const auto& sym = rev.symbol_transitions.front();
+        CHECK(sym.symbol == 1);
+
+        REQUIRE(sym.sources_transitions.size() == 1);
+        const auto& src = sym.sources_transitions.front();
+        CHECK(src.sources == std::vector<State>{2,3});
+
+        CHECK(src.targets.count(0) == 1);
+        CHECK(src.targets.count(1) == 1);
+    }
+
+    SECTION("Reversed delta distinguishes different tuples") {
+        delta.clear();
+
+        delta.add(0, 1, {2});
+        delta.add(0, 1, {3});
+
+        auto rev = delta.get_reversed();
+        REQUIRE(rev.symbol_transitions.size() == 1);
+
+        const auto& sym = rev.symbol_transitions.front();
+        REQUIRE(sym.sources_transitions.size() == 2);
+
+        bool found2 = false;
+        bool found3 = false;
+        for (const auto& src : sym.sources_transitions) {
+            if (src.sources == std::vector<State>{2}) {
+                found2 = true;
+                CHECK(src.targets.count(0) == 1);
+            }
+            if (src.sources == std::vector<State>{3}) {
+                found3 = true;
+                CHECK(src.targets.count(0) == 1);
+            }
+        }
+        CHECK(found2);
+        CHECK(found3);
+    }
+
+    SECTION("Reversed delta separates symbols") {
+        delta.clear();
+
+        delta.add(0, 1, {2});
+        delta.add(1, 2, {2});
+
+        auto rev = delta.get_reversed();
+        REQUIRE(rev.symbol_transitions.size() == 2);
+
+        bool found_sym1 = false;
+        bool found_sym2 = false;
+
+        for (const auto& sym : rev.symbol_transitions) {
+            if (sym.symbol == 1) {
+                found_sym1 = true;
+                REQUIRE(sym.sources_transitions.size() == 1);
+                const auto& src = sym.sources_transitions.front();
+                CHECK(src.sources == std::vector<State>{2});
+                CHECK(src.targets.count(0) == 1);
+            }
+            if (sym.symbol == 2) {
+                found_sym2 = true;
+                REQUIRE(sym.sources_transitions.size() == 1);
+                const auto& src = sym.sources_transitions.front();
+                CHECK(src.sources == std::vector<State>{2});
+                CHECK(src.targets.count(1) == 1);
+            }
+        }
+        CHECK(found_sym1);
+        CHECK(found_sym2);
+    }
+
+    SECTION("Reversed delta merges multiple original sources") {
+        delta.clear();
+
+        delta.add(0, 5, {1,2});
+        delta.add(3, 5, {1,2});
+        delta.add(4, 5, {1,2});
+
+        auto rev = delta.get_reversed();
+
+        REQUIRE(rev.symbol_transitions.size() == 1);
+        const auto& sym = rev.symbol_transitions.front();
+        REQUIRE(sym.sources_transitions.size() == 1);
+
+        const auto& src = sym.sources_transitions.front();
+        CHECK(src.sources == std::vector<State>{1,2});
+        REQUIRE(src.targets.size() == 3);
+        CHECK(src.targets.count(0) == 1);
+        CHECK(src.targets.count(2) == 0);
+        CHECK(src.targets.count(3) == 1);
+        CHECK(src.targets.count(4) == 1);
+    }
+
+    SECTION("Reversed delta of empty delta is empty") {
+        delta.clear();
+
+        auto rev = delta.get_reversed();
+        CHECK(rev.symbol_transitions.empty());
+    }
+
+    SECTION("Reversed delta large mixed transitions") {
+        delta.clear();
+    }
+
+    SECTION("Reversed delta lots of transitions") {
+        delta.clear();
+
+        delta.add(0, 1, {2, 3});
+        delta.add(0, 1, {4});
+        delta.add(1, 1, {2, 3});
+        delta.add(1, 2, {3, 5});
+        delta.add(2, 2, {0});
+        delta.add(3, 3, {1, 2, 4});
+        delta.add(4, 3, {2, 3});
+        delta.add(4, 4, {0});
+        delta.add(5, 5, {1, 2});
+        delta.add(5, 5, {3});
+        delta.add(0, 5, {1, 2});
+
+        // Get reversed delta
+        auto rev = delta.get_reversed();
+
+        // Symbol 1
+        auto sym1_it = rev.symbol_transitions.find(Delta::SymbolTransitions{1});
+        auto sym1_tr = sym1_it->sources_transitions;
+        REQUIRE(sym1_tr.size() == 2);
+        CHECK(sym1_tr.at(0).sources == std::vector<State>{2, 3});
+        CHECK(sym1_tr.at(0).targets == utils::OrdVector<State>{0, 1});
+        CHECK(sym1_tr.at(1).sources == std::vector<State>{4});
+        CHECK(sym1_tr.at(1).targets == utils::OrdVector<State>{0});
+
+        // Symbol 2
+        auto sym2_it = rev.symbol_transitions.find(Delta::SymbolTransitions{2});
+        auto sym2_tr = sym2_it->sources_transitions;
+        REQUIRE(sym2_tr.size() == 2);
+        CHECK(sym2_tr.at(0).sources == std::vector<State>{0});
+        CHECK(sym2_tr.at(0).targets == utils::OrdVector<State>{2});
+        CHECK(sym2_tr.at(1).sources == std::vector<State>{3, 5});
+        CHECK(sym2_tr.at(1).targets == utils::OrdVector<State>{1});
+
+        // Symbol 3
+        auto sym3_it = rev.symbol_transitions.find(Delta::SymbolTransitions{3});
+        auto sym3_tr = sym3_it->sources_transitions;
+
+        REQUIRE(sym3_tr.size() == 2);
+        CHECK(sym3_tr.at(0).sources == std::vector<State>{1, 2, 4});
+        CHECK(sym3_tr.at(0).targets == utils::OrdVector<State>{3});
+        CHECK(sym3_tr.at(1).sources == std::vector<State>{2, 3});
+        CHECK(sym3_tr.at(1).targets == utils::OrdVector<State>{4});
+
+
+        // Symbol 4
+        auto sym4_it = rev.symbol_transitions.find(Delta::SymbolTransitions{4});
+        auto sym4_tr = sym4_it->sources_transitions;
+
+        REQUIRE(sym4_tr.size() == 1);
+        CHECK(sym4_tr.at(0).sources == std::vector<State>{0});
+        CHECK(sym4_tr.at(0).targets == utils::OrdVector<State>{4});
+
+        // Symbol 5
+        auto sym5_it = rev.symbol_transitions.find(Delta::SymbolTransitions{5});
+        auto sym5_tr = sym5_it->sources_transitions;
+
+        REQUIRE(sym5_it->sources_transitions.size() == 2);
+        CHECK(sym5_tr.at(0).sources == std::vector<State>{1, 2});
+        CHECK(sym5_tr.at(0).targets == utils::OrdVector<State>{0, 5});
+        CHECK(sym5_tr.at(1).sources == std::vector<State>{3});
+        CHECK(sym5_tr.at(1).targets == utils::OrdVector<State>{5});
+    }
 }
-
-

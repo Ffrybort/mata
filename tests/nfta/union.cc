@@ -153,7 +153,7 @@ TEST_CASE("mata::nfta::union_product") {
 
     SECTION("Union product – 3-state") {
         Nfta A({1}, &alphabet, Delta(2));
-        Nfta B({0}, &alphabet, Delta(2));
+        Nfta B({0}, &alphabet, Delta(3));
 
         A.delta.add(0, alphabet["a"], {});
         A.delta.add(0, alphabet["f"], {1});
@@ -161,21 +161,25 @@ TEST_CASE("mata::nfta::union_product") {
 
         B.delta.add(0, alphabet["f"], {1});
         B.delta.add(1, alphabet["f"], {2});
+        B.delta.add(2, alphabet["f"], {2});
         B.delta.add(1, alphabet["a"], {});
 
         utils::TwoDimensionalMap<State> map(A.delta.num_of_states(), B.delta.num_of_states());
         Nfta C = union_product(A, B, &map);
 
-        REQUIRE(C.delta.num_of_states() == 3);
+        REQUIRE(C.delta.num_of_states() == 4);
 
         State s10 = map.get(1,0);
         CHECK(C.is_state_initial(s10));
 
         State s01 = map.get(0,1);
         State s12 = map.get(1,2);
+        State s02 = map.get(0,2);
         CHECK(C.delta.contains(s10, alphabet["f"], {s01}));
         CHECK(C.delta.contains(s01, alphabet["f"], {s12}));
         CHECK(C.delta.contains(s01, alphabet["a"], {}));
+        CHECK(C.delta.contains(s12, alphabet["f"], {s02}));
+        CHECK(C.delta.contains(s02, alphabet["f"], {s12}));
     }
 
     SECTION("Union leaves only") {
