@@ -159,10 +159,11 @@ namespace mata::nfta {
         bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
 
         /**
-         * todo
+         * default sink state => next available state
+         * any tr out of the sink state get deleted - todo is that ok
          */
-        void make_bottom_up_complete();
-        void make_top_down_complete();
+        void make_bottom_up_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink = Limits::max_state);
+        void make_top_down_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink = Limits::max_state);
 
     }; // class Nfta
 

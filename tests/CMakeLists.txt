@@ -4,7 +4,8 @@ add_executable (tests ${MATA_TEST_SOURCES}
         nfta/union.cc
         nfta/intersection.cc
         nfta/determinism.cc
-        nfta/check_functions.cc)
+        nfta/check_functions.cc
+        nfta/make_complete.cc)
 
 target_link_libraries (tests PRIVATE libmata Catch2::Catch2WithMain)
 

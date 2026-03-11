@@ -49,6 +49,12 @@
  */
 namespace mata {
 
+constexpr size_t ipow(const size_t base, size_t exp) {
+  size_t result = 1;
+  while (exp--) { result *= base; }
+  return result;
+}
+
 template <typename T, typename Predicate>
 auto enumerate(const std::vector<T>& vec, Predicate pred) {
     return std::views::iota(size_t{ 0 }, vec.size())

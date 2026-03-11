@@ -430,12 +430,34 @@ void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& 
     state_posts_.resize(source_new);
 }
 
-Delta::ReversedDelta Delta::get_reversed() const {
+void Delta::print_reversed_delta(const Delta::ReversedDelta& delta) {
+    std::cout << "ReversedDelta {\n";
+    for (const auto& sym_trans : delta.symbol_transitions) {
+        std::cout << "  Symbol: " << sym_trans.symbol << "\n";
+        std::cout << "  SourceTransitions:\n";
+        for (const auto& src_trans : sym_trans.sources_transitions) {
+            std::cout << "    Sources: [";
+            for (size_t i = 0; i < src_trans.sources.size(); ++i) {
+                std::cout << src_trans.sources[i];
+                if (i + 1 < src_trans.sources.size()) std::cout << ", ";
+            }
+            std::cout << "] -> Targets: [";
+            for (size_t i = 0; i < src_trans.targets.size(); ++i) {
+                std::cout << src_trans.targets.at(i);
+                if (i + 1 < src_trans.targets.size()) std::cout << ", ";
+            }
+            std::cout << "]\n";
+        }
+    }
+    std::cout << "}\n";
+}
+
+Delta::ReversedDelta Delta::get_reversed() const { // todo optionally reserve symbols?
     ReversedDelta result;
 
     for (State q = 0; q < state_posts_.size(); ++q) {
         for (const auto& symbol_post : state_posts_[q]) {
-            SymbolTransitions sym{symbol_post.symbol};
+            SymbolTransitions sym { symbol_post.symbol };
 
             auto sym_it = result.symbol_transitions.find(sym);
             if (sym_it == result.symbol_transitions.end())

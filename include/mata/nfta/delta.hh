@@ -79,8 +79,8 @@ public:
 
     SymbolPost() = default;
     explicit SymbolPost(const Symbol symbol) : symbol{ symbol } {}
-    SymbolPost(const Symbol symbol, const std::vector<State>& state_to) : symbol{ symbol }, target_tuples{ state_to } {}
-    SymbolPost(const Symbol symbol, StateVectorSet  states_to) : symbol{ symbol }, target_tuples{std::move( states_to )} {}
+    SymbolPost(const Symbol symbol, const std::vector<State>& one_tuple) : symbol{ symbol }, target_tuples{ one_tuple } {}
+    SymbolPost(const Symbol symbol, StateVectorSet  multiple_tuples) : symbol{ symbol }, target_tuples{std::move( multiple_tuples )} {}
 
     SymbolPost(SymbolPost&& rhs) noexcept : symbol{ rhs.symbol }, target_tuples{ std::move(rhs.target_tuples) } {}
     SymbolPost(const SymbolPost& rhs) = default;
@@ -453,7 +453,8 @@ public:
     /**
      * @brief Add multiple transitions from the same source and symbol.
      */
-    void add(State source, const  SymbolPost& symbol_post);
+    void add(State source, const SymbolPost& symbol_post);
+    void add(State source, const StatePost& post); // todo test
     void add_multiple(State source, Symbol symbol, const StateVectorSet& target_tuples);
 
     /**
@@ -647,12 +648,15 @@ public:
 
         ReversedDelta() : symbol_transitions{} {}
     };
-
+    static void print_reversed_delta(const Delta::ReversedDelta& delta);
     ReversedDelta get_reversed() const;
 
 protected:
     std::vector<StatePost> state_posts_;
 }; // class Delta.
+
+
+
 
 /**
  * @brief Defragment the Delta.
