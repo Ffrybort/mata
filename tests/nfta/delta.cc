@@ -568,7 +568,7 @@ TEST_CASE("mata::nfta::delta") {
         auto rev = delta.get_reversed();
 
         // Symbol 1
-        auto sym1_it = rev.symbol_transitions.find(Delta::SymbolTransitions{1});
+        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
         auto sym1_tr = sym1_it->sources_transitions;
         REQUIRE(sym1_tr.size() == 2);
         CHECK(sym1_tr.at(0).sources == std::vector<State>{2, 3});
@@ -577,7 +577,7 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym1_tr.at(1).targets == utils::OrdVector<State>{0});
 
         // Symbol 2
-        auto sym2_it = rev.symbol_transitions.find(Delta::SymbolTransitions{2});
+        auto sym2_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{2});
         auto sym2_tr = sym2_it->sources_transitions;
         REQUIRE(sym2_tr.size() == 2);
         CHECK(sym2_tr.at(0).sources == std::vector<State>{0});
@@ -586,7 +586,7 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym2_tr.at(1).targets == utils::OrdVector<State>{1});
 
         // Symbol 3
-        auto sym3_it = rev.symbol_transitions.find(Delta::SymbolTransitions{3});
+        auto sym3_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{3});
         auto sym3_tr = sym3_it->sources_transitions;
 
         REQUIRE(sym3_tr.size() == 2);
@@ -597,7 +597,7 @@ TEST_CASE("mata::nfta::delta") {
 
 
         // Symbol 4
-        auto sym4_it = rev.symbol_transitions.find(Delta::SymbolTransitions{4});
+        auto sym4_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{4});
         auto sym4_tr = sym4_it->sources_transitions;
 
         REQUIRE(sym4_tr.size() == 1);
@@ -605,7 +605,7 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym4_tr.at(0).targets == utils::OrdVector<State>{4});
 
         // Symbol 5
-        auto sym5_it = rev.symbol_transitions.find(Delta::SymbolTransitions{5});
+        auto sym5_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{5});
         auto sym5_tr = sym5_it->sources_transitions;
 
         REQUIRE(sym5_it->sources_transitions.size() == 2);

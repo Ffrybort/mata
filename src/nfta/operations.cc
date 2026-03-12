@@ -291,7 +291,7 @@ bool Nfta::is_top_down_deterministic() const {
 // todo symbols optional and default to alphabet?
 bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const { // todo test
     const size_t num_of_states = delta.num_of_states();
-    Delta::ReversedDelta rev_delta = delta.get_reversed();
+    ReversedDelta rev_delta = delta.get_reversed();
     if (rev_delta.symbol_transitions.size() < symbols.size()) {
         return false;
     }
@@ -501,7 +501,7 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_a
 } // make_top_down_complete
 
 // todo test
-BoolVector Nfta::get_top_down_accessible() const {
+BoolVector Nfta::get_top_down_reachable() const {
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
     std::deque<State> worklist{};
@@ -524,7 +524,8 @@ BoolVector Nfta::get_top_down_accessible() const {
     return marked;
 }
 
-BoolVector Nfta::get_bottom_up_accessible() const {
+BoolVector Nfta::get_bottom_up_reachable() const {
+    const auto rev_delta = delta.get_reversed();
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
     std::deque<State> worklist{};

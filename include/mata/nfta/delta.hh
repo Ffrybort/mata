@@ -70,6 +70,54 @@ public:
 }; // class Move.
 
 /**
+ * Delta in a bottom-up format with symbols at top level.
+ */
+class ReversedDelta {
+public:
+  struct SourceTransitions { /// source tuple and all possible targets
+    std::vector<State> sources;
+    utils::OrdVector<State> targets;
+
+    SourceTransitions() : sources{}, targets{} {}
+
+    explicit SourceTransitions(std::vector<State> s)
+        : sources(std::move(s)), targets{} {}
+
+    std::weak_ordering operator<=>(const SourceTransitions& other) const {
+      return sources <=> other.sources;
+    }
+
+    bool operator==(const SourceTransitions& other) const {
+      return sources == other.sources;
+    }
+  };
+
+  struct SymbolTransitions { /// all transitions from a given symbol
+    Symbol symbol{};
+    utils::OrdVector<SourceTransitions> sources_transitions;
+
+    SymbolTransitions() : symbol{}, sources_transitions{} {}
+
+    explicit SymbolTransitions(Symbol s)
+        : symbol(s), sources_transitions{} {}
+
+    std::weak_ordering operator<=>(const SymbolTransitions& other) const {
+      return symbol <=> other.symbol;
+    }
+
+    bool operator==(const SymbolTransitions& other) const {
+      return symbol == other.symbol;
+    }
+  };
+
+  utils::OrdVector<SymbolTransitions> symbol_transitions{};
+
+  ReversedDelta() : symbol_transitions{} {}
+
+  void print() const;
+};
+
+/**
  * @brief Structure represents a post of a single @c symbol: a set of target states in transitions.
  */
 class SymbolPost {
@@ -637,45 +685,11 @@ public:
      *
      * symbols -> sources -> targets
      */
-public:
-    struct SourceTransitions { /// source tuple and all possible targets
-        std::vector<State> sources;
-        utils::OrdVector<State> targets;
-
-        SourceTransitions() : sources{}, targets{} {}
-
-        explicit SourceTransitions(std::vector<State> s)
-            : sources(std::move(s)), targets{} {}
-        std::weak_ordering operator<=>(const SourceTransitions& other) const { return sources <=> other.sources; }
-        bool operator==(const SourceTransitions& other) const { return sources == other.sources; }
-    };
-
-    struct SymbolTransitions { /// all transitions from a given symbol
-        Symbol symbol{};
-        utils::OrdVector<SourceTransitions> sources_transitions;
-
-        SymbolTransitions() : symbol{}, sources_transitions{} {}
-
-        explicit SymbolTransitions(Symbol s)
-            : symbol(s), sources_transitions{} {}
-
-        std::weak_ordering operator<=>(const SymbolTransitions& other) const { return symbol <=> other.symbol; }
-        bool operator==(const SymbolTransitions& other) const { return symbol == other.symbol; }
-    };
-
-    struct ReversedDelta {
-        utils::OrdVector<SymbolTransitions> symbol_transitions{};
-
-        ReversedDelta() : symbol_transitions{} {}
-    };
-    static void print_reversed_delta(const Delta::ReversedDelta& delta);
     ReversedDelta get_reversed() const;
 
 protected:
     std::vector<StatePost> state_posts_;
 }; // class Delta.
-
-
 
 
 /**

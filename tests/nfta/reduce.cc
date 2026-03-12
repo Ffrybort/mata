@@ -23,7 +23,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(1, alphabet["f"], {2});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc.size() == 3);
         CHECK(acc[0]);
@@ -38,7 +38,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(2, alphabet["f"], {1});
         // state 2 unreachable
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK(acc[1]);
@@ -51,7 +51,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(0, alphabet["g"], {1,2});
         aut.delta.add(2, alphabet["f"], {3});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK(acc[1]);
@@ -65,7 +65,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(1, alphabet["f"], {2});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK_FALSE(acc[0]);
         CHECK_FALSE(acc[1]);
@@ -77,7 +77,7 @@ TEST_CASE("mata::nfta::accessibility") {
 
         aut.delta.add(0, alphabet["f"], {0});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK_FALSE(acc[1]);
@@ -90,7 +90,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(1, alphabet["f"], {2});
         aut.delta.add(2, alphabet["f"], {0});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK(acc[1]);
@@ -103,7 +103,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(2, alphabet["f"], {3});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK(acc[1]);
@@ -121,7 +121,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(3, alphabet["g"], {4, 5});
         aut.delta.add(4, alphabet["g"], {4, 5});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK(acc[1]);
@@ -137,7 +137,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(0, alphabet["a"], {}); // constant
         aut.delta.add(1, alphabet["f"], {2}); // unreachable
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK_FALSE(acc[1]);
@@ -150,7 +150,7 @@ TEST_CASE("mata::nfta::accessibility") {
         aut.delta.add(0, alphabet["g"], {1,1});
         aut.delta.add(1, alphabet["f"], {2});
 
-        BoolVector acc = aut.get_top_down_accessible();
+        BoolVector acc = aut.get_top_down_reachable();
 
         CHECK(acc[0]);
         CHECK(acc[1]);
@@ -165,7 +165,7 @@ TEST_CASE("mata::nfta::accessibility") {
     //     aut.delta.add(1, alphabet["f"], {0});
     //     aut.delta.add(2, alphabet["f"], {1});
     //
-    //     BoolVector acc = aut.get_bottom_up_accessible();
+    //     BoolVector acc = aut.get_bottom_up_reachable();
     //
     //     CHECK(acc[0]);
     //     CHECK(acc[1]);
@@ -179,7 +179,7 @@ TEST_CASE("mata::nfta::accessibility") {
     //     aut.delta.add(1, alphabet["f"], {0});
     //     // state 2 never constructed
     //
-    //     BoolVector acc = aut.get_bottom_up_accessible();
+    //     BoolVector acc = aut.get_bottom_up_reachable();
     //
     //     CHECK(acc[0]);
     //     CHECK(acc[1]);
@@ -195,7 +195,7 @@ TEST_CASE("mata::nfta::accessibility") {
     //     aut.delta.add(2, alphabet["g"], {0,1});
     //     aut.delta.add(3, alphabet["f"], {2});
     //
-    //     BoolVector acc = aut.get_bottom_up_accessible();
+    //     BoolVector acc = aut.get_bottom_up_reachable();
     //
     //     CHECK(acc[0]);
     //     CHECK(acc[1]);
@@ -209,7 +209,7 @@ TEST_CASE("mata::nfta::accessibility") {
     //     aut.delta.add(0, alphabet["a"], {});
     //     aut.delta.add(2, alphabet["g"], {0,1}); // 1 missing
     //
-    //     BoolVector acc = aut.get_bottom_up_accessible();
+    //     BoolVector acc = aut.get_bottom_up_reachable();
     //
     //     CHECK(acc[0]);
     //     CHECK_FALSE(acc[1]);
@@ -226,7 +226,7 @@ TEST_CASE("mata::nfta::accessibility") {
     //     aut.delta.add(3, alphabet["g"], {1,0});
     //     aut.delta.add(4, alphabet["f"], {3});
     //
-    //     BoolVector acc = aut.get_bottom_up_accessible();
+    //     BoolVector acc = aut.get_bottom_up_reachable();
     //
     //     CHECK(acc[0]);
     //     CHECK(acc[1]);
