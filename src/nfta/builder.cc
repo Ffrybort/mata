@@ -2,18 +2,16 @@
 
 namespace mata::nfta {
 
-/**
- * @brief Get state from a string, insert to @p delta if not already in the @p state_map.
- */
+
+/// brief Get state from a string, insert to @p delta if not already in the @p state_map.
 static State get_state(const std::string& state_str, std::unordered_map<std::string, State>& state_map, Delta& delta) {
     auto [it, inserted] = state_map.try_emplace(state_str, State{});
     if (inserted) { it->second = delta.add_state(); }
     return it->second;
-}
+} // get_state
 
-/**
- * @brief Add initial and final states as final states to nfta.
- */
+
+/// Add initial and final states as final states to nfta.
 void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap &state_map, Nfta &aut) {
     auto add_states = [&](const auto& states) {
         for (const auto& state_str : states) {
@@ -23,8 +21,7 @@ void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap
     };
     add_states(inter_aut->initial_formula.collect_node_names());
     add_states(inter_aut->final_formula.collect_node_names());
-}
-
+} // add_initial_and_final_states
 
 /**
  * @brief Helper function to extract a transition from an inter_aut.
@@ -55,8 +52,7 @@ std::tuple<State, std::string, std::vector<State>> get_transition(
         auto *tmp_graph = &formula_graph.children[1];
         num_of_children = tmp_graph->children.size();
         // walk through right side chain of & nodes
-        while (num_of_children == 2 && tmp_graph->children[1].node.is_and())
-        {
+        while (num_of_children == 2 && tmp_graph->children[1].node.is_and()) {
             if(!tmp_graph->children[1].node.is_symbol()) { // skip the symbol
                 targets.push_back(state_map.at(tmp_graph->children[0].node.name));
             }
@@ -71,15 +67,16 @@ std::tuple<State, std::string, std::vector<State>> get_transition(
         if (num_of_children == 2) {
             targets.push_back(state_map.at(tmp_graph->children[1].node.name));
         }
-    } // else if
+    } // else if num_of_children == 2
     return {source, symbol, targets};
-}
+} // get_transition
 
 void add_states(NameStateMap& state_map, const std::vector<std::string>& state_names, Delta& delta) {
     for (const std::string& state_name : state_names) {
         state_map[state_name] = get_state(state_name, state_map, delta);
     }
-}
+} // add_states
+
 Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAlphabet *alphabet) {
     // this might cause memory leaks if not handled right
     if (alphabet == nullptr) { alphabet = new RankedOnTheFlyAlphabet(); }
@@ -109,7 +106,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
             formula_node, formula_graph, state_map);
         auto arity = static_cast<unsigned>(targets.size());
         Symbol symbol = alphabet->translate_ranked_symbol(symbol_str, arity);
-        aut.delta.add(source, symbol, std::move(targets));
+        aut.delta.add(source, symbol, targets);
     } // for transitions
     return aut;
 } // construct_from_inter_aut wit Ranked alphabet
@@ -164,4 +161,5 @@ Nfta parse_from_mata(const std::string& input, Alphabet *alphabet) {
     std::istringstream in_stream(input);
     return parse_from_mata(in_stream, alphabet);
 } // parse_from_mata
+
 }// namespace mata::nfta

@@ -9,7 +9,7 @@ inline void unknown_symbol_in_delta(const std::optional<std::string> &symbol = s
         std::cerr << "Unknown symbol in delta: " << *symbol << std::endl;
     }
     assert(false && "Unknown symbol in delta");
-}
+} // unknown_symbol_in_delta
 
 std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon, const bool include_state = true) {
     const size_t num_of_states = delta.num_of_states();
@@ -38,7 +38,7 @@ std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsi
                 result[i].insert(tr.front());
             }
         }
-    }
+    } // for states in delta
 
     bool changed = true;
     while (changed) {
@@ -52,8 +52,7 @@ std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsi
         }
     }
     return result;
-}
-
+} // get_epsilon_closures
 
 void Nfta::remove_epsilon(const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(delta.num_of_states());
@@ -70,7 +69,7 @@ void Nfta::remove_epsilon(const Symbol epsilon) {
         }
     }
     *this = std::move(result);
-}
+} // remove_epsilon
 
 void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(delta.num_of_states());
@@ -91,7 +90,7 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
             }
         }
     }
-}
+} // remove_epsilon_in_place
 
 void Nfta::union_nondet_in_place(const Nfta& aut) {
     if (this == &aut) { return; }
@@ -113,12 +112,12 @@ void Nfta::union_nondet_in_place(const Nfta& aut) {
     for(const State& aut_fin: aut.initial_states) {
         this->initial_states.insert(renumber_states(aut_fin));
     }
-}
+} // union_nondet_in_place
 
 Nfta union_nondet(const Nfta& A, const Nfta& B) {
     if (A.initial_states.empty() && B.initial_states.empty()) {return Nfta();}
     Nfta result{A}; result.union_nondet_in_place(B); return result;
-}
+} // union_nondet
 
 /// nfta must be epsilon free
 Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
@@ -127,11 +126,11 @@ Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>
 
     auto result = product(A, B, Condition::Or, state_mapping_out);
     return result;
-}
+} // union_product
 
 /// automata must be top down complete over the same set of symbols
 Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensionalMap<State> *state_mapping_out) {
-    // todo this is bullshit it was probably correct before
+    // todo this may be wrong, rewrite after consulting
     #ifndef NDEBUG
     auto symbols = A.delta.get_used_symbols(true);
     symbols.insert(B.delta.get_used_symbols(true));
@@ -162,7 +161,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
                 if (symbol_post.is_constant()) { leaf_tr_B[source].emplace_back(symbol_post.symbol); }
             }
         }
-    }
+    } // if union
 
     // a lambda to create a new product state,
     auto add_product_state = [&](const State source_A, const State source_B) {
@@ -177,7 +176,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
             for (const Symbol symbol : leaf_tr_B[source_B]) { product_leaf_tr[product_state].push_back(symbol); }
         }
         return product_state;
-    };
+    }; // add_product_state
 
     // Initialize worklist with initial state pairs
     for (const State initial_A : A.initial_states) {
@@ -206,11 +205,11 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
         }
         //TODO: Push_back all of them and sort later could be faster.
         product_symbol_post.insert(std::move(result_targets));
-    };
+    }; // create_product_state_and_symbol_post
     std::vector<std::pair<State, Symbol>> constant_tr_A = {};
     std::vector<std::pair<State, Symbol>> constant_tr_B = {};
 
-    // get constant tr first, then iterate and add product states
+    // get constant transitions first, then iterate and add product states
     // fuck this shit
     while (!worklist.empty()) { // todo now using a stack - would a queue be better?
         const State product_source = worklist.back();
@@ -237,7 +236,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
             // adding constants before this means we need to insert and not push back
             product_state_post.push_back(std::move(product_symbol_post));
         }
-    }
+    } // while worklist not empty
     if (cond == Condition::Or) {
         for (State source = 0; source < product_leaf_tr.size(); source++) {
             for (const auto& symbol : product_leaf_tr[source]) {
@@ -250,7 +249,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
     assert(product.delta.is_sorted() && "Delta not sorted after product");
     if (!product_contains_leaf_tr) { return Nfta(); }
     return product;
-}
+} // product
 
 Nfta intersection(const Nfta& A, const Nfta& B) {
     if (A.initial_states.empty() || B.initial_states.empty()) { return Nfta(); }
@@ -258,7 +257,7 @@ Nfta intersection(const Nfta& A, const Nfta& B) {
 
     auto result = product(A, B, Condition::And, nullptr);
     return result;
-}
+} // intersection
 
 bool Nfta::is_bottom_up_deterministic() const {
     if (delta.is_empty()) { return true; }
@@ -275,7 +274,7 @@ bool Nfta::is_bottom_up_deterministic() const {
         }
     }
     return true;
-}
+} // is_bottom_up_deterministic
 
 bool Nfta::is_top_down_deterministic() const {
     if (initial_states.size() > 1) { return false; }
@@ -286,9 +285,8 @@ bool Nfta::is_top_down_deterministic() const {
         for (const auto& symbol_post : delta[i]) { if (symbol_post.target_tuples.size() != 1) { return false; } }
     }
     return true;
-}
+} // is_top_down_deterministic
 
-// todo symbols optional and default to alphabet?
 bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const { // todo test
     const size_t num_of_states = delta.num_of_states();
     ReversedDelta rev_delta = delta.get_reversed();
@@ -306,11 +304,10 @@ bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const 
         for (const auto& source_tr : symbol_tr.sources_transitions) {
             assert(source_tr.sources.size() == arity);
         }
-    }
+    } // for symbol transitions
     return true;
-}
+} // is_bottom_up_complete
 
-// todo symbols optional and default to alphabet? that could be a problem with constants
 /// symbols need to exclude constants
 bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
     // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
@@ -326,9 +323,9 @@ bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
         if (n != symbols.size()) {
             return false;
         }
-    }
+    } // for state posts
     return true;
-}
+} // is_top_down_complete
 
 // increment by 1 as a number with the given base, overflow => return false
 bool next_tuple(std::vector<State>& tuple, const size_t base) {
@@ -339,13 +336,13 @@ bool next_tuple(std::vector<State>& tuple, const size_t base) {
         tuple[pos] = 0;
     }
     return false;
-}
+} // next_tuple
 
 State get_sink(State sink, Delta& delta) {
     if (sink == Limits::max_state) { sink = delta.add_state(); }
     delta.resize_for_states(sink);
     return sink;
-}
+} // get_sink
 
 void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
     sink = get_sink(sink, delta);
@@ -396,7 +393,7 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
             const size_t expected_num_of_transitions = ipow(num_of_states, arity);
             assert(old_rev_delta_it->sources_transitions.size() <= expected_num_of_transitions);
             if (old_rev_delta_it->sources_transitions.size() == expected_num_of_transitions) { continue; }
-        }
+        } // else
         // adding transitions
         if (arity == 0) {
             sink_state_post.push_back(SymbolPost{ symbol, std::vector<State>{} });
@@ -413,27 +410,27 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
             } while (next_tuple(tuple, num_of_states));
             if (sink_sp_empty) { sink_state_post.push_back(std::move(new_symbol_post)); }
             else { delta.add(sink, new_symbol_post); }
-        }
-    }
+        } // else
+    } // while rev_delta_it != end OR input_symbols_it != end
 
     #ifndef NDEBUG
     assert(delta.is_sorted());
     const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities);
     assert(is_bottom_up_complete(symbols));
     #endif
-}
+} // make_bottom_up_complete
 
 //todo test
 void Nfta::make_bottom_up_complete(State sink ) { // todo
     if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
-    make_bottom_up_complete(delta.get_used_symbols_arities());
-}
+    make_bottom_up_complete(delta.get_used_symbols_arities(), sink);
+} // make_bottom_up_complete
 
 //todo test
 void Nfta::make_top_down_complete(State sink ) { // todo
     if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
-    make_top_down_complete(delta.get_used_symbols_arities());
-}
+    make_top_down_complete(delta.get_used_symbols_arities(), sink);
+} // make_top_down_complete
 
 void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
     sink = get_sink(sink, delta);
@@ -468,7 +465,7 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_a
                 // input symbol is not in this state post -> move to the next
                 ++input_index;
             }
-        }
+        } // while delta_symbols_it != end
 
         // add all non-constant symbols that were not found
         for (size_t j = 0; j < symbols_arities.size(); j++) {
@@ -480,7 +477,7 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_a
                 delta.add(state, symbol, targets);
             }
         }
-    }
+    } // for states in delta
 
     // add sink loops
     StatePost sink_state_post = delta.mutable_state_post(sink);
@@ -500,7 +497,6 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_a
     #endif
 } // make_top_down_complete
 
-// todo test
 BoolVector Nfta::get_top_down_reachable() const {
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
@@ -520,8 +516,9 @@ BoolVector Nfta::get_top_down_reachable() const {
         }
     }
     return marked;
-}
+} // get_top_down_reachable
 
+// todo general loop over reachable states could be implemented and shared
 BoolVector Nfta::get_bottom_up_reachable() const {
     const ReversedDelta rev_delta = delta.get_reversed();
     const size_t num_of_states = delta.num_of_states();
@@ -551,7 +548,6 @@ BoolVector Nfta::get_bottom_up_reachable() const {
         }
     }
     return marked;
-}
-
+} // get_bottom_up_reachable
 
 } // namespace mata::nfta

@@ -230,6 +230,9 @@ namespace mata::nfta {
         BoolVector get_top_down_reachable() const;
         BoolVector get_bottom_up_reachable() const;
 
+        void reduce_top_down();
+        void reduce_bottom_up_down();
+
 
     }; // class Nfta
 

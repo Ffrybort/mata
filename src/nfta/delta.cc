@@ -15,24 +15,27 @@ SymbolPost& SymbolPost::operator=(SymbolPost&& rhs) noexcept {
         target_tuples = std::move(rhs.target_tuples);
     }
     return *this;
-}
+} // operator=
 
-void SymbolPost::insert(const std::vector<State> s) {
+void SymbolPost::insert(const std::vector<State> s) { // todo use
     if(target_tuples.empty() || target_tuples.back() < s) {
         target_tuples.push_back(s);
         return;
     }
     // Find the place where to put the element (if not present).
     // Insert to OrdVector without the searching of a proper position inside insert(const Key&x).
-    if (const auto it = std::ranges::lower_bound(target_tuples, s); it == target_tuples.end() || *it != s) {
+    if (const auto it = std::ranges::lower_bound(target_tuples, s);
+            it == target_tuples.end() || *it != s) {
         target_tuples.insert(it, s);
     }
-}
+} // insert single vector
+// todo inserting into a statpost like this could be useful
 
 void SymbolPost::insert(const StateVectorSet& states) {
     target_tuples.insert(states); // union function already in OrdVector
-}
+} // insert multiple
 
+// todo use or delete
 StatePost::const_iterator Delta::epsilon_symbol_posts(const State s, const Symbol epsilon) const {
     const auto& state_post = state_posts_[s];
     if (!state_post.empty()) {
@@ -41,7 +44,7 @@ StatePost::const_iterator Delta::epsilon_symbol_posts(const State s, const Symbo
         } else { return state_post.find(SymbolPost(epsilon)); }
     }
     return state_post.end();
-}
+} // epsilon_symbol_posts
 
 OrdVector<State> StatePost::get_successors() const {
     std::vector<State> successors;  // plain vector to collect everything
@@ -53,7 +56,7 @@ OrdVector<State> StatePost::get_successors() const {
         }
     }
     return OrdVector<State>(successors);
-}
+} // get_successors
 
 OrdVector<State> StatePost::get_successors(const Symbol symbol) const {
     const auto symbol_post_it = find(symbol);
@@ -67,20 +70,21 @@ OrdVector<State> StatePost::get_successors(const Symbol symbol) const {
         successors.insert(successors.end(), targets.begin(), targets.end());
     }
     return OrdVector<State>(successors);
-}
+} // get_successors symbol
 
 
 OrdVector<State> Delta::get_successors(const State s) const {
     return state_post(s).get_successors();
-}
+} // get_successors state
 
 OrdVector<State> Delta::get_successors(const State state, const Symbol symbol) const {
     return state_post(state).get_successors(symbol);
-}
+} // get_successors state, symbol
 
 std::vector<Transition> Delta::get_transitions() const {
-    std::vector<Transition> all_transitions;
+    // this function is expensive
 
+    std::vector<Transition> all_transitions;
     // Iterate over states
     for (State source = 0; source < state_posts_.size(); ++source) {
         const StatePost& state_post = state_posts_[source];
@@ -95,8 +99,9 @@ std::vector<Transition> Delta::get_transitions() const {
     }
 
     return all_transitions;
-}
+} // get_transitions
 
+// todo use or delete and rewrite for a single state to
 std::vector<Transition> Delta::get_transitions_to(const std::vector<State>& states_to) const {
     std::vector<Transition> transitions_to_state{};
     const std::size_t num_of_states{ this->num_of_states() };
@@ -109,8 +114,9 @@ std::vector<Transition> Delta::get_transitions_to(const std::vector<State>& stat
         }
     }
     return transitions_to_state;
-}
+} // get_transitions_to
 
+// todo use or delete, potentionally rewrite for a single state to
 std::vector<Transition> Delta::get_transitions_between(State state_from, const std::vector<State>& states_to) const {
     std::vector<Transition> transitions_between{};
     for (const SymbolPost& symbol_post : state_post(state_from)) {
@@ -120,7 +126,7 @@ std::vector<Transition> Delta::get_transitions_between(State state_from, const s
         }
     }
     return transitions_between;
-}
+} // get_transitions_between
 
 void Delta::add(const State source, const Symbol symbol, const std::vector<State>& targets) {
     resize_for_states(targets);
@@ -139,7 +145,7 @@ void Delta::add(const State source, const Symbol symbol, const std::vector<State
             state_post.insert(new_symbol_transitions);
         }
     }
-}
+} // add transition
 
 
 void Delta::add(const State source, const SymbolPost& symbol_post) {
@@ -157,29 +163,29 @@ void Delta::add(const State source, const SymbolPost& symbol_post) {
         // New symbol - insert whole SymbolPost
         state_post.insert(symbol_post);
     }
-}
+} // add symbol post
 
 void Delta::remove(const State source, const Symbol symbol, const std::vector<State>& targets) {
-    auto throw_no_transition = [&]() {
+    auto no_transition = [&]() {
         throw std::invalid_argument(
             "Transition [" + std::to_string(source) + ", " + std::to_string(symbol) + ", " +
             std::to_string(targets) + "] does not exist."
         );
     };
 
-    if (source >= state_posts_.size()) { throw_no_transition(); }
+    if (source >= state_posts_.size()) { no_transition(); }
 
     StatePost& state_transitions = state_posts_[source];
-    if (state_transitions.empty() || state_transitions.back().symbol < symbol) { throw_no_transition(); }
+    if (state_transitions.empty() || state_transitions.back().symbol < symbol) { no_transition(); }
 
     auto symbol_transitions = state_transitions.find(symbol);
-    if (symbol_transitions == state_transitions.end()) { throw_no_transition(); }
+    if (symbol_transitions == state_transitions.end()) { no_transition(); }
 
     symbol_transitions->erase(targets);
     if (symbol_transitions->empty()) { // remove symbol is no targets remain
         state_transitions.erase(*symbol_transitions);
     }
-}
+} // remove
 
 // todo throw or ignore?
 void Delta::try_remove(const State source, const Symbol symbol) {
@@ -189,7 +195,7 @@ void Delta::try_remove(const State source, const Symbol symbol) {
     if (const auto symbol_transitions = state_transitions.find(symbol); symbol_transitions != state_transitions.end()) {
         state_transitions.erase(*symbol_transitions);
     }
-}
+} // try_remove
 
 
 bool Delta::contains(const State source, const Symbol symbol, const std::vector<State>& targets) const {
@@ -204,7 +210,7 @@ bool Delta::contains(const State source, const Symbol symbol, const std::vector<
     }
 
     return symbol_transitions->target_tuples.find(targets) != symbol_transitions->target_tuples.end();
-}
+} // contains
 
 size_t Delta::num_of_transitions() const {
     size_t number_of_transitions = 0;
@@ -214,18 +220,18 @@ size_t Delta::num_of_transitions() const {
         }
     }
     return number_of_transitions;
-}
+} // num_of_transitions
 
 bool Delta::is_empty() const { // todo should this check the symbol posts if they actually contain any targets?
     return std::ranges::all_of(state_posts_, [](const StatePost& state_post) { return state_post.empty(); });
-}
+} // is_empty
 
 bool SymbolPost::is_sorted() const {
     if (!utils::is_sorted(target_tuples.to_vector())) {
         return false;
     }
     return true;
-}
+} // is_sorted
 
 bool Delta::is_sorted() {
     for (const StatePost& state_post : state_posts_) {
@@ -237,7 +243,7 @@ bool Delta::is_sorted() {
         }
     }
     return true;
-}
+} // is_sorted
 
 
 Delta::Transitions::const_iterator::const_iterator(const Delta& delta): delta_{ &delta } {
@@ -275,7 +281,7 @@ Delta::Transitions::const_iterator::const_iterator(const Delta& delta, const Sta
 
     // No transition found, delta from the current state contains only empty state posts.
     is_end_ = true;
-}
+} // const_iterator
 
 Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator++() {
     assert(delta_->begin() != delta_->end());
@@ -312,7 +318,7 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
     transition_.targets = *symbol_post_it_;
 
     return *this;
-}
+} // const_iterator::operator++
 
 Delta::Transitions::const_iterator Delta::Transitions::const_iterator::operator++(int) {
     const const_iterator tmp{ *this };
@@ -326,7 +332,7 @@ bool Delta::Transitions::const_iterator::operator==(const const_iterator& other)
     return current_state_ == other.current_state_ &&
         state_post_it_ == other.state_post_it_ &&
         symbol_post_it_ == other.symbol_post_it_;
-}
+} // const_iterator::operator==
 
 std::vector<StatePost> Delta::renumber_targets(const State offset) const {
     std::vector<StatePost> result;
@@ -351,40 +357,40 @@ std::vector<StatePost> Delta::renumber_targets(const State offset) const {
                 symbol_post.symbol,
                 std::move(new_target_tuples)
             );
-        }
+        } // for symbol posts
         result.emplace_back(std::move(new_state_post));
-    }
+    } // for state posts
     return result;
-}
+} // renumber_targets
 
 std::vector<StatePost> Delta::renumber_targets(const std::function<State(State)>& renumberer) const {
     std::vector<StatePost> result;
     result.reserve(num_of_states());
+
     for (const StatePost& state_post : state_posts_) {
         StatePost new_state_post;
         new_state_post.reserve(state_post.size());
+
         for (const SymbolPost& symbol_post : state_post) {
             StateVectorSet new_target_tuples;
             new_target_tuples.reserve(symbol_post.target_tuples.size());
+
             for (const auto& targets : symbol_post.target_tuples) {
                 std::vector<State> new_targets;
                 new_targets.reserve(targets.size());
-                std::ranges::transform(targets
-                    ,
-                    std::back_inserter(new_targets),
-                    renumberer
-                );
+                std::ranges::transform(targets, std::back_inserter(new_targets), renumberer);
                 new_target_tuples.emplace_back(std::move(new_targets));
             }
+
             new_state_post.emplace_back(
                 symbol_post.symbol,
                 std::move(new_target_tuples)
             );
-        }
+        } // for symbol posts
         result.emplace_back(std::move(new_state_post));
-    }
+    } // for state posts
     return result;
-}
+} // renumber_targets
 
 StatePost& Delta::mutable_state_post(const State s) {
     if (s >= state_posts_.size()) {
@@ -394,7 +400,7 @@ StatePost& Delta::mutable_state_post(const State s) {
     }
 
     return state_posts_[s];
-}
+} // mutable_state_post
 
 void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& renaming) {
     #ifndef NDEBUG
@@ -416,9 +422,10 @@ void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& 
     };
 
     size_t source_new = 0 ;
-    for (size_t source_orig = 0 , num_of_states = this->num_of_states(); source_orig < num_of_states; ++source_orig) {
+    for (size_t source_orig = 0, num_of_states = this->num_of_states(); source_orig < num_of_states; ++source_orig) {
         if (!is_staying[source_orig]) { continue; }
         StatePost& state_post = state_posts_[source_orig];
+
         for (auto state_post_it = state_post.begin(); state_post_it != state_post.end();) {
             StateVectorSet& target_tuples = state_post_it->target_tuples;
             target_tuples.erase_if(not_staying);
@@ -430,36 +437,37 @@ void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& 
                 }
             }
             if (target_tuples.empty()) { state_post_it = state_post.erase(state_post_it); } else { ++state_post_it; }
-        }
+        } // for symbol posts
+
         // Move the filtered state post to the new position, if needed.
         if (source_new != source_orig) { state_posts_[source_new] = std::move(state_post); }
         ++source_new;
-    }
+    } // for all states
     // Resize to remove filtered-out state posts.
     state_posts_.resize(source_new);
-}
+} // defragment
 
-void ReversedDelta::print() const {
-    std::cout << "ReversedDelta {\n";
+void ReversedDelta::print(std::ostream& os) const {
+    os << "ReversedDelta {\n";
     for (const auto& sym_trans : symbol_transitions) {
-        std::cout << "  Symbol: " << sym_trans.symbol << "\n";
-        std::cout << "  SourceTransitions:\n";
+        os << "  Symbol: " << sym_trans.symbol << "\n";
+        os << "  SourceTransitions:\n";
         for (const auto& src_trans : sym_trans.sources_transitions) {
-            std::cout << "    Sources: [";
+            os << "    Sources: [";
             for (size_t i = 0; i < src_trans.sources.size(); ++i) {
-                std::cout << src_trans.sources[i];
-                if (i + 1 < src_trans.sources.size()) std::cout << ", ";
+                os << src_trans.sources[i];
+                if (i + 1 < src_trans.sources.size()) os << ", ";
             }
-            std::cout << "] -> Targets: [";
+            os << "] -> Targets: [";
             for (size_t i = 0; i < src_trans.targets.size(); ++i) {
-                std::cout << src_trans.targets.at(i);
-                if (i + 1 < src_trans.targets.size()) std::cout << ", ";
+                os << src_trans.targets.at(i);
+                if (i + 1 < src_trans.targets.size()) os << ", ";
             }
-            std::cout << "]\n";
+            os << "]\n";
         }
     }
-    std::cout << "}\n";
-}
+    os << "}\n";
+} // print
 
 OrdVector<State> ReversedDelta::get_initial_states() const {
     std::vector<State> result;
@@ -470,7 +478,8 @@ OrdVector<State> ReversedDelta::get_initial_states() const {
         }
     }
     return OrdVector<State>(result);
-}
+} // get_initial_states
+
 ReversedDelta Delta::get_reversed() const { // todo optionally reserve symbols?
     ReversedDelta result;
 
@@ -490,18 +499,18 @@ ReversedDelta Delta::get_reversed() const { // todo optionally reserve symbols?
                     src_it = sym_it->sources_transitions.insert(src).first;
                 src_it->targets.insert(q);
             }
-        }
-    }
+        } // for all symbol posts
+    } // for all states
     return result;
-}
+} // get_reversed
 
 bool Delta::operator==(const Delta& other) const {
     const Transitions this_transitions{ transitions() };
     Transitions::const_iterator this_transitions_it{ this_transitions.begin() };
-    const Transitions::const_iterator this_transitions_end{ this_transitions.end() };
+    const Transitions::const_iterator this_transitions_end{ mata::nfta::Delta::Transitions::end() };
     const Transitions other_transitions{ other.transitions() };
     Transitions::const_iterator other_transitions_it{ other_transitions.begin() };
-    const Transitions::const_iterator other_transitions_end{ other_transitions.end() };
+    const Transitions::const_iterator other_transitions_end{ mata::nfta::Delta::Transitions::end() };
     while (this_transitions_it != this_transitions_end) {
         if (other_transitions_it == other_transitions_end || *this_transitions_it != *other_transitions_it) {
             return false;
@@ -510,25 +519,6 @@ bool Delta::operator==(const Delta& other) const {
         ++other_transitions_it;
     }
     return other_transitions_it == other_transitions_end;
-}
-
-///Returns an iterator to the smallest epsilon, or end() if there is no epsilon
-///Searches from the end of the vector of SymbolPosts, since epsilons are at the end and they are typically few, mostly 1.
-StatePost::const_iterator StatePost::first_epsilon_it(const Symbol first_epsilon) const {
-    const auto end_it = cend();
-    auto it = end_it;
-    while (it != begin()) {
-        --it;
-        if (it->symbol < first_epsilon) { //is it a normal symbol already?
-            return it + 1; // Return the previous position, the smallest epsilon or end().
-        }
-    }
-
-    if (it != end_it && it->symbol >= first_epsilon) {
-        // The special case when begin is the smallest epsilon (since the while loop ended before the step back)
-        return it;
-    }
-    return end_it;
 }
 
 StatePost::Moves::const_iterator::const_iterator(
@@ -594,7 +584,7 @@ bool StatePost::Moves::const_iterator::operator==(const StatePost::Moves::const_
            && symbol_post_end_ == other.symbol_post_end_;
 }
 
-size_t StatePost::num_of_moves() const {
+size_t StatePost::num_of_moves() const { // unused
     size_t counter{ 0 };
     for (const SymbolPost& symbol_post: *this) {
         counter += symbol_post.target_tuples.size();
@@ -602,7 +592,7 @@ size_t StatePost::num_of_moves() const {
     return counter;
 }
 
-StatePost::Moves& StatePost::Moves::operator=(StatePost::Moves&& other) noexcept {
+StatePost::Moves& StatePost::Moves::operator=(Moves&& other) noexcept {
     if (&other != this) {
         state_post_ = other.state_post_;
         symbol_post_it_ = other.symbol_post_it_;
@@ -649,7 +639,7 @@ StatePost::Moves::Moves(
     const StatePost& state_post, const StatePost::const_iterator symbol_post_it, const StatePost::const_iterator symbol_post_end)
     : state_post_{ &state_post }, symbol_post_it_{ symbol_post_it }, symbol_post_end_{ symbol_post_end } {}
 
-void Delta::add_symbols_to(OnTheFlyAlphabet& target_alphabet) const {
+void Delta::add_symbols_to(OnTheFlyAlphabet& target_alphabet) const { // unused
     const size_t aut_num_of_states{ num_of_states() };
     for (State state{ 0 }; state < aut_num_of_states; ++state) {
         for (const SymbolPost& move: state_post(state)) {
@@ -657,14 +647,13 @@ void Delta::add_symbols_to(OnTheFlyAlphabet& target_alphabet) const {
             target_alphabet.try_add_new_symbol(std::to_string(move.symbol), move.symbol);
         }
     }
-}
+} // add_symbols_to
 
 OrdVector<Symbol> Delta::get_used_symbols(const bool exclude_constants) const {
     std::vector<Symbol> symbols{};
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost & symbol_post: state_post) {
-            if (exclude_constants && (symbol_post.target_tuples.empty() || symbol_post.target_tuples.at(0).empty())) {
-                // constant todo
+            if (exclude_constants && symbol_post.is_constant()) {
                 continue;
             }
             reserve_on_insert(symbols);
@@ -673,7 +662,7 @@ OrdVector<Symbol> Delta::get_used_symbols(const bool exclude_constants) const {
     }
     OrdVector<Symbol> sorted_symbols(symbols);
     return sorted_symbols;
-}
+} // get_used_symbols
 
 OrdVector<SymbolArity> Delta::get_used_symbols_arities() const {
     std::vector<SymbolArity> symbols{};
@@ -686,82 +675,9 @@ OrdVector<SymbolArity> Delta::get_used_symbols_arities() const {
     }
     OrdVector<SymbolArity> sorted_symbols(symbols);
     return sorted_symbols;
-}
+} // get_used_symbols_arities
 
-
-// // Other versions, maybe an interesting experiment with speed of data structures.
-// // Returns symbols appearing in Delta, pushes back to vector and then sorts
-// mata::utils::OrdVector<Symbol> Delta::get_used_symbols_vec() const {
-//     std::vector<Symbol> symbols{};
-//     for (const StatePost& state_post: state_posts_) {
-//         for (const SymbolPost & symbol_post: state_post) {
-//             utils::reserve_on_insert(symbols);
-//             symbols.push_back(symbol_post.symbol);
-//         }
-//     }
-//     OrdVector<Symbol> sorted_symbols(symbols);
-//     return sorted_symbols;
-// }
-//
-// // returns symbols appearing in Delta, inserts to a std::set
-// std::set<Symbol> Delta::get_used_symbols_set() const {
-//     //static should prevent reallocation, seems to speed things up a little
-// #ifdef _STATIC_STRUCTURES_
-//     static std::set<Symbol>  symbols;
-//     symbols.clear();
-// #else
-//     static std::set<Symbol>  symbols{};
-// #endif
-//     for (const StatePost& state_post: state_posts_) {
-//         for (const SymbolPost& symbol_post: state_post) {
-//             symbols.insert(symbol_post.symbol);
-//         }
-//     }
-//     return symbols;
-// }
-//
-// // returns symbols appearing in Delta, adds to NumberPredicate,
-// // Seems to be the fastest option, but could have problems with large maximum symbols
-// mata::utils::SparseSet<Symbol> Delta::get_used_symbols_sps() const {
-// #ifdef _STATIC_STRUCTURES_
-//     //static seems to speed things up a little
-//     static utils::SparseSet<Symbol> symbols(64);
-//     symbols.clear();
-// #else
-//     utils::SparseSet<Symbol> symbols(64);
-// #endif
-//     //symbols.dont_track_elements();
-//     for (const StatePost& state_post: state_posts_) {
-//         for (const SymbolPost & symbol_post: state_post) {
-//             symbols.insert(symbol_post.symbol);
-//         }
-//     }
-//     return symbols;
-// }
-//
-// // returns symbols appearing in Delta, adds to NumberPredicate,
-// // Seems to be the fastest option, but could have problems with large maximum symbols
-// std::vector<bool> Delta::get_used_symbols_bv() const {
-// #ifdef _STATIC_STRUCTURES_
-//     //static seems to speed things up a little
-//     static std::vector<bool> symbols(64, false);
-//     symbols.clear();
-// #else
-//     std::vector<bool> symbols(64, false);
-// #endif
-//     //symbols.dont_track_elements();
-//     for (const StatePost& state_post: state_posts_) {
-//         for (const SymbolPost& symbol_post: state_post) {
-//             if (const size_t capacity{ symbol_post.symbol + 1 }; symbols.size() < capacity) {
-//                 symbols.resize(capacity);
-//             }
-//             symbols[symbol_post.symbol] = true;
-//         }
-//     }
-//     return symbols;
-// }
-
-Symbol Delta::get_largest_symbol() const {
+Symbol Delta::get_largest_symbol() const { // unused
     Symbol max{ 0 };
     for (const StatePost& state_post: state_posts_) {
         for (const SymbolPost& symbol_post: state_post) {
@@ -769,4 +685,4 @@ Symbol Delta::get_largest_symbol() const {
         }
     }
     return max;
-}
+} // get_largest_symbol

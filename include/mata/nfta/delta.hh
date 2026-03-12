@@ -117,7 +117,14 @@ public:
     utils::OrdVector<SymbolTransitions> symbol_transitions{};
     ReversedDelta() : symbol_transitions{} {}
 
-    void print() const;
+    /**
+     * @brief Print in a readable format to std::cout or a given stream.
+     */
+    void print(std::ostream& os = std::cout) const;
+
+    /**
+     * @brief Get states that have a constant (arity 0) transition leading to them
+     */
     utils::OrdVector<State> get_initial_states() const; /// initial here means the state has a constant transition
 };
 
@@ -714,7 +721,7 @@ Delta defragment(const Delta& delta, const BoolVector& is_staying, const std::ve
  *
  * It iterates over triples (State source, Symbol symbol, State target).
  */
-class Delta::Transitions {
+class Delta::Transitions { // todo unused, delete if no used
 public:
     Transitions() = default;
     explicit Transitions(const Delta* delta): delta_{ delta } {}
