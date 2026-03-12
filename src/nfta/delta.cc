@@ -320,6 +320,25 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
     return *this;
 } // const_iterator::operator++
 
+///Returns an iterator to the smallest epsilon, or end() if there is no epsilon
+///Searches from the end of the vector of SymbolPosts, since epsilons are at the end and they are typically few, mostly 1.
+StatePost::const_iterator StatePost::first_epsilon_it(const Symbol first_epsilon) const {
+    const auto end_it = cend();
+    auto it = end_it;
+    while (it != begin()) {
+        --it;
+        if (it->symbol < first_epsilon) { //is it a normal symbol already?
+            return it + 1; // Return the previous position, the smallest epsilon or end().
+        }
+    }
+
+    if (it != end_it && it->symbol >= first_epsilon) {
+        // The special case when begin is the smallest epsilon (since the while loop ended before the step back)
+        return it;
+    }
+    return end_it;
+}
+
 Delta::Transitions::const_iterator Delta::Transitions::const_iterator::operator++(int) {
     const const_iterator tmp{ *this };
     ++(*this);

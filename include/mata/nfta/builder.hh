@@ -16,9 +16,29 @@
 namespace mata::nfta {
     using NameStateMap = std::unordered_map<std::string, State>;
 
+    struct RawTransition {
+      State source;
+      std::string symbol_string;
+      std::vector<State> targets;
+    };
+
     inline Nfta create_empty(Alphabet *alphabet = nullptr) {
        return Nfta({0}, alphabet, Delta(1));
     }
+
+    /**
+    * @brief Helper function to extract a transition from an inter_aut.
+    * @param formula_node A node containing the left-hand side (source state).
+    * @param formula_graph A graph containing the right-hand side (symbol and target(s)).
+    * @param alphabet An alphabet to translate the symbol
+    * @param state_map A mapping of state names to numbers used by the constructor.
+    * @return A transition, with the symbol remaining a std::string, and states translated to internal numeric values.
+    *
+    * The reason for not translating a symbol right away is there is currently no unified way to do so for every possible
+    * construction. todo this might have been resolved in alphabet already
+    */
+    RawTransition get_transition(const FormulaNode &formula_node, const FormulaGraph &formula_graph, Alphabet &alphabet,
+        const NameStateMap &state_map);
 
     /**
      * @brief Parse nfta from an intermediate automaton.
