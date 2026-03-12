@@ -153,13 +153,13 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
         for (State source = 0; source < A.delta.num_of_states(); source++) {
             for (const auto& symbol_post : A.delta[source]) {
                 assert(!symbol_post.target_tuples.empty());
-                if (symbol_post.target_tuples.at(0).empty()) { leaf_tr_A[source].emplace_back(symbol_post.symbol); }
+                if (symbol_post.is_constant()) { leaf_tr_A[source].emplace_back(symbol_post.symbol); }
             }
         }
         for (State source = 0; source < B.delta.num_of_states(); source++) {
             for (const auto& symbol_post : B.delta[source]) {
                 assert(!symbol_post.target_tuples.empty());
-                if (symbol_post.target_tuples.at(0).empty()) { leaf_tr_B[source].emplace_back(symbol_post.symbol); }
+                if (symbol_post.is_constant()) { leaf_tr_B[source].emplace_back(symbol_post.symbol); }
             }
         }
     }
@@ -319,7 +319,7 @@ bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
         for (const auto& symbol_post : state_post) {
             assert(!symbol_post.target_tuples.empty());
             if (symbols.contains(symbol_post.symbol)) { n++; }
-            else if (!symbol_post.target_tuples.at(0).empty()) {  // not a constant
+            else if (!symbol_post.is_constant()) {
                 unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(symbol_post.symbol));
             }
         }
@@ -330,13 +330,12 @@ bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
     return true;
 }
 
-//
+// increment by 1 as a number with the given base, overflow => return false
 bool next_tuple(std::vector<State>& tuple, const size_t base) {
     size_t pos = tuple.size();
     while (pos > 0) {
         --pos;
-        if (++tuple[pos] < base)
-            return true;
+        if (++tuple[pos] < base) { return true; }
         tuple[pos] = 0;
     }
     return false;
@@ -455,7 +454,7 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_a
             assert(!delta_symbols_it->target_tuples.empty());
 
             // ignore constants
-            if (delta_symbols_it->target_tuples.at(0).empty()) { ++delta_symbols_it; continue; }
+            if (delta_symbols_it->is_constant()) { ++delta_symbols_it; continue; }
             if (input_arity == 0)  { ++input_index; continue; }
 
             if (const Symbol delta_symbol = delta_symbols_it->symbol; input_symbol == delta_symbol) { // symbols match

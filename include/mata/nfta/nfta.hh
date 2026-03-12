@@ -227,6 +227,10 @@ namespace mata::nfta {
          */
         void make_top_down_complete(State sink = Limits::max_state);
 
+        BoolVector get_top_down_accessible() {
+
+        }
+
     }; // class Nfta
 
     /**
@@ -257,6 +261,8 @@ namespace mata::nfta {
     * @brief Create a product automaton. Used for union and intersection.
     */
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
+
+
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

@@ -90,6 +90,18 @@ public:
     std::weak_ordering operator<=>(const SymbolPost& other) const { return symbol <=> other.symbol; }
     bool operator==(const SymbolPost& other) const { return symbol == other.symbol; }
 
+    /**
+     * @brief Determine whether the symbol is constant (has an empty target set)
+     *
+     * todo some better way of representing a constant?
+     */
+    bool is_constant() const {
+        assert(!target_tuples.empty() && "Empty target tuples");
+        const bool result = target_tuples.at(0).empty();
+        if (result) { assert(target_tuples.size() == 1 && "Target tuples of a constant must have size one"); }
+        return result;
+    }
+
     StateVectorSet::iterator begin() { return target_tuples.begin(); }
     StateVectorSet::iterator end() { return target_tuples.end(); }
     StateVectorSet::const_iterator cbegin() const { return target_tuples.cbegin(); }

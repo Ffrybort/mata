@@ -73,7 +73,7 @@ void Nfta::print_mata(std::ostream& os) const {
         if (alphabet) {
             try {
                 for (const Symbol sym : alphabet->get_alphabet_symbols()) {
-                    os << "  "<< alphabet->reverse_translate_symbol(sym); // todo print arities
+                    os << "  "<< alphabet->try_reverse_translate_symbol(sym); // todo print arities
                 }
             } catch (const std::exception& e) {
                 ;
