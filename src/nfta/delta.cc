@@ -43,29 +43,38 @@ StatePost::const_iterator Delta::epsilon_symbol_posts(const State s, const Symbo
     return state_post.end();
 }
 
-StateVectorSet StatePost::get_successors() const {
-    StateVectorSet successors;
-    for (const SymbolPost& symbol_post: *this) {
-        successors.insert(symbol_post.target_tuples);
+OrdVector<State> StatePost::get_successors() const {
+    std::vector<State> successors;  // plain vector to collect everything
+
+    for (const SymbolPost& symbol_post : *this) {
+        for (const auto& targets : symbol_post.target_tuples) {
+            // append all targets
+            successors.insert(successors.end(), targets.begin(), targets.end());
+        }
     }
-    return successors;
+    return OrdVector<State>(successors);
 }
 
-const StateVectorSet& StatePost::get_successors(const Symbol symbol) const {
+OrdVector<State> StatePost::get_successors(const Symbol symbol) const {
     const auto symbol_post_it = find(symbol);
     if (symbol_post_it == this->end()) {
-        static StateVectorSet empty_set{};
+        static OrdVector<State> empty_set{};
         return empty_set;
     }
-    return symbol_post_it->target_tuples;
+
+    std::vector<State> successors;  // plain vector to collect everything
+    for (const auto& targets : symbol_post_it->target_tuples) {
+        successors.insert(successors.end(), targets.begin(), targets.end());
+    }
+    return OrdVector<State>(successors);
 }
 
 
-StateVectorSet Delta::get_successors(const State s) const {
+OrdVector<State> Delta::get_successors(const State s) const {
     return state_post(s).get_successors();
 }
 
-const StateVectorSet& Delta::get_successors(const State state, const Symbol symbol) const {
+OrdVector<State> Delta::get_successors(const State state, const Symbol symbol) const {
     return state_post(state).get_successors(symbol);
 }
 

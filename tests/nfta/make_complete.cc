@@ -34,7 +34,7 @@ TEST_CASE("mata::nfta::make_bottom_up_complete") {
 
     SECTION("Custom sink") {
         Nfta aut({}, &alphabet, Delta(2));
-        State sink = aut.delta.add_state() + 2;
+        State sink = 4;
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["f"], {1});

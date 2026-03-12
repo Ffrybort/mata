@@ -166,7 +166,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
 
     // a lambda to create a new product state,
     auto add_product_state = [&](const State source_A, const State source_B) {
-        State product_state = product.delta.add_state();
+        const State product_state = product.delta.add_state();
         state_mapping.insert(source_A, source_B, product_state);
         if (state_mapping_out) { state_mapping_out->insert(source_A, source_B, product_state); }
 
@@ -212,7 +212,7 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
 
     // get constant tr first, then iterate and add product states
     // fuck this shit
-    while (!worklist.empty()) {
+    while (!worklist.empty()) { // todo now using a stack - would a queue be better?
         const State product_source = worklist.back();
         worklist.pop_back();
         const State source_A = state_mapping.get_first_inverted(product_source);
@@ -347,10 +347,8 @@ State get_sink(State sink, Delta& delta) {
     return sink;
 }
 
-// todo some is_constant function in delta
 void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
     sink = get_sink(sink, delta);
-    std::cout << "sink " << sink << std::endl;
 
     StatePost& sink_state_post = delta.mutable_state_post(sink);
     const bool sink_sp_empty = sink_state_post.empty();
@@ -369,6 +367,8 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
     while (rev_delta_it != rev_delta_end || input_symbols_it != input_symbols_end) {
         // symbol in delta that is not in the input
         if (!delta_empty && (input_symbols_it == input_symbols_end || rev_delta_it->symbol < input_symbols_it->first)) {
+            if (input_symbols_it == input_symbols_end) { std::cerr <<"Input symbols end" << std::endl; }
+            std::cerr <<"Input symbol at " << input_symbols_it->first << std::endl;
             unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(rev_delta_it->symbol));
             ++rev_delta_it; continue; // or ignore
         }
@@ -499,5 +499,39 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_a
     assert(is_top_down_complete(symbols));
     #endif
 } // make_top_down_complete
+
+// todo test
+BoolVector Nfta::get_top_down_accessible() const {
+    const size_t num_of_states = delta.num_of_states();
+    BoolVector marked(num_of_states, false);
+    std::deque<State> worklist{};
+
+    for (State state : initial_states) {
+        marked[state] = true;
+        worklist.push_back(state);
+    }
+
+    while (!worklist.empty()) {
+        const State current_state = worklist.front();
+        worklist.pop_front();
+        for (const auto successor : delta.get_successors(current_state)) {
+            if (!marked[successor]) {
+                marked[successor] = true;
+                worklist.push_back(successor);
+            }
+        }
+    }
+    return marked;
+}
+
+BoolVector Nfta::get_bottom_up_accessible() const {
+    const size_t num_of_states = delta.num_of_states();
+    BoolVector marked(num_of_states, false);
+    std::deque<State> worklist{};
+
+
+    return marked;
+}
+
 
 } // namespace mata::nfta

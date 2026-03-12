@@ -227,9 +227,9 @@ namespace mata::nfta {
          */
         void make_top_down_complete(State sink = Limits::max_state);
 
-        BoolVector get_top_down_accessible() {
+        BoolVector get_top_down_accessible() const;
+        BoolVector get_bottom_up_accessible() const;
 
-        }
 
     }; // class Nfta
 

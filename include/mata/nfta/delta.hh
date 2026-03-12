@@ -182,14 +182,14 @@ public:
      * @brief Get the set of all target states in the @c StatePost.
      * @return Set of all target states in the @c StatePost.
      */
-    StateVectorSet get_successors() const;
+    OrdVector<State> get_successors() const;
 
     /**
      * @brief Returns a reference to target states for a given symbol in the @c StatePost.
      *
      * If there is no such symbol, a static empty set is returned.
      */
-    const StateVectorSet& get_successors(Symbol symbol) const;
+    OrdVector<State> get_successors(Symbol symbol) const;
 
     /**
      * @brief Iterator over moves represented as @c Move instances.
@@ -580,9 +580,9 @@ public:
      * @param[in] state State from which successors are checked.
      * @return Set of states that are successors of the given @p state.
      */
-    StateVectorSet get_successors(State s) const;
+    utils::OrdVector<State> get_successors(State s) const; // todo test
 
-    const StateVectorSet& get_successors(State state, Symbol symbol) const;
+    utils::OrdVector<State> get_successors(State state, Symbol symbol) const; // todo test
 
     /**
      * Iterate over @p epsilon symbol posts under the given @p state.
