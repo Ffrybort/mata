@@ -595,7 +595,6 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym3_tr.at(1).sources == std::vector<State>{2, 3});
         CHECK(sym3_tr.at(1).targets == utils::OrdVector<State>{4});
 
-
         // Symbol 4
         auto sym4_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{4});
         auto sym4_tr = sym4_it->sources_transitions;

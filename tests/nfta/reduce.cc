@@ -11,13 +11,23 @@ using namespace mata::utils;
 using namespace mata;
 
 
-TEST_CASE("mata::nfta::accessibility") {
+TEST_CASE("mata::nfta::get_top_down_reachable") {
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("a"); // constant
     alphabet.add_new_symbol("f"); // unary
     alphabet.add_new_symbol("g"); // binary
 
-    SECTION("Top-down simple chain") {
+    SECTION("Empty") {
+        Nfta aut({0}, &alphabet, Delta(3));
+
+        BoolVector acc = aut.get_top_down_reachable();
+
+        CHECK(acc[0]);
+        CHECK_FALSE(acc[1]);
+        CHECK_FALSE(acc[2]);
+    }
+
+    SECTION("Simple chain") {
         Nfta aut({0}, &alphabet, Delta(3));
 
         aut.delta.add(0, alphabet["f"], {1});
@@ -31,7 +41,7 @@ TEST_CASE("mata::nfta::accessibility") {
         CHECK(acc[2]);
     }
 
-    SECTION("Top-down unreachable state") {
+    SECTION("Unreachable state") {
         Nfta aut({0}, &alphabet, Delta(3));
 
         aut.delta.add(0, alphabet["f"], {1});
@@ -45,7 +55,7 @@ TEST_CASE("mata::nfta::accessibility") {
         CHECK_FALSE(acc[2]);
     }
 
-    SECTION("Top-down branching") {
+    SECTION("Branching") {
         Nfta aut({0}, &alphabet, Delta(4));
 
         aut.delta.add(0, alphabet["g"], {1,2});
@@ -134,8 +144,8 @@ TEST_CASE("mata::nfta::accessibility") {
     SECTION("Constant transitions do not create successors") {
         Nfta aut({0}, &alphabet, Delta(3));
 
-        aut.delta.add(0, alphabet["a"], {}); // constant
-        aut.delta.add(1, alphabet["f"], {2}); // unreachable
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {2});
 
         BoolVector acc = aut.get_top_down_reachable();
 
@@ -144,7 +154,7 @@ TEST_CASE("mata::nfta::accessibility") {
         CHECK_FALSE(acc[2]);
     }
 
-    SECTION("Repeated successors") {
+    SECTION("Another simple") {
         Nfta aut({0}, &alphabet, Delta(3));
 
         aut.delta.add(0, alphabet["g"], {1,1});
@@ -156,82 +166,191 @@ TEST_CASE("mata::nfta::accessibility") {
         CHECK(acc[1]);
         CHECK(acc[2]);
     }
+}
+TEST_CASE("mata::nfta::get_bottom_up_reachable") {
+    OnTheFlyAlphabet alphabet;
+    alphabet.add_new_symbol("a"); // constant
+    alphabet.add_new_symbol("f"); // unary
+    alphabet.add_new_symbol("g"); // binary
 
+    SECTION("Empty") {
+        Nfta aut({0}, &alphabet, Delta(1));
+        aut.delta.add(0, alphabet["a"], {});
 
-    // SECTION("Bottom-up constant start") {
-    //     Nfta aut({}, &alphabet, Delta(3));
-    //
-    //     aut.delta.add(0, alphabet["a"], {}); // constant
-    //     aut.delta.add(1, alphabet["f"], {0});
-    //     aut.delta.add(2, alphabet["f"], {1});
-    //
-    //     BoolVector acc = aut.get_bottom_up_reachable();
-    //
-    //     CHECK(acc[0]);
-    //     CHECK(acc[1]);
-    //     CHECK(acc[2]);
-    // }
-    //
-    // SECTION("Bottom-up unreachable") {
-    //     Nfta aut({}, &alphabet, Delta(3));
-    //
-    //     aut.delta.add(0, alphabet["a"], {});
-    //     aut.delta.add(1, alphabet["f"], {0});
-    //     // state 2 never constructed
-    //
-    //     BoolVector acc = aut.get_bottom_up_reachable();
-    //
-    //     CHECK(acc[0]);
-    //     CHECK(acc[1]);
-    //     CHECK_FALSE(acc[2]);
-    // }
-    //
-    // SECTION("Bottom-up binary propagation") {
-    //     Nfta aut({}, &alphabet, Delta(4));
-    //
-    //     aut.delta.add(0, alphabet["a"], {});
-    //     aut.delta.add(1, alphabet["a"], {});
-    //
-    //     aut.delta.add(2, alphabet["g"], {0,1});
-    //     aut.delta.add(3, alphabet["f"], {2});
-    //
-    //     BoolVector acc = aut.get_bottom_up_reachable();
-    //
-    //     CHECK(acc[0]);
-    //     CHECK(acc[1]);
-    //     CHECK(acc[2]);
-    //     CHECK(acc[3]);
-    // }
+        BoolVector acc = aut.get_bottom_up_reachable();
 
-    // SECTION("Bottom-up missing child blocks accessibility") {
-    //     Nfta aut({}, &alphabet, Delta(3));
-    //
-    //     aut.delta.add(0, alphabet["a"], {});
-    //     aut.delta.add(2, alphabet["g"], {0,1}); // 1 missing
-    //
-    //     BoolVector acc = aut.get_bottom_up_reachable();
-    //
-    //     CHECK(acc[0]);
-    //     CHECK_FALSE(acc[1]);
-    //     CHECK_FALSE(acc[2]);
-    // }
-    //
-    // SECTION("Bottom-up multiple constants") {
-    //     Nfta aut({}, &alphabet, Delta(5));
-    //
-    //     aut.delta.add(0, alphabet["a"], {});
-    //     aut.delta.add(1, alphabet["a"], {});
-    //
-    //     aut.delta.add(2, alphabet["g"], {0,1});
-    //     aut.delta.add(3, alphabet["g"], {1,0});
-    //     aut.delta.add(4, alphabet["f"], {3});
-    //
-    //     BoolVector acc = aut.get_bottom_up_reachable();
-    //
-    //     CHECK(acc[0]);
-    //     CHECK(acc[1]);
-    //     CHECK(acc[2]);
-    //     CHECK(acc[3]);
-    //     CHECK(acc[4]);
-    // }
+        CHECK(acc[0]);
+    }
+
+    SECTION("Constant only") {
+        Nfta aut({}, &alphabet, Delta(3));
+        BoolVector acc = aut.get_bottom_up_reachable();
+
+        CHECK_FALSE(acc[0]);
+        CHECK_FALSE(acc[1]);
+        CHECK_FALSE(acc[2]);
+    }
+
+    SECTION("Bottom-up simple") {
+        Nfta aut({}, &alphabet, Delta(3));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {0});
+        aut.delta.add(2, alphabet["f"], {1});
+
+        BoolVector acc = aut.get_bottom_up_reachable();
+        CHECK(acc[0]);
+        CHECK(acc[1]);
+        CHECK(acc[2]);
+    }
+
+    SECTION("Bottom-up unreachable") {
+        Nfta aut({}, &alphabet, Delta(3));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {0});
+        // state 2 never constructed
+
+        BoolVector acc = aut.get_bottom_up_reachable();
+
+        CHECK(acc[0]);
+        CHECK(acc[1]);
+        CHECK_FALSE(acc[2]);
+    }
+
+    SECTION("Bottom-up binary") {
+        Nfta aut({}, &alphabet, Delta(4));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["a"], {});
+
+        aut.delta.add(2, alphabet["g"], {0,1});
+        aut.delta.add(3, alphabet["f"], {2});
+
+        BoolVector acc = aut.get_bottom_up_reachable();
+
+        CHECK(acc[0]);
+        CHECK(acc[1]);
+        CHECK(acc[2]);
+        CHECK(acc[3]);
+    }
+
+    SECTION("Bottom-up missing child") {
+        Nfta aut({}, &alphabet, Delta(3));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(2, alphabet["g"], {0,1}); // 1 missing
+
+        BoolVector acc = aut.get_bottom_up_reachable();
+
+        CHECK(acc[0]);
+        CHECK_FALSE(acc[1]);
+        CHECK_FALSE(acc[2]);
+    }
+
+    SECTION("Bottom-up multiple constant transitions") {
+        Nfta aut({}, &alphabet, Delta(5));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["a"], {});
+
+        aut.delta.add(2, alphabet["g"], {0,1});
+        aut.delta.add(3, alphabet["g"], {1,0});
+        aut.delta.add(4, alphabet["f"], {3});
+
+        BoolVector acc = aut.get_bottom_up_reachable();
+
+        CHECK(acc[0]);
+        CHECK(acc[1]);
+        CHECK(acc[2]);
+        CHECK(acc[3]);
+        CHECK(acc[4]);
+    }
+
+    alphabet.add_new_symbol("b"); // constant
+    alphabet.add_new_symbol("h"); // ternary
+    alphabet.add_new_symbol("k"); // quaternary
+
+    SECTION("Simple constants") {
+        Nfta aut({}, &alphabet, Delta(3));
+
+        // Only one constant reachable
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["b"], {});
+        aut.delta.add(2, alphabet["f"], {0});
+
+        BoolVector reachable = aut.get_bottom_up_reachable();
+        CHECK(reachable[0]);
+        CHECK(reachable[1]);
+        CHECK(reachable[2]);
+    }
+
+    SECTION("Multiple levels, some unreachable") {
+        Nfta aut({}, &alphabet, Delta(4));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {0});
+        aut.delta.add(2, alphabet["g"], {0,1});
+        aut.delta.add(3, alphabet["h"], {1,2,3});
+
+        BoolVector reachable = aut.get_bottom_up_reachable();
+        CHECK(reachable[0]);
+        CHECK(reachable[1]);
+        CHECK(reachable[2]);
+        CHECK_FALSE(reachable[3]);
+    }
+
+    SECTION("Disconnected components") {
+        Nfta aut({}, &alphabet, Delta(5));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {0});
+
+        aut.delta.add(2, alphabet["b"], {});
+        aut.delta.add(3, alphabet["f"], {2});
+
+        BoolVector reachable = aut.get_bottom_up_reachable();
+        CHECK(reachable[0]);
+        CHECK(reachable[1]);
+        CHECK(reachable[2]);
+        CHECK(reachable[3]);
+        CHECK_FALSE(reachable[4]);
+    }
+
+    SECTION("Multiple initial states") {
+        Nfta aut({}, &alphabet, Delta(6));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["b"], {});
+        aut.delta.add(2, alphabet["f"], {0});
+        aut.delta.add(3, alphabet["f"], {1});
+        aut.delta.add(4, alphabet["g"], {4,4});
+        aut.delta.add(5, alphabet["h"], {0,1,2});
+
+        BoolVector reachable = aut.get_bottom_up_reachable();
+        CHECK(reachable[0]);
+        CHECK(reachable[1]);
+        CHECK(reachable[2]);
+        CHECK(reachable[3]);
+        CHECK_FALSE(reachable[4]);
+        CHECK(reachable[5]);
+    }
+
+    SECTION("Largeer automaton") {
+        constexpr size_t N = 10;
+        Nfta aut({}, &alphabet, Delta(N));
+        for (State s = 0; s < 3; ++s) {aut.delta.add(s, alphabet["a"], {}); }
+        for (State s = 3; s < 6; ++s) {aut.delta.add(s, alphabet["f"], {s-3}); }
+
+        aut.delta.add(6, alphabet["g"], {0,1});
+        aut.delta.add(7, alphabet["g"], {1,2});
+        aut.delta.add(8, alphabet["g"], {3,4});
+        aut.delta.add(9, alphabet["h"], {5,6,7});
+
+        BoolVector reachable = aut.get_bottom_up_reachable();
+
+        for (State s = 0; s < N; ++s) {
+            CHECK(reachable[s]);
+        }
+    }
 }

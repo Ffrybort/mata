@@ -461,6 +461,16 @@ void ReversedDelta::print() const {
     std::cout << "}\n";
 }
 
+OrdVector<State> ReversedDelta::get_initial_states() const {
+    std::vector<State> result;
+    for (const auto& sym_trans : symbol_transitions) {
+        if (sym_trans.is_constant()) {
+            const auto& targets = sym_trans.sources_transitions.front().targets;
+            result.insert(result.end(), targets.begin(), targets.end());
+        }
+    }
+    return OrdVector<State>(result);
+}
 ReversedDelta Delta::get_reversed() const { // todo optionally reserve symbols?
     ReversedDelta result;
 

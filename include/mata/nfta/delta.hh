@@ -74,47 +74,51 @@ public:
  */
 class ReversedDelta {
 public:
-  struct SourceTransitions { /// source tuple and all possible targets
-    std::vector<State> sources;
-    utils::OrdVector<State> targets;
+    struct SourceTransitions { /// source tuple and all possible targets
+        std::vector<State> sources;
+        utils::OrdVector<State> targets;
 
-    SourceTransitions() : sources{}, targets{} {}
+        SourceTransitions() : sources{}, targets{} {}
 
-    explicit SourceTransitions(std::vector<State> s)
-        : sources(std::move(s)), targets{} {}
+        explicit SourceTransitions(std::vector<State> s) : sources(std::move(s)), targets{} {}
 
-    std::weak_ordering operator<=>(const SourceTransitions& other) const {
-      return sources <=> other.sources;
-    }
+        std::weak_ordering operator<=>(const SourceTransitions& other) const {
+            return sources <=> other.sources;
+        }
 
-    bool operator==(const SourceTransitions& other) const {
-      return sources == other.sources;
-    }
-  };
+        bool operator==(const SourceTransitions& other) const {
+            return sources == other.sources;
+        }
+       };
 
-  struct SymbolTransitions { /// all transitions from a given symbol
-    Symbol symbol{};
-    utils::OrdVector<SourceTransitions> sources_transitions;
+       struct SymbolTransitions { /// all transitions from a given symbol
+           Symbol symbol{};
+           utils::OrdVector<SourceTransitions> sources_transitions;
 
-    SymbolTransitions() : symbol{}, sources_transitions{} {}
+           SymbolTransitions() : symbol{}, sources_transitions{} {}
 
-    explicit SymbolTransitions(Symbol s)
-        : symbol(s), sources_transitions{} {}
+           explicit SymbolTransitions(Symbol s)
+               : symbol(s), sources_transitions{} {}
 
-    std::weak_ordering operator<=>(const SymbolTransitions& other) const {
-      return symbol <=> other.symbol;
-    }
+           std::weak_ordering operator<=>(const SymbolTransitions& other) const {
+               return symbol <=> other.symbol;
+           }
 
-    bool operator==(const SymbolTransitions& other) const {
-      return symbol == other.symbol;
-    }
-  };
+           bool operator==(const SymbolTransitions& other) const {
+               return symbol == other.symbol;
+           }
 
-  utils::OrdVector<SymbolTransitions> symbol_transitions{};
+           bool is_constant() const {
+               assert(!sources_transitions.empty() && "Empty source transitions");
+               return sources_transitions.at(0).sources.empty();
+           }
+     };
 
-  ReversedDelta() : symbol_transitions{} {}
+    utils::OrdVector<SymbolTransitions> symbol_transitions{};
+    ReversedDelta() : symbol_transitions{} {}
 
-  void print() const;
+    void print() const;
+    utils::OrdVector<State> get_initial_states() const; /// initial here means the state has a constant transition
 };
 
 /**

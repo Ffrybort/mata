@@ -506,10 +506,8 @@ BoolVector Nfta::get_top_down_reachable() const {
     BoolVector marked(num_of_states, false);
     std::deque<State> worklist{};
 
-    for (State state : initial_states) {
-        marked[state] = true;
-        worklist.push_back(state);
-    }
+    worklist.insert(worklist.end(), initial_states.begin(), initial_states.end());
+    for (const State state : initial_states) { marked[state] = true; }
 
     while (!worklist.empty()) {
         const State current_state = worklist.front();
@@ -525,12 +523,33 @@ BoolVector Nfta::get_top_down_reachable() const {
 }
 
 BoolVector Nfta::get_bottom_up_reachable() const {
-    const auto rev_delta = delta.get_reversed();
+    const ReversedDelta rev_delta = delta.get_reversed();
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
     std::deque<State> worklist{};
 
+    const auto bottom_up_initial = rev_delta.get_initial_states();
+    for (const State state : bottom_up_initial) { marked[state] = true; }
+    worklist.insert(worklist.end(), bottom_up_initial.begin(), bottom_up_initial.end());
 
+    while (!worklist.empty()) {
+        worklist.pop_front();
+
+        for (const auto& sym_trans : rev_delta.symbol_transitions) {
+            if (sym_trans.is_constant()) continue;
+            for (const auto& src_tr : sym_trans.sources_transitions) {
+                bool all_marked = true;
+                for (const State s : src_tr.sources) { if (!marked[s]) { all_marked = false; break; } }
+                if (!all_marked) { continue; }
+                for (State target : src_tr.targets) {
+                    if (!marked[target]) {
+                        marked[target] = true;
+                        worklist.push_back(target);
+                    }
+                }
+            }
+        }
+    }
     return marked;
 }
 
