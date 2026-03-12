@@ -44,6 +44,17 @@ public:
      */
     virtual std::string reverse_translate_symbol(Symbol symbol) const = 0;
 
+    /**
+     * @brief Try to translate a symbol, if it fails return the symbol value in a string.
+     */
+    std::string try_reverse_translate_symbol(Symbol symbol) const {
+        try {
+            return reverse_translate_symbol(symbol);
+        } catch (...) {
+            return "<sym " + std::to_string(symbol) + ">";
+        }
+    }
+
     /// also translates strings to symbols
     Symbol operator[](const std::string &symb) { return this->translate_symb(symb); }
 
