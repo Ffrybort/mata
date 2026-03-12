@@ -15,6 +15,16 @@ namespace mata::nfta
     using StateVectorSet = utils::OrdVector<std::vector<State>>;
     using StateSet = utils::OrdVector<State>;
 
+    using SymbolArity = std::pair<Symbol, unsigned>;
+    inline utils::OrdVector<Symbol> collect_symbols(const utils::OrdVector<SymbolArity>& sa, const bool ignore_constants = false) {
+        utils::OrdVector<Symbol> symbols;
+        for (auto [symbol, arity] : sa) {
+            if (!ignore_constants || arity > 0) { symbols.insert(symbol); }
+        }
+        return symbols;
+    }
+
+
     struct Limits {
       static constexpr State min_state = std::numeric_limits<State>::min();
       static constexpr State max_state = std::numeric_limits<State>::max();

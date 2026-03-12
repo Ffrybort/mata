@@ -244,7 +244,7 @@ TEST_CASE("mata::nfta completeness check") {
         aut.delta.add(1, alphabet["f"],  {1,1});
 
         CHECK(aut.is_bottom_up_complete(alphabet.get_alphabet_symbols()));
-        CHECK(aut.is_top_down_complete({alphabet["g"], alphabet["f"]}));
+        CHECK(aut.is_top_down_complete(OrdVector<Symbol>{alphabet["g"], alphabet["f"]}));
     }
 
     SECTION("Bottom-up incomplete automaton") {
@@ -256,53 +256,153 @@ TEST_CASE("mata::nfta completeness check") {
         aut.delta.add(0, alphabet["g"], {0});
         aut.delta.add(1, alphabet["g"], {0});
 
-        CHECK_FALSE(aut.is_bottom_up_complete(alphabet.get_alphabet_symbols()));
-        CHECK(aut.is_top_down_complete({alphabet["g"]}));
+        CHECK_FALSE(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["g"]}));
+        CHECK(aut.is_top_down_complete(OrdVector<Symbol>{alphabet["g"]}));
 
         aut.delta.add(0, alphabet["g"], {1});
         // now complete without f
-        CHECK_FALSE(aut.is_bottom_up_complete(alphabet.get_alphabet_symbols()));
-        CHECK(aut.is_bottom_up_complete({alphabet["a"], alphabet["g"]}));
+        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["g"]}));
     }
 
-    // SECTION("Top-down complete small automaton") {
-    //     Nfta aut({}, &alphabet, {});
-    //
-    //     State s0 = aut.delta.add_state();
-    //     State s1 = aut.delta.add_state();
-    //     aut.add_initial_state(s0);
-    //     aut.add_initial_state(s1);
-    //
-    //     // constants
-    //     aut.delta.add(alphabet["a"], s0, {});
-    //     aut.delta.add(alphabet["a"], s1, {});
-    //
-    //     // unary "g"
-    //     aut.delta.add(alphabet["g"], s0, {s0});
-    //     aut.delta.add(alphabet["g"], s1, {s1});
-    //
-    //     // binary "f"
-    //     aut.delta.add(alphabet["f"], s0, {s0,s0});
-    //     aut.delta.add(alphabet["f"], s0, {s1,s1});
-    //     aut.delta.add(alphabet["f"], s1, {s0,s0});
-    //     aut.delta.add(alphabet["f"], s1, {s1,s1});
-    //
-    //     CHECK(aut.is_top_down_complete(alphabet.get_alphabet_symbols()));
-    // }
-    //
-    // SECTION("Top-down incomplete automaton") {
-    //     Nfta aut({}, &alphabet, {});
-    //
-    //     State s0 = aut.delta.add_state();
-    //     aut.add_initial_state(s0);
-    //
-    //     // constant
-    //     aut.delta.add(alphabet["a"], s0, {});
-    //
-    //     // binary "f" partially defined
-    //     aut.delta.add(alphabet["f"], s0, {s0,s0});
-    //     // missing other combinations
-    //
-    //     CHECK_FALSE(aut.is_top_down_complete(alphabet.get_alphabet_symbols()));
-    // }
+    SECTION("Top-down complete") {
+        Nfta aut({}, &alphabet, {});
+
+        State s0 = aut.delta.add_state();
+        State s1 = aut.delta.add_state();
+        aut.add_initial_state(s0);
+        aut.add_initial_state(s1);
+
+        // constants
+        aut.delta.add(s0, alphabet["a"], {});
+        aut.delta.add(s1, alphabet["a"], {});
+
+        // unary "g"
+        aut.delta.add(s0, alphabet["g"], {s0});
+        aut.delta.add(s1, alphabet["g"], {s1});
+
+        // binary "f"
+        aut.delta.add(s0, alphabet["f"], {s0,s0});
+        aut.delta.add(s0, alphabet["f"], {s1,s1});
+        aut.delta.add(s1, alphabet["f"], {s0,s0});
+        aut.delta.add(s1, alphabet["f"], {s1,s1});
+
+        CHECK(aut.is_top_down_complete(alphabet.get_alphabet_symbols()));
+    }
+
+    SECTION("Top-down incomplete") {
+        Nfta aut({0}, &alphabet, {});
+
+        aut.add_initial_state(0);
+
+        // constant
+        aut.delta.add(0, alphabet["a"], {});
+
+        // binary "f" partially defined
+        aut.delta.add(0, alphabet["f"], {0,0});
+        // missing other combinations
+
+        CHECK_FALSE(aut.is_top_down_complete(alphabet.get_alphabet_symbols()));
+    }
+
+    SECTION("Incomplete both directions (higher arities)") {
+        alphabet.add_new_symbol("h"); // arity 3
+        alphabet.add_new_symbol("k"); // arity 4
+
+        Nfta aut({}, &alphabet, Delta(3));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["a"], {});
+
+        aut.delta.add(0, alphabet["g"], {0});
+        aut.delta.add(1, alphabet["g"], {1});
+
+        // only a few tuples
+        aut.delta.add(0, alphabet["h"], {0,0,0});
+        aut.delta.add(1, alphabet["h"], {1,1,1});
+
+        aut.delta.add(2, alphabet["k"], {0,0,0,0});
+
+        CHECK_FALSE(aut.is_bottom_up_complete(alphabet.get_alphabet_symbols()));
+        CHECK_FALSE(aut.is_top_down_complete(alphabet.get_alphabet_symbols()));
+    }
+
+    SECTION("Bottom-up complete but not top-down complete") {
+        Nfta aut({}, &alphabet, Delta(2));
+
+        aut.delta.add(0, alphabet["a"], {});
+
+        for (State s : {0u,1u}) {
+            aut.delta.add(0, alphabet["g"], {s});
+        }
+
+        // all tuples for h
+        for (State a : {0u,1u}) {
+            for (State b : {0u,1u}) {
+                for (State c : {0u,1u}) {
+                    aut.delta.add(0, alphabet["h"], {a,b,c});
+                    aut.delta.add(1, alphabet["h"], {a,b,c});
+                }
+            }
+        }
+
+        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["g"], alphabet["h"]}));
+        CHECK_FALSE(aut.is_top_down_complete(OrdVector<Symbol>{alphabet["g"], alphabet["h"]}));
+    }
+
+    SECTION("Top-down complete but not bottom-up complete") {
+        Nfta aut({}, &alphabet, Delta(2));
+
+        aut.add_initial_state(0);
+        aut.add_initial_state(1);
+
+        aut.delta.add(1, alphabet["a"], {});
+
+        aut.delta.add(0, alphabet["g"], {0});
+        aut.delta.add(1, alphabet["g"], {1});
+
+        aut.delta.add(0, alphabet["h"], {0,0,0});
+        aut.delta.add(1, alphabet["h"], {1,1,1});
+
+        CHECK(aut.is_top_down_complete(OrdVector<Symbol>{alphabet["g"], alphabet["h"]}));
+        CHECK_FALSE(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["g"], alphabet["h"]}));
+    }
+
+    SECTION("Complete both directions with arity 4 symbol") {
+        alphabet.add_new_symbol("h"); // arity 3
+        alphabet.add_new_symbol("k"); // arity 4
+
+        Nfta aut({}, &alphabet, Delta(2));
+
+        aut.delta.add(0, alphabet["a"], {});
+
+        for (State s : {0u,1u}) {
+            aut.delta.add(0, alphabet["g"], {s});
+            aut.delta.add(1, alphabet["g"], {s});
+        }
+
+        // all tuples for h
+        for (State a : {0u,1u}) {
+            for (State b : {0u,1u}) {
+                for (State c : {0u,1u}) {
+                    aut.delta.add(0, alphabet["h"], {a,b,c});
+                    aut.delta.add(1, alphabet["h"], {a,b,c});
+                }
+            }
+        }
+
+        // all tuples for k
+        for (State a : {0u,1u}) {
+            for (State b : {0u,1u}) {
+                for (State c : {0u,1u}) {
+                    for (State d : {0u,1u}) {
+                        aut.delta.add(0, alphabet["k"], {a,b,c,d});
+                        aut.delta.add(1, alphabet["k"], {a,b,c,d});
+                    }
+                }
+            }
+        }
+
+        CHECK(aut.is_bottom_up_complete(aut.delta.get_used_symbols(false)));
+        CHECK(aut.is_top_down_complete(OrdVector<Symbol>{alphabet["g"], alphabet["h"], alphabet["k"]}));
+    }
 }

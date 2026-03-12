@@ -3,6 +3,14 @@
 #include <cmath>
 
 namespace mata::nfta {
+
+inline void unknown_symbol_in_delta(const std::optional<std::string> &symbol = std::nullopt) {
+    if (symbol) {
+        std::cerr << "Unknown symbol in delta: " << *symbol << std::endl;
+    }
+    assert(false && "Unknown symbol in delta");
+}
+
 std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon, const bool include_state = true) {
     const size_t num_of_states = delta.num_of_states();
     std::vector<StateSet> result{ num_of_states };
@@ -199,7 +207,6 @@ Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensional
         //TODO: Push_back all of them and sort later could be faster.
         product_symbol_post.insert(std::move(result_targets));
     };
-
     std::vector<std::pair<State, Symbol>> constant_tr_A = {};
     std::vector<std::pair<State, Symbol>> constant_tr_B = {};
 
@@ -289,7 +296,9 @@ bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const 
         return false;
     }
     for (const auto& symbol_tr : rev_delta.symbol_transitions) {
-        if (!symbols.contains(symbol_tr.symbol)) { throw std::runtime_error("Unknown symbol in delta: " + std::to_string(symbol_tr.symbol)); }
+        if (!symbols.contains(symbol_tr.symbol)) {
+            unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(symbol_tr.symbol));
+        }
         assert(!symbol_tr.sources_transitions.empty() && "Source transitions not empty");
         const size_t arity = symbol_tr.sources_transitions.at(0).sources.size(); // todo use arity
         if (symbol_tr.sources_transitions.size() != ipow(num_of_states, arity)) { return false; }
@@ -301,7 +310,7 @@ bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const 
     return true;
 }
 
-// todo symbols optional and default to alphabet?
+// todo symbols optional and default to alphabet? that could be a problem with constants
 /// symbols need to exclude constants
 bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
     // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
@@ -311,9 +320,7 @@ bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
             assert(!symbol_post.target_tuples.empty());
             if (symbols.contains(symbol_post.symbol)) { n++; }
             else if (!symbol_post.target_tuples.at(0).empty()) {  // not a constant
-                std::cout << "symbol: " << alphabet->reverse_translate_symbol(symbol_post.symbol) << std::endl;
-                throw std::runtime_error("Unknown non-constant symbol" +
-                    alphabet->reverse_translate_symbol(symbol_post.symbol) +" in delta");
+                unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(symbol_post.symbol));
             }
         }
         if (n != symbols.size()) {
@@ -323,12 +330,31 @@ bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
     return true;
 }
 
+//
+bool next_tuple(std::vector<State>& tuple, const size_t base) {
+    size_t pos = tuple.size();
+    while (pos > 0) {
+        --pos;
+        if (++tuple[pos] < base)
+            return true;
+        tuple[pos] = 0;
+    }
+    return false;
+}
 
-
-void Nfta::make_bottom_up_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink) {
+State get_sink(State sink, Delta& delta) {
     if (sink == Limits::max_state) { sink = delta.add_state(); }
     delta.resize_for_states(sink);
+    return sink;
+}
+
+// todo some is_constant function in delta
+void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
+    sink = get_sink(sink, delta);
+    std::cout << "sink " << sink << std::endl;
+
     StatePost& sink_state_post = delta.mutable_state_post(sink);
+    const bool sink_sp_empty = sink_state_post.empty();
 
     const bool delta_empty = delta.is_empty();
     auto rev_delta = delta.get_reversed();
@@ -342,105 +368,135 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<std::pair<Symbol, unsi
 
     // iterating over symbols - both in delta and in input
     while (rev_delta_it != rev_delta_end || input_symbols_it != input_symbols_end) {
-        Symbol symbol;
-        unsigned arity;
-
-        decltype(rev_delta_it->sources_transitions.begin()) it{};
-        decltype(rev_delta_it->sources_transitions.end()) end{};
-
-        if (!delta_empty) {
-            it = rev_delta_it->sources_transitions.begin();
-            end = rev_delta_it->sources_transitions.end();
+        // symbol in delta that is not in the input
+        if (!delta_empty && (input_symbols_it == input_symbols_end || rev_delta_it->symbol < input_symbols_it->first)) {
+            unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(rev_delta_it->symbol));
+            ++rev_delta_it; continue; // or ignore
         }
-        if (delta_empty) {
-            symbol = input_symbols_it->first;
-            arity = input_symbols_it->second;
+        const Symbol symbol = input_symbols_it->first;
+        const unsigned arity = input_symbols_it->second;
+
+        static const decltype(rev_delta_it->sources_transitions) empty{};
+        auto source_tr_it  = empty.end();
+        auto source_tr_end = empty.end();
+
+        if (delta_empty || rev_delta_it == rev_delta_end || symbol < rev_delta_it->symbol) {
             ++input_symbols_it;
-        } else if (input_symbols_it == input_symbols_end || (rev_delta_it != rev_delta_end && rev_delta_it->symbol < input_symbols_it->first)) {
-            throw std::runtime_error("Unknown symbol in delta");
-        } else if (rev_delta_it == rev_delta_end || input_symbols_it->first < rev_delta_it->symbol) {
-            // input symbol missing in delta
-            it = rev_delta_it->sources_transitions.end();
-            symbol = input_symbols_it->first;
-            arity = input_symbols_it->second;
-            ++input_symbols_it;
-        } else { // symbol already in delta
-            symbol = rev_delta_it->symbol;
-            arity = input_symbols_it->second;
+            // add all
+        } else  { // symbols match
             assert(arity == rev_delta_it->sources_transitions.at(0).sources.size() && "Wrong arity");
 
-            // if there are already all combinations, continue
-            const size_t expected_num_of_transitions = ipow(num_of_states, arity);
-            assert(rev_delta_it->sources_transitions.size() <= expected_num_of_transitions);
+            source_tr_it  = rev_delta_it->sources_transitions.cbegin();
+            source_tr_end = rev_delta_it->sources_transitions.cend();
 
             const auto old_rev_delta_it = rev_delta_it;
             ++rev_delta_it;
             ++input_symbols_it;
+
+            // if there are already all combinations, continue
+            const size_t expected_num_of_transitions = ipow(num_of_states, arity);
+            assert(old_rev_delta_it->sources_transitions.size() <= expected_num_of_transitions);
             if (old_rev_delta_it->sources_transitions.size() == expected_num_of_transitions) { continue; }
         }
-        // some symbols are missing
+        // adding transitions
         if (arity == 0) {
             sink_state_post.push_back(SymbolPost{ symbol, std::vector<State>{} });
         } else {
             std::vector<State> tuple(arity, 0);
             SymbolPost new_symbol_post {symbol};
-            while (true) { // iterate over all possible tuples
-                if (!delta_empty && it != end && it->sources == tuple) {
-                    ++it; // tuple is already present
+            do {
+                if (!delta_empty && source_tr_it != source_tr_end && source_tr_it->sources == tuple) {
+                    ++source_tr_it; // tuple is already present
                 } else {
                     // we are working with symbols in order, so push back is fine
                     new_symbol_post.push_back(tuple);
                 }
-                size_t pos = arity;
-                while (pos > 0) { // increment tuple
-                    --pos;
-                    tuple[pos]++;
-                    if (tuple[pos] < num_of_states) { break; } // no overflow
-                    tuple[pos] = 0; // overflow -> carry to the left
-                }
-                // if (pos == 0 && tuple[0] == 0) { break; }
-                if (tuple == std::vector<State>(arity, 0)) { break; }
-            }
-            sink_state_post.push_back(std::move(new_symbol_post));
-            // const std::vector targets(arity, sink);
-            // sink_state_post.back().insert(targets);
+            } while (next_tuple(tuple, num_of_states));
+            if (sink_sp_empty) { sink_state_post.push_back(std::move(new_symbol_post)); }
+            else { delta.add(sink, new_symbol_post); }
         }
     }
 
-    assert(delta.is_sorted());
-
     #ifndef NDEBUG
-    utils::OrdVector<Symbol> symbols;
-    for (auto [symbol, arity] : symbols_arities) { symbols.insert(symbol); }
+    assert(delta.is_sorted());
+    const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities);
     assert(is_bottom_up_complete(symbols));
     #endif
 }
 
-void Nfta::make_top_down_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink) {
-    if (sink == Limits::max_state) { sink = delta.add_state(); }
-    delta.resize_for_states(sink);
+//todo test
+void Nfta::make_bottom_up_complete(State sink ) { // todo
+    if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
+    make_bottom_up_complete(delta.get_used_symbols_arities());
+}
+
+//todo test
+void Nfta::make_top_down_complete(State sink ) { // todo
+    if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
+    make_top_down_complete(delta.get_used_symbols_arities());
+}
+
+void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
+    sink = get_sink(sink, delta);
     const auto num_of_states = static_cast<State>(delta.num_of_states());
-    StatePost& sink_state_post = delta.mutable_state_post(sink);
-    for (State i = 0; i < num_of_states; i++) {
-        BoolVector symbols_found;
-        symbols_found.assign(symbols_arities.size(), 0);
-        for (const auto& symbol_post : delta[i]) {
-            for (size_t j = 0; j < symbols_arities.size(); j++) {
-                if (symbols_arities.at(j).first == symbol_post.symbol) { symbols_found[j] = true; break;}
+
+    for (State state = 0; state < num_of_states; state++) {
+        BoolVector symbols_found(symbols_arities.size(), false);
+        size_t input_index = 0;
+        auto delta_symbols_it = delta[state].cbegin();
+
+        // iterating through symbols_arities and delta symbol posts at the same time, as both are ordered
+        while (delta_symbols_it != delta[state].cend()) {
+            if (input_index >= symbols_arities.size()) { // still some symbols in delta
+                unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(delta_symbols_it->symbol));
+                break;
+            }
+            const auto &[input_symbol, input_arity] = symbols_arities.at(input_index);
+            assert(!delta_symbols_it->target_tuples.empty());
+
+            // ignore constants
+            if (delta_symbols_it->target_tuples.at(0).empty()) { ++delta_symbols_it; continue; }
+            if (input_arity == 0)  { ++input_index; continue; }
+
+            if (const Symbol delta_symbol = delta_symbols_it->symbol; input_symbol == delta_symbol) { // symbols match
+                symbols_found[input_index] = true;
+                ++delta_symbols_it;
+                ++input_index;
+            } else if (delta_symbol < input_symbol) {
+                unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(delta_symbol));
+                ++delta_symbols_it; // ignore it
+            } else {
+                // input symbol is not in this state post -> move to the next
+                ++input_index;
             }
         }
-        for (size_t j = 0; j < symbols_arities.size(); j++) { // todo creating a symbol post and merging could be faster
+
+        // add all non-constant symbols that were not found
+        for (size_t j = 0; j < symbols_arities.size(); j++) {
             const Symbol symbol = symbols_arities.at(j).first;
             const unsigned arity = symbols_arities.at(j).second;
+            if (arity == 0) { continue; }
             std::vector targets(arity, sink);
-            if (!symbols_found[j]) { delta.add(i, symbol, targets); }
-            delta.add(sink, symbol, targets);
+            if (!symbols_found[j]) {
+                delta.add(state, symbol, targets);
+            }
         }
     }
+
+    // add sink loops
+    StatePost sink_state_post = delta.mutable_state_post(sink);
+    const bool sink_sp_empty = sink_state_post.empty();
+    for (const auto &[symbol, arity] : symbols_arities) {
+        if (arity > 0) {
+            std::vector targets(arity, sink);
+            if (sink_sp_empty) { sink_state_post.push_back(SymbolPost{ symbol, targets }); }
+            else { delta.add(sink, symbol, targets); }
+        } // could become unsorted if there was something already
+    }
+
     #ifndef NDEBUG
     assert(delta.is_sorted());
-    utils::OrdVector<Symbol> symbols;
-    for (auto& [symbol, arity] : symbols_arities) { if (arity > 0) { symbols.insert(symbol); } }
+    const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities, true);
     assert(is_top_down_complete(symbols));
     #endif
 } // make_top_down_complete

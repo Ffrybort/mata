@@ -156,14 +156,76 @@ namespace mata::nfta {
          * @brief Check if the automaton is complete. todo
          */
         bool is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const;
+
+        /**
+         * @brief Check bottom-up completeness.
+         *
+         */
+        bool is_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const {
+            return is_bottom_up_complete(collect_symbols(symbols_arities));
+        }
+
+        /**
+         * @brief Check top-down completeness.
+         *
+         * Symbols need to exclude constants.
+         */
         bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
 
         /**
-         * default sink state => next available state
-         * any tr out of the sink state get deleted - todo is that ok
+         * @brief Check top-down completeness.
+         *
+         * Constant (arity 0) symbols are automatically ignored.
          */
-        void make_bottom_up_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink = Limits::max_state);
+        bool is_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const {
+            return is_top_down_complete(collect_symbols(symbols_arities, true));
+        }
+
+        /**
+         * @brief Complete the automaton bottom-up with given symbols, add missing transitions leading to a sink state.
+         *
+         * @param symbols_arities OrdVector of symbols to be added if missing, and their arities.
+         * @param sink Sink state may be custom defined, the default value will use the next available state.
+         *
+         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
+         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
+         * case existing from it are NOT deleted.
+         */
+        void make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink = Limits::max_state);
+
+        /**
+         * @brief Complete the automaton with symbols either from its alphabet (if a ranked alphabet is used), or with all used symbols in delta.
+         *
+         * @param sink Sink state may be custom defined, the default value will use the next available state.
+         *
+         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
+         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
+         * case existing from it are NOT deleted.
+         */
+        void make_bottom_up_complete(State sink = Limits::max_state);
+
+        /**
+         * @brief Complete the automaton top-down with given symbols, add missing transitions leading to a sink state.
+         *
+         * @param symbols_arities OrdVector of symbols to be added if missing, and their arities - arity 0 symbols are ignored.
+         * @param sink Sink state may be custom defined, the default value will use the next available state.
+         *
+         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
+         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
+         * case existing from it are NOT deleted.
+         */
         void make_top_down_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink = Limits::max_state);
+
+        /**
+         * @brief Complete the automaton with symbols either from its alphabet (if a ranked alphabet is used), or with all used symbols in delta.
+         *
+         * @param sink Sink state may be custom defined, the default value will use the next available state.
+         *
+         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
+         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
+         * case existing from it are NOT deleted.
+         */
+        void make_top_down_complete(State sink = Limits::max_state);
 
     }; // class Nfta
 

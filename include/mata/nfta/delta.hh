@@ -596,6 +596,14 @@ public:
     utils::OrdVector<Symbol> get_used_symbols(bool exclude_constants = false) const;
 
     /**
+     * @brief Get the set of symbols used on the transitions in the automaton.
+     *
+     * Does not necessarily have to equal the set of symbols in the alphabet used by the automaton.
+     * @return Set of symbols used on the transitions.
+     */
+     utils::OrdVector<SymbolArity> get_used_symbols_arities() const; // todo test
+
+    /**
      * @brief Get the maximum non-epsilon used symbol.
      */
     Symbol get_largest_symbol() const;

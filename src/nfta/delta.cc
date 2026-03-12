@@ -656,6 +656,20 @@ OrdVector<Symbol> Delta::get_used_symbols(const bool exclude_constants) const {
     return sorted_symbols;
 }
 
+OrdVector<SymbolArity> Delta::get_used_symbols_arities() const {
+    std::vector<SymbolArity> symbols{};
+    for (const StatePost& state_post: state_posts_) {
+        for (const SymbolPost & symbol_post: state_post) {
+            reserve_on_insert(symbols);
+            assert(!symbol_post.target_tuples.empty() && "Empty symbol post");
+            symbols.emplace_back(symbol_post.symbol, symbol_post.target_tuples.size());
+        }
+    }
+    OrdVector<SymbolArity> sorted_symbols(symbols);
+    return sorted_symbols;
+}
+
+
 // // Other versions, maybe an interesting experiment with speed of data structures.
 // // Returns symbols appearing in Delta, pushes back to vector and then sorts
 // mata::utils::OrdVector<Symbol> Delta::get_used_symbols_vec() const {
