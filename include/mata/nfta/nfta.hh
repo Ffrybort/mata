@@ -230,7 +230,14 @@ namespace mata::nfta {
         BoolVector get_top_down_reachable() const;
         BoolVector get_bottom_up_reachable() const;
 
+        /**
+         * @brief Remove top-down unreachable states
+         */
         void reduce_top_down();
+
+        /**
+         * @brief Remove bottom-up unreachable states
+         */
         void reduce_bottom_up_down();
 
 

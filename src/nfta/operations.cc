@@ -550,4 +550,13 @@ BoolVector Nfta::get_bottom_up_reachable() const {
     return marked;
 } // get_bottom_up_reachable
 
+void Nfta::reduce_top_down() {
+    const BoolVector marked = get_top_down_reachable();
+    defragment(marked);
+}
+void Nfta::reduce_bottom_up_down() {
+    const BoolVector marked = get_bottom_up_reachable();
+    defragment(marked);
+}
+
 } // namespace mata::nfta

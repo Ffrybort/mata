@@ -102,14 +102,14 @@ void Nfta::defragment(const BoolVector& is_staying) {
     }
     delta.defragment(is_staying, renaming);
 
-    utils::SparseSet<State> new_final_states;
+    utils::SparseSet<State> new_inital_states;
     for (const State s : initial_states) {
         if (is_staying[s]) {
             assert(s < renaming.size());
-            new_final_states.insert(renaming[s]);
+            new_inital_states.insert(renaming[s]);
         }
     }
-    initial_states = std::move(new_final_states);
+    initial_states = std::move(new_inital_states);
 } // defragment
 
 bool Nfta::operator== (const Nfta& other) const {

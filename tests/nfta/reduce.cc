@@ -336,7 +336,7 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
         CHECK(reachable[5]);
     }
 
-    SECTION("Largeer automaton") {
+    SECTION("Larger automaton") {
         constexpr size_t N = 10;
         Nfta aut({}, &alphabet, Delta(N));
         for (State s = 0; s < 3; ++s) {aut.delta.add(s, alphabet["a"], {}); }
@@ -352,5 +352,150 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
         for (State s = 0; s < N; ++s) {
             CHECK(reachable[s]);
         }
+    }
+}
+
+TEST_CASE("mata::nfta::reduce_top_down") {
+    OnTheFlyAlphabet alphabet;
+    alphabet.add_new_symbol("a"); // arity 0
+    alphabet.add_new_symbol("f"); // arity 1
+
+    SECTION("Empty") {
+        Nfta aut({}, &alphabet, Delta(10));
+
+        aut.reduce_top_down();
+        CHECK(aut.delta.num_of_states() == 0);
+    }
+
+    SECTION("Final state only") {
+        Nfta aut({0}, &alphabet, Delta(42));
+
+        aut.reduce_top_down();
+        CHECK(aut.delta.num_of_states() == 1);
+    }
+
+
+    SECTION("Simple reduction") {
+        Nfta aut({0}, &alphabet, Delta(3));
+
+        aut.delta.add(1, alphabet["a"], {});
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(2, alphabet["a"], {});
+
+        aut.reduce_top_down();
+        CHECK(aut.delta.num_of_states() == 2);
+        CHECK(aut.delta.contains(0, alphabet["f"], {1}));
+        CHECK(aut.delta.contains(1, alphabet["a"], {}));
+    }
+
+    SECTION("Reachable chain") {
+        Nfta aut({0}, &alphabet, Delta(4));
+
+        aut.delta.add(3, alphabet["a"], {});
+        aut.delta.add(2, alphabet["f"], {3});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(3, alphabet["f"], {3});
+
+        aut.reduce_top_down();
+        CHECK(aut.delta.num_of_states() == 4);
+    }
+
+    SECTION("Multiple initial") {
+        Nfta aut({0, 1}, &alphabet, Delta(4));
+
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["a"], {});
+
+        aut.delta.add(2, alphabet["a"], {});
+        aut.delta.add(3, alphabet["a"], {});
+
+        aut.reduce_top_down();
+
+        CHECK(aut.delta.num_of_states() == 2);
+        CHECK(aut.delta.contains(0, alphabet["a"], {}));
+        CHECK(aut.delta.contains(1, alphabet["a"], {}));
+    }
+}
+
+TEST_CASE("mata::nfta::reduce_bottom_up") {
+    OnTheFlyAlphabet alphabet;
+    alphabet.add_new_symbol("a"); // 0
+    alphabet.add_new_symbol("f"); // 1
+    alphabet.add_new_symbol("g"); // 2
+
+    SECTION("Empty") {
+        Nfta aut({}, &alphabet, Delta(10));
+
+        aut.reduce_bottom_up_down();
+        CHECK(aut.delta.num_of_states() == 0);
+    }
+
+    SECTION("Simple reduction removes unreachable states") {
+        Nfta aut({}, &alphabet, Delta(4));
+
+        aut.delta.add(1, alphabet["a"], {});
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(3, alphabet["f"], {2});
+
+        aut.reduce_bottom_up_down();
+
+        CHECK(aut.delta.num_of_states() == 2);
+        CHECK(aut.delta.contains(1, alphabet["a"], {}));
+        CHECK(aut.delta.contains(0, alphabet["f"], {1}));
+    }
+
+    SECTION("Reachable chain") {
+        Nfta aut({}, &alphabet, Delta(3));
+
+        aut.delta.add(2, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(0, alphabet["f"], {1});
+
+        aut.reduce_bottom_up_down();
+
+        CHECK(aut.delta.num_of_states() == 3);
+    }
+
+    SECTION("No constant") {
+        Nfta aut({}, &alphabet, Delta(2));
+
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(1, alphabet["f"], {0});
+
+        aut.reduce_bottom_up_down();
+
+        CHECK(aut.delta.num_of_states() == 0);
+    }
+
+    SECTION("Partially unreachable states") {
+        Nfta aut({0}, &alphabet, Delta(5));
+
+        aut.delta.add(2, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(0, alphabet["g"], {1, 2});
+        aut.delta.add(0, alphabet["g"], {3, 2});
+
+        aut.reduce_bottom_up_down();
+
+        CHECK(aut.delta.num_of_states() == 3);
+    }
+
+    SECTION("Unreachable component") {
+        Nfta aut({}, &alphabet, Delta(10));
+
+        aut.delta.add(3, alphabet["a"], {});
+        aut.delta.add(2, alphabet["f"], {3});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(0, alphabet["f"], {1});
+
+        aut.delta.add(7, alphabet["f"], {6});
+        aut.delta.add(6, alphabet["f"], {7});
+        aut.delta.add(5, alphabet["f"], {6});
+        aut.delta.add(4, alphabet["f"], {5});
+
+        aut.reduce_bottom_up_down();
+
+        CHECK(aut.delta.num_of_states() == 4);
     }
 }
