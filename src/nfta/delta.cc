@@ -222,9 +222,9 @@ size_t Delta::num_of_transitions() const {
     return number_of_transitions;
 } // num_of_transitions
 
-bool Delta::is_empty() const { // todo should this check the symbol posts if they actually contain any targets?
+bool Delta::empty() const { // todo should this check the symbol posts if they actually contain any targets?
     return std::ranges::all_of(state_posts_, [](const StatePost& state_post) { return state_post.empty(); });
-} // is_empty
+} // empty
 
 bool SymbolPost::is_sorted() const {
     if (!utils::is_sorted(target_tuples.to_vector())) {
@@ -499,6 +499,18 @@ OrdVector<State> ReversedDelta::get_initial_states() const {
     return OrdVector<State>(result);
 } // get_initial_states
 
+std::vector<std::pair<Symbol, OrdVector<State>>> ReversedDelta::get_initial_states_by_symbol() const {
+    std::vector<std::pair<Symbol, OrdVector<State>>> result;
+    for (const auto& sym_trans : symbol_transitions) {
+        if (sym_trans.is_constant()) {
+            const auto& targets = sym_trans.sources_transitions.front().targets;
+            result.emplace_back(sym_trans.symbol, OrdVector<State>(targets));
+        }
+    }
+
+    return result;
+} // get_initial_states_by_symbol
+
 ReversedDelta Delta::get_reversed() const { // todo optionally reserve symbols?
     ReversedDelta result;
 
@@ -705,3 +717,41 @@ Symbol Delta::get_largest_symbol() const { // unused
     }
     return max;
 } // get_largest_symbol
+
+// StateSet SynchronizedExistentialSymbolPostIterator::unify_targets() const {
+//     if(!is_synchronized()) { return {}; }
+//
+//     StateSet unified_targets{};
+//
+//     using TargetSetBeginEndPair = std::pair<StateSet::const_iterator, StateSet::const_iterator>;
+//     auto compare = [](const auto& a, const auto& b) { return *(a.first) > *(b.first); };
+//     std::priority_queue<TargetSetBeginEndPair, std::vector<TargetSetBeginEndPair>, decltype(compare) > queue(compare);
+//     for (const StatePost::const_iterator& symbol_post_it: get_current()) {
+//         queue.emplace(symbol_post_it->cbegin(), symbol_post_it->cend());
+//     }
+//     unified_targets.reserve(32);
+//     while (!queue.empty()) {
+//         auto item = queue.top();
+//         queue.pop();
+//         if (unified_targets.empty() || unified_targets.back() != *(item.first)) {
+//             unified_targets.push_back(*(item.first));
+//         }
+//         if (++item.first != item.second) { queue.emplace(item); }
+//     }
+//
+//     return unified_targets;
+// }
+
+bool SynchronizedExistentialSymbolPostIterator::synchronize_with(const Symbol sync_symbol) {
+    do {
+        if (is_synchronized()) {
+            if (const auto current_min_symbol_post_it = get_current_minimum();
+                current_min_symbol_post_it->symbol >= sync_symbol) { break; }
+        }
+    } while (advance());
+    return is_synchronized() && get_current_minimum()->symbol == sync_symbol;
+}
+
+bool SynchronizedExistentialSymbolPostIterator::synchronize_with(const SymbolPost& sync) {
+    return synchronize_with(sync.symbol);
+}

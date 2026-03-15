@@ -97,7 +97,7 @@ public:
 
            SymbolTransitions() : symbol{}, sources_transitions{} {}
 
-           explicit SymbolTransitions(Symbol s)
+           explicit SymbolTransitions(const Symbol s)
                : symbol(s), sources_transitions{} {}
 
            std::weak_ordering operator<=>(const SymbolTransitions& other) const {
@@ -108,9 +108,13 @@ public:
                return symbol == other.symbol;
            }
 
-           bool is_constant() const {
+           unsigned get_arity() const {
                assert(!sources_transitions.empty() && "Empty source transitions");
-               return sources_transitions.at(0).sources.empty();
+               return static_cast<unsigned>(sources_transitions.at(0).sources.size());
+           }
+
+           bool is_constant() const {
+               return get_arity() == 0;
            }
      };
 
@@ -126,6 +130,7 @@ public:
      * @brief Get states that have a constant (arity 0) transition leading to them
      */
     utils::OrdVector<State> get_initial_states() const; /// initial here means the state has a constant transition
+    std::vector<std::pair<Symbol, utils::OrdVector<State>>>get_initial_states_by_symbol() const; /// initial here means the state has a constant transition
 };
 
 /**
@@ -356,32 +361,6 @@ public:
     bool operator==(const const_iterator& other) const;
 }; // class const_iterator.
 
-/**
- * @brief Specialization of utils::SynchronizedExistentialIterator for iterating over SymbolPosts.
- */
-class SynchronizedExistentialSymbolPostIterator : public utils::SynchronizedExistentialIterator<utils::OrdVector<SymbolPost>::const_iterator> {
-public:
-    /**
-     * @brief Get union of all targets.
-     */
-    StateVectorSet unify_targets() const;
-
-    /**
-     * @brief Synchronize with the given SymbolPost @p sync.
-     *
-     * Alignes the synchronized iterator to the same symbol as @p sync.
-     * @return True iff the synchronized iterator points to the same symbol as @p sync.
-     */
-    bool synchronize_with(const SymbolPost& sync);
-
-    /**
-     * @brief Synchronize with the given symbol @p sync_symbol.
-     *
-     * Alignes the synchronized iterator to the same symbol as @p sync_symbol.
-     * @return True iff the synchronized iterator points to the same symbol as @p sync.
-     */
-    bool synchronize_with(Symbol sync_symbol);
-}; // class SynchronizedExistentialSymbolPostIterator.
 
 /**
  * @brief Delta is a data structure for representing transition relation.
@@ -554,7 +533,7 @@ public:
      * Check whether automaton contains no transitions.
      * @return True if there are no transitions in the automaton, false otherwise.
      */
-    bool is_empty() const;
+    bool empty() const;
 
     /**
      * @brief Append post vector to the delta.
