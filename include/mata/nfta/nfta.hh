@@ -86,6 +86,7 @@ namespace mata::nfta {
          * @brief Print the automaton in an easy-to-read format.
          */
         void print_readable(std::ostream& os = std::cout) const;
+        void print_readable_bottom_up(std::ostream& os = std::cout) const;
 
         /**
          * @brief Get the set of initial states.
@@ -95,7 +96,7 @@ namespace mata::nfta {
         /**
          * @brief Check if the automaton is empty - no initial states and no transitions in delta.
          */
-        bool is_empty() const { return initial_states.empty() || delta.is_empty(); }
+        bool is_empty() const { return initial_states.empty() || delta.empty(); }
 
         /**
          * @brief Remove unused states and rename the rest.
@@ -239,6 +240,8 @@ namespace mata::nfta {
          * @brief Remove bottom-up unreachable states
          */
         void reduce_bottom_up_down();
+
+        void determinize(std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
 
     }; // class Nfta

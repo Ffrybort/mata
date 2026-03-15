@@ -23,6 +23,23 @@ void print_transitions(std::ostream& os, const std::vector<Transition>& transiti
     }
 } // print_transitions
 
+void print_transitions_bottom_up(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
+    for (const auto& transition : transitions) {
+        os <<"(";
+        for (std::size_t i = 0; i < transition.targets.size(); ++i) {
+            os << transition.targets[i];
+            if (i + 1 < transition.targets.size()) os << ",";
+        }
+        os << ")";
+
+        os << " -> ";
+        if (alphabet) { os << alphabet->reverse_translate_symbol(transition.symbol); }
+        else { os << transition.symbol; }
+        os << " " <<  transition.source;
+        os << std::endl;
+    }
+} // print_transitions
+
 void Nfta::print_mata(std::ostream& os) const {
     os << "@NFTA-explicit" << std::endl;
     os << "%States-marked " << std::endl;
@@ -88,6 +105,42 @@ void Nfta::print_readable(std::ostream& os) const {
     // Transitions
     os << "Transitions:\n";
     print_transitions(os, delta.get_transitions(), alphabet);
+    os << "\n================================================\n";
+} // print_readable
+
+void Nfta::print_readable_bottom_up(std::ostream& os) const {
+    os << "NFTA";
+    os << "================================================" << std::endl;
+
+    // States
+    os << "States (" << delta.num_of_states() << "): ";
+
+    // Initial states
+    os << "Final states: ";
+
+    for (const State s : initial_states) {
+        os << s << " ";
+    }
+    os << std::endl;
+
+    // Alphabet
+    os << "Alphabet:";
+    if (alphabet) {
+        try {
+            for (const Symbol sym : alphabet->get_alphabet_symbols()) {
+                os << "  "<< alphabet->try_reverse_translate_symbol(sym); // todo print arities
+            }
+        } catch (const std::exception& e) {
+            ;
+        }
+    } else {
+        os << "  none\n";
+    }
+    os << std::endl;
+
+    // Transitions
+    os << "Transitions:\n";
+    print_transitions_bottom_up(os, delta.get_transitions(), alphabet);
     os << "\n================================================\n";
 } // print_readable
 
