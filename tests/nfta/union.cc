@@ -195,6 +195,6 @@ TEST_CASE("mata::nfta::union_product") {
             // L(C) = {a, b}
 
         Nfta C = union_product(A, B);
-        CHECK_FALSE(C.delta.is_empty());
+        CHECK_FALSE(C.delta.empty());
     }
 }
