@@ -16,11 +16,18 @@
 namespace mata::nfta {
     using NameStateMap = std::unordered_map<std::string, State>;
 
+    /**
+     * @brief Transition with the symbol as a string to be translated later.
+     */
     struct RawTransition {
-      State source;
-      std::string symbol_string;
-      std::vector<State> targets;
+        State source;
+        std::string symbol_string;
+        std::vector<State> targets;
+
+        RawTransition()
+            : source{}, symbol_string{}, targets{} {}
     };
+
 
     inline Nfta create_empty(Alphabet *alphabet = nullptr) {
        return Nfta({0}, alphabet, Delta(1));
