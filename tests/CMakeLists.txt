@@ -3,7 +3,7 @@ add_executable (tests ${MATA_TEST_SOURCES}
         nfta/epsilon_transitions.cc
         nfta/union.cc
         nfta/intersection.cc
-        nfta/determinism.cc
+        nfta/determinize.cc
         nfta/check_functions.cc
         nfta/make_complete.cc
         nfta/reduce.cc)

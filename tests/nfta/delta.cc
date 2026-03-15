@@ -125,10 +125,10 @@ TEST_CASE("mata::nfta::delta") {
     }
 
     SECTION("Empty delta") {
-        CHECK(delta.is_empty());
+        CHECK(delta.empty());
 
         delta.add(0, 1, {2});
-        CHECK_FALSE(delta.is_empty());
+        CHECK_FALSE(delta.empty());
     }
 
 
@@ -382,7 +382,7 @@ TEST_CASE("mata::nfta::delta") {
         delta.defragment(is_staying, renaming);
 
         CHECK(delta.num_of_states() == 0);
-        CHECK(delta.is_empty());
+        CHECK(delta.empty());
     }
 
     SECTION("Delta is_sorted on empty delta") {

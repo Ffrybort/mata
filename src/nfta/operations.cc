@@ -260,7 +260,7 @@ Nfta intersection(const Nfta& A, const Nfta& B) {
 } // intersection
 
 bool Nfta::is_bottom_up_deterministic() const {
-    if (delta.is_empty()) { return true; }
+    if (delta.empty()) { return true; }
     std::vector<Move> moves;
 
     for (const auto& state_post : delta) {
@@ -278,7 +278,7 @@ bool Nfta::is_bottom_up_deterministic() const {
 
 bool Nfta::is_top_down_deterministic() const {
     if (initial_states.size() > 1) { return false; }
-    if (delta.is_empty()) { return true; }
+    if (delta.empty()) { return true; }
 
     const auto num_of_states = static_cast<State>(delta.num_of_states());
     for (State i = 0; i < num_of_states; ++i) {
@@ -350,7 +350,7 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
     StatePost& sink_state_post = delta.mutable_state_post(sink);
     const bool sink_sp_empty = sink_state_post.empty();
 
-    const bool delta_empty = delta.is_empty();
+    const bool delta_empty = delta.empty();
     auto rev_delta = delta.get_reversed();
     const size_t num_of_states = delta.num_of_states();
 
@@ -421,13 +421,13 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
 } // make_bottom_up_complete
 
 //todo test
-void Nfta::make_bottom_up_complete(State sink ) { // todo
+void Nfta::make_bottom_up_complete(const State sink ) { // todo
     if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
     make_bottom_up_complete(delta.get_used_symbols_arities(), sink);
 } // make_bottom_up_complete
 
 //todo test
-void Nfta::make_top_down_complete(State sink ) { // todo
+void Nfta::make_top_down_complete(const State sink ) { // todo
     if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
     make_top_down_complete(delta.get_used_symbols_arities(), sink);
 } // make_top_down_complete
@@ -558,5 +558,98 @@ void Nfta::reduce_bottom_up_down() {
     const BoolVector marked = get_bottom_up_reachable();
     defragment(marked);
 }
+
+void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
+    Nfta result{};
+    result.alphabet = alphabet;
+
+    ReversedDelta rev_delta = delta.get_reversed();
+    //assuming all sets targets are non-empty
+    std::vector<std::pair<State, StateSet>> worklist{};
+    std::unordered_map<StateSet, State> state_mapping_local{};
+    if (!state_mapping) {state_mapping = &state_mapping_local;} // todo using both set -> det state and det state -> set mappings
+    std::vector<StateSet> det_state_to_sets{};                  // todo decide which is better
+    det_state_to_sets.reserve(delta.num_of_states()); // todo sizes
+    std::vector<State> marked; // states that were already processed - only these are considered for building tuples
+
+    if (delta.empty()) {
+        *this = result;
+        return;
+    }
+
+    // find a deterministic state or create a new one
+    auto get_det_state = [&](const StateSet& orig_states) {
+        assert(!orig_states.empty());
+        if (const auto it = state_mapping->find(orig_states); it != state_mapping->end()) {
+            return it->second;
+        }
+
+        // create a new state
+        const State new_det_state = result.delta.add_state();
+        (*state_mapping)[orig_states] = new_det_state;
+        det_state_to_sets.resize(new_det_state + 1);
+        det_state_to_sets[new_det_state] = orig_states;
+        worklist.emplace_back(new_det_state, orig_states);
+        if (initial_states.intersects_with(orig_states)) { result.add_initial_state(new_det_state); }
+        return new_det_state;
+    };
+
+    for (auto bottom_up_initial = rev_delta.get_initial_states_by_symbol();
+            const auto& [symbol, states_orig] : bottom_up_initial) {
+        const State state_det = get_det_state(states_orig);
+        result.delta.add(state_det, symbol, {});
+        (*state_mapping)[states_orig] = state_det;
+        det_state_to_sets.resize(state_det + 1);
+        det_state_to_sets[state_det] = states_orig;
+    }
+
+    while (!worklist.empty()) {
+        const auto [new_det_state, new_state_set]{ std::move(worklist.back()) };
+        worklist.pop_back();
+        marked.push_back(new_det_state);
+        if (new_state_set.empty()) { // should not happen
+            std::cerr << "Nfta::determinize(): empty state set" << std::endl;
+            break;
+        }
+        for (const auto& symb_tr : rev_delta.symbol_transitions) {
+            const unsigned arity = symb_tr.get_arity();
+            if (arity == 0) { continue; }
+
+            std::vector<State> tuple(arity, 0);
+            const size_t base = marked.size();
+            std::vector<State> tuple_det_states(arity);
+            do {
+                std::vector<State> targets;
+                for (unsigned i = 0; i < arity; i++) { tuple_det_states[i] = marked[tuple[i]]; }
+
+                for (const auto& src_tr : symb_tr.sources_transitions) {
+                    bool match = true;
+                    assert(src_tr.sources.size() == arity && "Nfta::determinize arity mismatch");
+                    // try to match it to state_det
+                    for (size_t i = 0; i < arity; i++) {
+                        auto det_state_to_match = tuple_det_states[i];
+                        auto& orig_states_to_match = det_state_to_sets[det_state_to_match];
+                        if (!orig_states_to_match.contains(src_tr.sources[i])) {match = false; break; }
+                    }
+
+                    if (!match) { continue; }
+
+                    // add to targets
+                    std::ranges::copy(src_tr.targets, std::back_inserter(targets));
+                }
+
+                if (targets.empty()) { continue; }
+                utils::OrdVector<State> targets_ord(targets);
+                State det_target = get_det_state(targets_ord);
+                result.delta.add(det_target, symb_tr.symbol, tuple_det_states); // todo add multiple later
+            } while (next_tuple(tuple, base));
+
+
+        }
+    }
+    *this = result;
+    // assert(is_bottom_up_deterministic());
+}
+
 
 } // namespace mata::nfta
