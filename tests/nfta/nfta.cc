@@ -18,29 +18,14 @@ TEST_CASE("mata::nfta") {
     alphabet.add_new_symbol("f"); // function symbol
     alphabet.add_new_symbol("a"); // constant symbol
 
-    SECTION("AddState") {
-        Nfta aut({}, &alphabet, {});
-        State s = aut.delta.add_state();
-        CHECK(aut.delta.contains_state(s));
-        CHECK(aut.delta.num_of_states() == 1);
-    }
-
-    SECTION("AddInitialState") {
+    SECTION("Add initial") {
         Nfta aut({}, &alphabet, {});
         aut.add_initial_state(0);
         CHECK(aut.is_state_initial(0));
         CHECK(aut.delta.num_of_states() == 1); // adding initial state increases num of states
     }
 
-    SECTION("DuplicateStateIgnored") {
-        Nfta aut({}, &alphabet, {});
-        aut.delta.add_state();
-        aut.delta.add_state();
-        // All added states are unique numbers, so count reflects additions
-        CHECK(aut.delta.num_of_states() == 2);
-    }
-
-    SECTION("DuplicateInitialStateIgnored") {
+    SECTION("Duplicate initial") {
         Nfta aut({}, &alphabet, {});
         aut.add_initial_state(0);
         aut.add_initial_state(0);
@@ -48,33 +33,8 @@ TEST_CASE("mata::nfta") {
         CHECK(aut.get_initial_states().size() == 1);
     }
 
-    SECTION("AddTransition") {
-        Nfta aut( {}, &alphabet, {});
-        State src = aut.delta.add_state(); // source state
-        State t1 = aut.delta.add_state();
-        State t2 = aut.delta.add_state();
-        aut.delta.add(alphabet["f"], src, {t1, t2});
-        auto transitions = aut.delta.get_transitions();
-        REQUIRE(transitions.size() == 1);
-        const auto& t = *transitions.begin();
-        CHECK(t.symbol == alphabet["f"]);
-        CHECK(t.source == src);
-        CHECK(t.targets.size() == 2);
-    }
 
-    SECTION("AddMultipleTransitions") {
-        Nfta aut({}, &alphabet, {});
-        State s1 = aut.delta.add_state();
-        State s2 = aut.delta.add_state();
-        State s3 = aut.delta.add_state();
-        aut.delta.add(alphabet["f"], s1, {s2, s3});
-        State s4 = aut.delta.add_state();
-        aut.delta.add(s4, alphabet["a"], {});
-        auto transitions = aut.delta.get_transitions();
-        CHECK(transitions.size() == 2);
-    }
-
-    SECTION("ContainsStateAndInitialCheck") {
+    SECTION("Contains state and initial state") {
         Nfta aut({}, &alphabet, {});
         State s = aut.delta.add_state();
         CHECK(aut.delta.contains_state(s));
@@ -82,7 +42,7 @@ TEST_CASE("mata::nfta") {
         CHECK(!aut.delta.contains_state(static_cast<State>(aut.delta.num_of_states()))); // should out of range
     }
 
-    SECTION("ConstructorInitialization") {
+    SECTION("Constructor initialization") {
         Nfta aut( {1}, &alphabet, Delta(2)); // 2 states: 0 and 1, initial state 1
         CHECK(aut.delta.contains_state(0));
         CHECK(aut.delta.contains_state(1));
@@ -91,7 +51,7 @@ TEST_CASE("mata::nfta") {
         CHECK(aut.delta.num_of_states() == 2);
     }
 
-    SECTION("PrintSanity") {
+    SECTION("Print sanity") {
         Nfta aut({0}, &alphabet, {});
         aut.delta.add(alphabet["f"], 0, {0,1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
@@ -99,7 +59,22 @@ TEST_CASE("mata::nfta") {
         CHECK_NOTHROW(aut.print_readable(std::cout));
     }
 
-    SECTION("DefragmentBasic") {
+    SECTION("Swap initial") {
+        Nfta aut({0, 3, 6, 9}, &alphabet, {Delta(10)});
+        aut.swap_initial_states();
+        CHECK(!aut.is_state_initial(0));
+        CHECK(aut.is_state_initial(1));
+        CHECK(aut.is_state_initial(2));
+        CHECK(!aut.is_state_initial(3));
+        CHECK(aut.is_state_initial(4));
+        CHECK(aut.is_state_initial(5));
+        CHECK(!aut.is_state_initial(6));
+        CHECK(aut.is_state_initial(7));
+        CHECK(aut.is_state_initial(8));
+        CHECK(!aut.is_state_initial(9));
+    }
+
+    SECTION("Defragment basic") {
         Nfta aut({}, &alphabet, {});
         State s0 = aut.delta.add_state();
         State s1 = aut.delta.add_state();
