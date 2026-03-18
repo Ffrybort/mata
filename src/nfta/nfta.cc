@@ -171,10 +171,10 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     auto symbols = delta.get_used_symbols_arities();
 
     for (const auto& [symbol, arity] : symbols) {
-        std::string sym_str;
+        std::string sym_str = "a";
 
-        if (alphabet) { sym_str = alphabet->try_reverse_translate_symbol(symbol); }
-        else { sym_str = std::to_string(symbol); }
+        if (alphabet) { sym_str.append(alphabet->try_reverse_translate_symbol(symbol)); }
+        else { sym_str.append(std::to_string(symbol)); }
 
         os << sym_str << ":" << arity << " ";
     }
@@ -195,10 +195,10 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     os << "Transitions" << std::endl;
 
     for (const auto& t : delta.get_transitions()) {
-        std::string sym_str;
+        std::string sym_str = "a";
 
-        if (alphabet) { sym_str = alphabet->reverse_translate_symbol(t.symbol); }
-        else { sym_str = std::to_string(t.symbol); }
+        if (alphabet) { sym_str.append(alphabet->reverse_translate_symbol(t.symbol)); }
+        else { sym_str.append(std::to_string(t.symbol)); }
 
         if (t.targets.empty()) {
             // constant
