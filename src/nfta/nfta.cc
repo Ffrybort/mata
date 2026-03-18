@@ -165,6 +165,56 @@ void Nfta::defragment(const BoolVector& is_staying) {
     initial_states = std::move(new_inital_states);
 } // defragment
 
+void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
+    // Alphabet with correct arities
+    os << "Ops ";
+    auto symbols = delta.get_used_symbols_arities();
+
+    for (const auto& [symbol, arity] : symbols) {
+        std::string sym_str;
+
+        if (alphabet) { sym_str = alphabet->try_reverse_translate_symbol(symbol); }
+        else { sym_str = std::to_string(symbol); }
+
+        os << sym_str << ":" << arity << " ";
+    }
+    os << std::endl;
+
+    os << "Automaton " << name << std::endl;
+    os << "States ";
+    for (State s = 0; s < delta.num_of_states(); ++s) {
+        os << "q" << s << " ";
+    }
+    os << std::endl;
+    os << "Final States ";
+    for (const State s : initial_states) {
+        os << "q" << s << " ";
+    }
+    os << std::endl;
+
+    os << "Transitions" << std::endl;
+
+    for (const auto& t : delta.get_transitions()) {
+        std::string sym_str;
+
+        if (alphabet) { sym_str = alphabet->reverse_translate_symbol(t.symbol); }
+        else { sym_str = std::to_string(t.symbol); }
+
+        if (t.targets.empty()) {
+            // constant
+            os << "  " << sym_str << " -> q" << t.source << std::endl;
+        } else {
+            // function symbol
+            os << "  " << sym_str << "(";
+            for (size_t i = 0; i < t.targets.size(); ++i) {
+                os << "q" << t.targets[i];
+                if (i + 1 < t.targets.size()) os << ",";
+            }
+            os << ") -> q" << t.source << std::endl;
+        }
+    }
+}
+
 bool Nfta::operator== (const Nfta& other) const {
     return delta.num_of_states() == other.delta.num_of_states()
         && initial_states == other.initial_states

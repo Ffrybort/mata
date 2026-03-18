@@ -7,8 +7,6 @@ using namespace mata::utils;
 using namespace mata::nfta;
 using mata::Symbol;
 
-using StateBoolArray = std::vector<bool>; ///< Bool array for states in the automaton.
-
 SymbolPost& SymbolPost::operator=(SymbolPost&& rhs) noexcept {
     if (*this != rhs) {
         symbol = rhs.symbol;
@@ -717,41 +715,3 @@ Symbol Delta::get_largest_symbol() const { // unused
     }
     return max;
 } // get_largest_symbol
-
-// StateSet SynchronizedExistentialSymbolPostIterator::unify_targets() const {
-//     if(!is_synchronized()) { return {}; }
-//
-//     StateSet unified_targets{};
-//
-//     using TargetSetBeginEndPair = std::pair<StateSet::const_iterator, StateSet::const_iterator>;
-//     auto compare = [](const auto& a, const auto& b) { return *(a.first) > *(b.first); };
-//     std::priority_queue<TargetSetBeginEndPair, std::vector<TargetSetBeginEndPair>, decltype(compare) > queue(compare);
-//     for (const StatePost::const_iterator& symbol_post_it: get_current()) {
-//         queue.emplace(symbol_post_it->cbegin(), symbol_post_it->cend());
-//     }
-//     unified_targets.reserve(32);
-//     while (!queue.empty()) {
-//         auto item = queue.top();
-//         queue.pop();
-//         if (unified_targets.empty() || unified_targets.back() != *(item.first)) {
-//             unified_targets.push_back(*(item.first));
-//         }
-//         if (++item.first != item.second) { queue.emplace(item); }
-//     }
-//
-//     return unified_targets;
-// }
-
-bool SynchronizedExistentialSymbolPostIterator::synchronize_with(const Symbol sync_symbol) {
-    do {
-        if (is_synchronized()) {
-            if (const auto current_min_symbol_post_it = get_current_minimum();
-                current_min_symbol_post_it->symbol >= sync_symbol) { break; }
-        }
-    } while (advance());
-    return is_synchronized() && get_current_minimum()->symbol == sync_symbol;
-}
-
-bool SynchronizedExistentialSymbolPostIterator::synchronize_with(const SymbolPost& sync) {
-    return synchronize_with(sync.symbol);
-}

@@ -56,7 +56,7 @@ TEST_CASE("mata::nfta") {
         aut.delta.add(alphabet["f"], 0, {0,1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
         CHECK_NOTHROW(aut.print_readable(std::cout));
-        CHECK_NOTHROW(aut.print_readable(std::cout));
+        CHECK_NOTHROW(aut.print_timbuk(std::cout));
     }
 
     SECTION("Swap initial") {

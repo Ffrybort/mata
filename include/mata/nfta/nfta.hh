@@ -88,6 +88,8 @@ namespace mata::nfta {
         void print_readable(std::ostream& os = std::cout) const;
         void print_readable_bottom_up(std::ostream& os = std::cout) const;
 
+        void print_timbuk(std::ostream& os = std::cout, const std::string& name = "A") const;
+
         /**
          * @brief Get the set of initial states.
          */
@@ -131,12 +133,15 @@ namespace mata::nfta {
         /**
          * @brief In-place union. Does not preserve determinism.
          */
-        void union_nondet_in_place(const Nfta& aut);
+        void unite_nondet_with(const Nfta& aut);
 
-        /** todo
+        /**
+         *@brief Swap initial and non-initial states.
          *
+         * New initial states consist of all states from delta that but current initial states.
          */
-        void complement();
+        void swap_initial_states();
+
 
         /**
          * @brief Check if the automaton is bottom-up deterministic.
@@ -161,6 +166,7 @@ namespace mata::nfta {
         /**
          * @brief Check bottom-up completeness.
          *
+         * Arities are disregarded.
          */
         bool is_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const {
             return is_bottom_up_complete(collect_symbols(symbols_arities));
@@ -241,9 +247,12 @@ namespace mata::nfta {
          */
         void reduce_bottom_up_down();
 
+        /**
+         * @brief
+         *
+         * todo some parameter to choose an algorithm
+         */
         void determinize(std::unordered_map<StateSet, State>* state_mapping = nullptr);
-
-
     }; // class Nfta
 
     /**
@@ -270,11 +279,17 @@ namespace mata::nfta {
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
 
+    /** todo
+    *
+    */
+    Nfta complement(const Nfta& aut);
+
     /**
     * @brief Create a product automaton. Used for union and intersection.
     */
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
+    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
 
 } // namespace mata::nfta

@@ -24,7 +24,7 @@ TEST_CASE("mata::nfta::union_nondet") {
 
         B.add_initial_state(0);
 
-        A.union_nondet_in_place(B);
+        A.unite_nondet_with(B);
 
         CHECK(A.delta.num_of_states() == 1);
         CHECK(A.is_state_initial(0));
@@ -40,7 +40,7 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.add_initial_state(0);
         B.add_initial_state(1);
 
-        A.union_nondet_in_place(B);
+        A.unite_nondet_with(B);
 
         CHECK(A.get_initial_states().size() == 2);
         CHECK(A.is_state_initial(0));
@@ -53,7 +53,7 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.delta.add(0, alphabet["a"], {0});
         B.delta.add(1, alphabet["f"], {4, 5});
 
-        A.union_nondet_in_place(B);
+        A.unite_nondet_with(B);
 
         CHECK(A.delta.contains(0, alphabet["a"], {0}));
         CHECK(A.delta.contains(2, alphabet["f"], {5, 6}));
@@ -64,7 +64,7 @@ TEST_CASE("mata::nfta::union_nondet") {
         Nfta B({1}, &alphabet, Delta(2));
 
         B.delta.add(1, alphabet["a"], {0});
-        A.union_nondet_in_place(B);
+        A.unite_nondet_with(B);
 
         CHECK(A.delta.num_of_states() == 3);
     }
@@ -93,7 +93,7 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.delta.add(0, alphabet["f"], {1});
         B.delta.add(1, alphabet["f"], {1, 2});
 
-        A.union_nondet_in_place(B);
+        A.unite_nondet_with(B);
 
         auto transitions = A.delta.get_transitions();
 

@@ -92,7 +92,19 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     }
 } // remove_epsilon_in_place
 
-void Nfta::union_nondet_in_place(const Nfta& aut) {
+void Nfta::swap_initial_states() {
+    const auto num_of_states = static_cast<State>(delta.num_of_states());
+    initial_states.complement(num_of_states);
+}
+
+Nfta complement(const Nfta& aut) {
+    Nfta result = determinize_naive(aut);
+    result.swap_initial_states();
+    return result;
+}
+
+
+void Nfta::unite_nondet_with(const Nfta& aut) {
     if (this == &aut) { return; }
     if (initial_states.empty()) { *this = aut; return; }
     if (aut.initial_states.empty()) { return; }
@@ -112,11 +124,11 @@ void Nfta::union_nondet_in_place(const Nfta& aut) {
     for(const State& aut_fin: aut.initial_states) {
         this->initial_states.insert(renumber_states(aut_fin));
     }
-} // union_nondet_in_place
+} // unite_nondet_with
 
 Nfta union_nondet(const Nfta& A, const Nfta& B) {
     if (A.initial_states.empty() && B.initial_states.empty()) {return Nfta();}
-    Nfta result{A}; result.union_nondet_in_place(B); return result;
+    Nfta result{A}; result.unite_nondet_with(B); return result;
 } // union_nondet
 
 /// nfta must be epsilon free
@@ -560,21 +572,25 @@ void Nfta::reduce_bottom_up_down() {
 }
 
 void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
-    Nfta result{};
-    result.alphabet = alphabet;
+    *this = determinize_naive(*this, state_mapping);
+}
 
-    ReversedDelta rev_delta = delta.get_reversed();
+
+Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
+    Nfta result{};
+    result.alphabet = aut.alphabet;
+
+    ReversedDelta rev_delta = aut.delta.get_reversed();
     //assuming all sets targets are non-empty
     std::vector<std::pair<State, StateSet>> worklist{};
     std::unordered_map<StateSet, State> state_mapping_local{};
     if (!state_mapping) {state_mapping = &state_mapping_local;} // todo using both set -> det state and det state -> set mappings
     std::vector<StateSet> det_state_to_sets{};                  // todo decide which is better
-    det_state_to_sets.reserve(delta.num_of_states()); // todo sizes
+    det_state_to_sets.reserve(aut.delta.num_of_states()); // todo sizes
     std::vector<State> marked; // states that were already processed - only these are considered for building tuples
 
-    if (delta.empty()) {
-        *this = result;
-        return;
+    if (aut.delta.empty()) {
+        return result;
     }
 
     // find a deterministic state or create a new one
@@ -590,7 +606,7 @@ void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
         det_state_to_sets.resize(new_det_state + 1);
         det_state_to_sets[new_det_state] = orig_states;
         worklist.emplace_back(new_det_state, orig_states);
-        if (initial_states.intersects_with(orig_states)) { result.add_initial_state(new_det_state); }
+        if (aut.initial_states.intersects_with(orig_states)) { result.add_initial_state(new_det_state); }
         return new_det_state;
     };
 
@@ -608,7 +624,7 @@ void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
         worklist.pop_back();
         marked.push_back(new_det_state);
         if (new_state_set.empty()) { // should not happen
-            std::cerr << "Nfta::determinize(): empty state set" << std::endl;
+            std::cerr << "Nfta::determinize_naive(): empty state set" << std::endl;
             break;
         }
         for (const auto& symb_tr : rev_delta.symbol_transitions) {
@@ -624,7 +640,7 @@ void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
 
                 for (const auto& src_tr : symb_tr.sources_transitions) {
                     bool match = true;
-                    assert(src_tr.sources.size() == arity && "Nfta::determinize arity mismatch");
+                    assert(src_tr.sources.size() == arity && "Nfta::determinize_naive arity mismatch");
                     // try to match it to state_det
                     for (size_t i = 0; i < arity; i++) {
                         auto det_state_to_match = tuple_det_states[i];
@@ -647,8 +663,8 @@ void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
 
         }
     }
-    *this = result;
     // assert(is_bottom_up_deterministic());
+    return result;
 }
 
 

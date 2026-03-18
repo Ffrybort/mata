@@ -10,7 +10,7 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
-TEST_CASE("mata::nfta::determinize") {
+TEST_CASE("mata::nfta::determinize_naive") {
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("f"); // unary
     alphabet.add_new_symbol("a"); // constant
