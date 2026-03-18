@@ -329,6 +329,7 @@ TEST_CASE("mata::nfta::builder") {
         Nfta aut = parse_from_mata(input, &ranked_alphabet);
 
         CHECK(aut.delta.num_of_states() == 4);
+        CHECK(aut.delta.num_of_transitions() == 3);
         CHECK(ranked_alphabet.get_alphabet_symbols().size() == 3);
 
         // arities inferred from transitions
@@ -351,6 +352,7 @@ TEST_CASE("mata::nfta::builder") {
         Nfta aut = parse_from_mata(input, &ranked_alphabet);
 
         CHECK(aut.delta.num_of_states() == 1);
+        CHECK(aut.delta.num_of_transitions() == 1);
         CHECK(ranked_alphabet.get_alphabet_symbols().size() == 1);
 
         Symbol c = ranked_alphabet.translate_ranked_symbol("c", 0);
@@ -373,6 +375,10 @@ TEST_CASE("mata::nfta::builder") {
         Nfta aut = parse_from_mata(input, &ranked_alphabet);
 
         CHECK(aut.delta.num_of_states() == 5);
+        CHECK(aut.delta.num_of_transitions() == 3);
+        CHECK(aut.delta.contains(0, alphabet["f"], {1, 2}));
+        CHECK(aut.delta.contains(1, alphabet["f"], {2, 3}));
+        CHECK(aut.delta.contains(2, alphabet["f"], {3, 4}));
         CHECK(ranked_alphabet.get_alphabet_symbols().size() == 1);
     }
 
@@ -393,6 +399,7 @@ TEST_CASE("mata::nfta::builder") {
         Nfta aut = parse_from_mata(input, &ranked_alphabet);
 
         CHECK(aut.delta.num_of_states() == 4);
+        CHECK(aut.delta.num_of_transitions() == 3);
 
         // same name, different arities → multiple ranked symbols
         CHECK(ranked_alphabet.get_alphabet_symbols().size() == 3);
