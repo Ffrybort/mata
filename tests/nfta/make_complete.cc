@@ -29,7 +29,7 @@ TEST_CASE("mata::nfta::make_bottom_up_complete") {
 
         aut.make_bottom_up_complete({{alphabet["a"],0}, {alphabet["f"],1}, {alphabet["g"],2}});
         CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
-        CHECK(aut.delta.num_of_transitions() == 13 + 1);
+        CHECK(aut.delta.num_of_transitions() == 14);
     }
 
     SECTION("Custom sink") {
