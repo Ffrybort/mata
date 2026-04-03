@@ -162,6 +162,8 @@ namespace mata::nfta {
          * @brief Check if the automaton is complete. todo
          */
         bool is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const;
+        bool is_bottom_up_complete(const ReversedDelta& rev_delta) const;
+
 
         /**
          * @brief Check bottom-up completeness.
@@ -178,6 +180,7 @@ namespace mata::nfta {
          * Symbols need to exclude constants.
          */
         bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
+        bool is_top_down_complete() const;
 
         /**
          * @brief Check top-down completeness.
@@ -238,21 +241,21 @@ namespace mata::nfta {
         BoolVector get_bottom_up_reachable() const;
 
         /**
-         * @brief Remove top-down unreachable states
+         * @brief
+         *
+         * todo some parameter to choose an algorithm
          */
+        void determinize(std::unordered_map<StateSet, State>* state_mapping = nullptr);
+
+        /**
+        * @brief Remove top-down unreachable states
+        */
         void reduce_top_down();
 
         /**
          * @brief Remove bottom-up unreachable states
          */
         void reduce_bottom_up_down();
-
-        /**
-         * @brief
-         *
-         * todo some parameter to choose an algorithm
-         */
-        void determinize(std::unordered_map<StateSet, State>* state_mapping = nullptr);
     }; // class Nfta
 
     /**
@@ -289,6 +292,9 @@ namespace mata::nfta {
     */
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
+    /**
+     * @brief Determinize an automaton with no optimizations.
+     */
     Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
 

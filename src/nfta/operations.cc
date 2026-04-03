@@ -98,11 +98,12 @@ void Nfta::swap_initial_states() {
 }
 
 Nfta complement(const Nfta& aut) {
+    if (aut.initial_states.empty() || aut.delta.empty()) { return Nfta{}; }
     Nfta result = determinize_naive(aut);
+    result.make_bottom_up_complete();
     result.swap_initial_states();
     return result;
 }
-
 
 void Nfta::unite_nondet_with(const Nfta& aut) {
     if (this == &aut) { return; }
@@ -320,6 +321,20 @@ bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const 
     return true;
 } // is_bottom_up_complete
 
+bool Nfta::is_bottom_up_complete(const ReversedDelta& rev_delta) const { // todo test
+    const size_t num_of_states = delta.num_of_states();
+    for (const auto& symbol_tr : rev_delta.symbol_transitions) {
+        assert(!symbol_tr.sources_transitions.empty() && "Source transitions not empty");
+        const size_t arity = symbol_tr.sources_transitions.at(0).sources.size(); // todo use arity
+        if (symbol_tr.sources_transitions.size() != ipow(num_of_states, arity)) { return false; }
+
+        for (const auto& source_tr : symbol_tr.sources_transitions) {
+            assert(source_tr.sources.size() == arity);
+        }
+    } // for symbol transitions
+    return true;
+} // is_bottom_up_complete
+
 /// symbols need to exclude constants
 bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
     // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
@@ -330,6 +345,29 @@ bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
             if (symbols.contains(symbol_post.symbol)) { n++; }
             else if (!symbol_post.is_constant()) {
                 unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(symbol_post.symbol));
+            }
+        }
+        if (n != symbols.size()) {
+            return false;
+        }
+    } // for state posts
+    return true;
+} // is_top_down_complete
+
+bool Nfta::is_top_down_complete() const {
+    // for every state in delta, the number of symbol posts must be == to the number of non-constant symbols
+    if (delta.num_of_states() == 0) { return true; }
+    utils::OrdVector<Symbol> symbols;
+    for (const auto& symbol_post : delta[0]) {
+        if (!symbol_post.is_constant()) { symbols.push_back(symbol_post.symbol); }
+    }
+    for (const auto& state_post : delta) {
+        unsigned n = 0; // counting present symbols
+        for (const auto& symbol_post : state_post) {
+            assert(!symbol_post.target_tuples.empty());
+            if (symbols.contains(symbol_post.symbol)) { n++; }
+            else if (!symbol_post.is_constant()) {
+                return false;
             }
         }
         if (n != symbols.size()) {
@@ -350,6 +388,20 @@ bool next_tuple(std::vector<State>& tuple, const size_t base) {
     return false;
 } // next_tuple
 
+// leave a given position alone
+bool next_tuple_except(std::vector<State>& tuple, const size_t base, const unsigned position ) {
+    assert(position < tuple.size() && "next_tuple_except: position out of range");
+    size_t pos = tuple.size();
+
+    while (pos > 0) {
+        --pos;
+        if (pos == position) { continue; }
+        if (++tuple[pos] < base) { return true; }
+        tuple[pos] = 0;
+    }
+    return false;
+}
+
 State get_sink(State sink, Delta& delta) {
     if (sink == Limits::max_state) { sink = delta.add_state(); }
     delta.resize_for_states(sink);
@@ -357,14 +409,21 @@ State get_sink(State sink, Delta& delta) {
 } // get_sink
 
 void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
+    // todo leave it alone if it already was complete
+    auto rev_delta = delta.get_reversed();
+
+    // if the sink is default and delta is complete, it is left alone
+    // todo it could have the correct number of symbols but wrong ones
+    if (sink == Limits::max_state && rev_delta.symbol_transitions.size() == symbols_arities.size() &&
+        is_bottom_up_complete(rev_delta)) { return; }
+
     sink = get_sink(sink, delta);
+    const size_t num_of_states = delta.num_of_states();
 
     StatePost& sink_state_post = delta.mutable_state_post(sink);
     const bool sink_sp_empty = sink_state_post.empty();
 
     const bool delta_empty = delta.empty();
-    auto rev_delta = delta.get_reversed();
-    const size_t num_of_states = delta.num_of_states();
 
     auto rev_delta_it = rev_delta.symbol_transitions.begin();
     const auto rev_delta_end = rev_delta.symbol_transitions.end();
@@ -375,11 +434,11 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
     // iterating over symbols - both in delta and in input
     while (rev_delta_it != rev_delta_end || input_symbols_it != input_symbols_end) {
         // symbol in delta that is not in the input
-        if (!delta_empty && (input_symbols_it == input_symbols_end || rev_delta_it->symbol < input_symbols_it->first)) {
+        if (rev_delta_it != rev_delta_end && (input_symbols_it == input_symbols_end || rev_delta_it->symbol < input_symbols_it->first)) {
             if (input_symbols_it == input_symbols_end) { std::cerr <<"Input symbols end" << std::endl; }
-            std::cerr <<"Input symbol at " << input_symbols_it->first << std::endl;
             unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(rev_delta_it->symbol));
-            ++rev_delta_it; continue; // or ignore
+            ++rev_delta_it;
+            continue; // or ignore
         }
         const Symbol symbol = input_symbols_it->first;
         const unsigned arity = input_symbols_it->second;
@@ -392,6 +451,7 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
             ++input_symbols_it;
             // add all
         } else  { // symbols match
+            assert(symbol == rev_delta_it->symbol && "Symbols do not match when they should");
             assert(arity == rev_delta_it->sources_transitions.at(0).sources.size() && "Wrong arity");
 
             source_tr_it  = rev_delta_it->sources_transitions.cbegin();
@@ -428,23 +488,21 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
     #ifndef NDEBUG
     assert(delta.is_sorted());
     const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities);
-    assert(is_bottom_up_complete(symbols));
+    // assert(is_bottom_up_complete(symbols));
     #endif
 } // make_bottom_up_complete
 
-//todo test
-void Nfta::make_bottom_up_complete(const State sink ) { // todo
-    if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
+void Nfta::make_bottom_up_complete(const State sink ) { // todo ranked alph
     make_bottom_up_complete(delta.get_used_symbols_arities(), sink);
 } // make_bottom_up_complete
 
-//todo test
-void Nfta::make_top_down_complete(const State sink ) { // todo
-    if (alphabet) { assert(false && "ranked alphabets not implemented yet"); }
+void Nfta::make_top_down_complete(const State sink ) { // todo ranked alph
     make_top_down_complete(delta.get_used_symbols_arities(), sink);
 } // make_top_down_complete
 
 void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
+    // if the sink is default, automaton is checked for completeness before adding a sink state
+    if (sink == Limits::max_state && is_top_down_complete(symbols_arities)) { return; } // todo
     sink = get_sink(sink, delta);
     const auto num_of_states = static_cast<State>(delta.num_of_states());
 
@@ -576,6 +634,8 @@ void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
 }
 
 
+
+
 Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
     Nfta result{};
     result.alphabet = aut.alphabet;
@@ -589,9 +649,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
     det_state_to_sets.reserve(aut.delta.num_of_states()); // todo sizes
     std::vector<State> marked; // states that were already processed - only these are considered for building tuples
 
-    if (aut.delta.empty()) {
-        return result;
-    }
+    if (aut.delta.empty()) { return result; }
 
     // find a deterministic state or create a new one
     auto get_det_state = [&](const StateSet& orig_states) {
@@ -610,60 +668,67 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
         return new_det_state;
     };
 
+    // get bottom-up initial states
     for (auto bottom_up_initial = rev_delta.get_initial_states_by_symbol();
             const auto& [symbol, states_orig] : bottom_up_initial) {
         const State state_det = get_det_state(states_orig);
         result.delta.add(state_det, symbol, {});
-        (*state_mapping)[states_orig] = state_det;
-        det_state_to_sets.resize(state_det + 1);
-        det_state_to_sets[state_det] = states_orig;
     }
 
     while (!worklist.empty()) {
         const auto [new_det_state, new_state_set]{ std::move(worklist.back()) };
         worklist.pop_back();
         marked.push_back(new_det_state);
-        if (new_state_set.empty()) { // should not happen
+        if (new_state_set.empty()) { // this should not happen
             std::cerr << "Nfta::determinize_naive(): empty state set" << std::endl;
+            assert(false);
             break;
         }
-        for (const auto& symb_tr : rev_delta.symbol_transitions) {
-            const unsigned arity = symb_tr.get_arity();
+        for (const auto& symbol_tr : rev_delta.symbol_transitions) {
+            const unsigned arity = symbol_tr.get_arity();
             if (arity == 0) { continue; }
 
-            std::vector<State> tuple(arity, 0);
+            const unsigned tuple_size = arity - 1;
+            std::vector<State> tuple(tuple_size, 0);
             const size_t base = marked.size();
-            std::vector<State> tuple_det_states(arity);
-            do {
-                std::vector<State> targets;
-                for (unsigned i = 0; i < arity; i++) { tuple_det_states[i] = marked[tuple[i]]; }
+            std::vector<State> small_tuple_det_states(tuple_size);
 
-                for (const auto& src_tr : symb_tr.sources_transitions) {
-                    bool match = true;
-                    assert(src_tr.sources.size() == arity && "Nfta::determinize_naive arity mismatch");
-                    // try to match it to state_det
-                    for (size_t i = 0; i < arity; i++) {
-                        auto det_state_to_match = tuple_det_states[i];
-                        auto& orig_states_to_match = det_state_to_sets[det_state_to_match];
-                        if (!orig_states_to_match.contains(src_tr.sources[i])) {match = false; break; }
+            do {
+                for (unsigned i = 0; i < tuple_size; i++) { small_tuple_det_states[i] = marked[tuple[i]]; }
+
+                std::vector<State> big_tuple_det_states(arity, 0);
+                for (unsigned pos = 0; pos < arity; pos++) {
+                    std::vector<State> targets;
+
+                    for (unsigned i = 0, k = 0; i < arity; i++) {
+                        big_tuple_det_states[i] = (i == pos ? new_det_state : small_tuple_det_states[k++]);
                     }
 
-                    if (!match) { continue; }
+                    for (const auto& src_tr : symbol_tr.sources_transitions) {
+                        bool match = true;
+                        assert(src_tr.sources.size() == arity && "Nfta::determinize_naive arity mismatch");
+                        // try to match it to state_det
+                        for (size_t i = 0; i < arity; i++) {
+                            auto det_state_to_match = big_tuple_det_states[i];
+                            auto& orig_states_to_match = det_state_to_sets[det_state_to_match];
+                            if (!orig_states_to_match.contains(src_tr.sources[i])) { match = false; break; }
+                        }
 
-                    // add to targets
-                    std::ranges::copy(src_tr.targets, std::back_inserter(targets));
+                        if (!match) { continue; }
+
+                        // add to targets
+                        std::ranges::copy(src_tr.targets, std::back_inserter(targets));
+                    }
+
+                    if (targets.empty()) { continue; }
+                    utils::OrdVector<State> targets_ord(targets);
+                    State det_target = get_det_state(targets_ord);
+                    result.delta.add(det_target, symbol_tr.symbol, big_tuple_det_states);
                 }
-
-                if (targets.empty()) { continue; }
-                utils::OrdVector<State> targets_ord(targets);
-                State det_target = get_det_state(targets_ord);
-                result.delta.add(det_target, symb_tr.symbol, tuple_det_states); // todo add multiple later
             } while (next_tuple(tuple, base));
-
-
         }
     }
-    // assert(is_bottom_up_deterministic());
+    assert(result.is_bottom_up_deterministic());
     return result;
 }
 

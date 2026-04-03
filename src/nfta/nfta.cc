@@ -1,5 +1,7 @@
 #include <iostream>
 #include <ostream>
+#include <cctype>
+#include <string>
 
 #include "mata/nfta/nfta.hh"
 
@@ -165,16 +167,34 @@ void Nfta::defragment(const BoolVector& is_staying) {
     initial_states = std::move(new_inital_states);
 } // defragment
 
+void sanitize_symbol(std::string &s) {
+    if (s.empty()) {
+        s = "a";
+        return;
+    }
+    // replace wierd characters with '_'
+    for (char& c : s) {
+        if (!std::isalnum(static_cast<unsigned char>(c)) && c != '_') {
+            c = '_';
+        }
+    }
+    // prefix with 'a' if needed
+    if (!std::isalpha(static_cast<unsigned char>(s[0]))) {
+        s = "a" + s;
+    }
+}
+
 void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     // Alphabet with correct arities
     os << "Ops ";
     auto symbols = delta.get_used_symbols_arities();
 
     for (const auto& [symbol, arity] : symbols) {
-        std::string sym_str = "a";
+        std::string sym_str;
 
-        if (alphabet) { sym_str.append(alphabet->try_reverse_translate_symbol(symbol)); }
-        else { sym_str.append(std::to_string(symbol)); }
+        if (alphabet) { sym_str = alphabet->try_reverse_translate_symbol(symbol); }
+        else { sym_str = std::to_string(symbol); }
+        sanitize_symbol(sym_str);
 
         os << sym_str << ":" << arity << " ";
     }
@@ -195,10 +215,11 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     os << "Transitions" << std::endl;
 
     for (const auto& t : delta.get_transitions()) {
-        std::string sym_str = "a";
+        std::string sym_str;
 
-        if (alphabet) { sym_str.append(alphabet->reverse_translate_symbol(t.symbol)); }
-        else { sym_str.append(std::to_string(t.symbol)); }
+        if (alphabet) { sym_str = alphabet->reverse_translate_symbol(t.symbol); }
+        else { sym_str = std::to_string(t.symbol); }
+        sanitize_symbol(sym_str);
 
         if (t.targets.empty()) {
             // constant

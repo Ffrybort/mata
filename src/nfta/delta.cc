@@ -699,7 +699,7 @@ OrdVector<SymbolArity> Delta::get_used_symbols_arities() const {
         for (const SymbolPost & symbol_post: state_post) {
             reserve_on_insert(symbols);
             assert(!symbol_post.target_tuples.empty() && "Empty symbol post");
-            symbols.emplace_back(symbol_post.symbol, symbol_post.target_tuples.size());
+            symbols.emplace_back(symbol_post.symbol, symbol_post.target_tuples.at(0).size());
         }
     }
     OrdVector<SymbolArity> sorted_symbols(symbols);
