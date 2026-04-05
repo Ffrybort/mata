@@ -21,10 +21,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
     SECTION("Empty") {
         Nfta aut({}, &alphabet, {});
 
-        aut.determinize(nullptr);
+        Nfta aut_n = determinize_naive(aut);
+        Nfta aut_0 = determinize_optimized(aut);
 
-        CHECK(aut.is_bottom_up_deterministic());
-        CHECK(aut.delta.empty());
+        CHECK(aut_n.is_bottom_up_deterministic());
+        CHECK(aut_n.delta.empty());
     }
 
     SECTION("Already deterministic") {
@@ -35,11 +36,12 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         size_t before_states = aut.delta.num_of_states();
 
-        aut.determinize(nullptr);
+        Nfta aut_n = determinize_naive(aut);
+        Nfta aut_0 = determinize_optimized(aut);
 
-        CHECK(aut.is_bottom_up_deterministic());
-        CHECK(aut.delta.num_of_transitions() == 2);
-        CHECK(aut.delta.num_of_states() == before_states);
+        CHECK(aut_n.is_bottom_up_deterministic());
+        CHECK(aut_n.delta.num_of_transitions() == 2);
+        CHECK(aut_n.delta.num_of_states() == before_states);
     }
 
     SECTION("Constant nondeterminism") {
@@ -50,9 +52,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         // expect macrostate {0,1}
         bool found = false;
@@ -64,7 +68,6 @@ TEST_CASE("mata::nfta::determinize_naive") {
                 found = true;
             }
         }
-
         CHECK(found);
     }
 
@@ -78,9 +81,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         // we should have at least two macrostates
         CHECK(mapping.size() >= 2);
@@ -101,9 +106,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         bool found01 = false;
 
@@ -114,7 +121,6 @@ TEST_CASE("mata::nfta::determinize_naive") {
                 found01 = true;
             }
         }
-
         CHECK(found01);
     }
 
@@ -130,14 +136,16 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         // ensure mapping entries are valid
         for (const auto& [set, det_state] : mapping) {
             CHECK(set.size() >= 1);
-            CHECK(det_state < aut.delta.num_of_states());
+            CHECK(det_state < aut_n.delta.num_of_states());
         }
     }
 
@@ -153,13 +161,15 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         // ensure each macrostate maps to valid deterministic state
         for (const auto& det_state : mapping | std::views::values) {
-            CHECK(det_state < aut.delta.num_of_states());
+            CHECK(det_state < aut_n.delta.num_of_states());
         }
     }
 
@@ -176,9 +186,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
         CHECK_FALSE(mapping.empty());
 
         std::vector<OrdVector<State>> macrosets;
@@ -210,10 +222,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(2, alphabet["g"], {0,0});
 
-        aut.determinize(nullptr);
+        Nfta aut_n = determinize_naive(aut);
+        Nfta aut_0 = determinize_optimized(aut);
 
-        CHECK(aut.is_bottom_up_deterministic());
-        CHECK(aut.delta.num_of_transitions() == 2);
+        CHECK(aut_n.is_bottom_up_deterministic());
+        CHECK(aut_n.delta.num_of_transitions() == 2);
     }
 
     SECTION("Same tuple") {
@@ -227,9 +240,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         bool found = false;
 
@@ -254,9 +269,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         bool found = false;
 
@@ -282,9 +299,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         bool found = false;
 
@@ -313,13 +332,15 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() == 3);
-        CHECK(aut.delta.num_of_states() == 3);
-        CHECK(aut.delta.num_of_transitions() == 3);
+        CHECK(aut_n.delta.num_of_states() == 3);
+        CHECK(aut_n.delta.num_of_transitions() == 3);
 
         bool found01=false, found23=false, found4=false;
 
@@ -349,14 +370,16 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() == 2);
-        CHECK(aut.delta.num_of_states() == 2);
-        CHECK(aut.delta.num_of_transitions() == 2);
-        CHECK(aut.is_state_initial(mapping[{1, 2}]));
+        CHECK(aut_n.delta.num_of_states() == 2);
+        CHECK(aut_n.delta.num_of_transitions() == 2);
+        CHECK(aut_n.is_state_initial(mapping[{1, 2}]));
 
         bool found = false;
 
@@ -380,13 +403,15 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() == 2);
-        CHECK(aut.delta.num_of_states() == 2);
-        CHECK(aut.delta.num_of_transitions() == 2);
+        CHECK(aut_n.delta.num_of_states() == 2);
+        CHECK(aut_n.delta.num_of_transitions() == 2);
 
         bool found = false;
 
@@ -409,14 +434,16 @@ TEST_CASE("mata::nfta::determinize_naive") {
         aut.delta.add(4, alphabet["h"], {1,1,1});
 
         std::unordered_map<StateSet, State> mapping;
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() == 2);
-        CHECK(aut.delta.num_of_states() == 2);
-        CHECK(aut.delta.num_of_transitions() == 2);
-        CHECK(aut.is_state_initial(mapping[{2, 3, 4}]));
+        CHECK(aut_n.delta.num_of_states() == 2);
+        CHECK(aut_n.delta.num_of_transitions() == 2);
+        CHECK(aut_n.is_state_initial(mapping[{2, 3, 4}]));
     }
 
     SECTION("Ternary chain") {
@@ -435,15 +462,17 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() >= 3);
-        CHECK(aut.delta.num_of_states() >= 3);
-        CHECK(aut.delta.num_of_transitions() >= 3);
-        CHECK(aut.is_state_initial(mapping[{2, 3}]));
-        CHECK(aut.is_state_initial(mapping[{4, 5, 6, 7}]));
+        CHECK(aut_n.delta.num_of_states() >= 3);
+        CHECK(aut_n.delta.num_of_transitions() >= 3);
+        CHECK(aut_n.is_state_initial(mapping[{2, 3}]));
+        CHECK(aut_n.is_state_initial(mapping[{4, 5, 6, 7}]));
     }
 
     SECTION("Arity 4 combinatorial") {
@@ -463,14 +492,16 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() >= 2);
-        CHECK(aut.delta.num_of_states() == 2);
-        CHECK(aut.delta.num_of_transitions() == 2);
-        CHECK(aut.initial_states.empty());
+        CHECK(aut_n.delta.num_of_states() == 2);
+        CHECK(aut_n.delta.num_of_transitions() == 2);
+        CHECK(aut_n.initial_states.empty());
     }
 
     SECTION("Propagation") {
@@ -491,10 +522,12 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
+        CHECK(aut_n == aut_0);
 
-        CHECK(aut.is_bottom_up_deterministic());
-        CHECK(aut.delta.num_of_transitions() == 4);
+        CHECK(aut_n.is_bottom_up_deterministic());
+        CHECK(aut_n.delta.num_of_transitions() == 4);
     }
 
     SECTION("Simple") {
@@ -511,15 +544,19 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        aut.determinize(&mapping);
+        Nfta aut_n = determinize_naive(aut, &mapping);
+        Nfta aut_0 = determinize_optimized(aut);
 
-        CHECK(aut.is_bottom_up_deterministic());
+        CHECK(aut_n == aut_0);
+
+        CHECK(aut_n.is_bottom_up_deterministic());
 
         CHECK(mapping.size() == 2);
-        CHECK(aut.delta.num_of_states() == 2);
+        CHECK(aut_n.delta.num_of_states() == 2);
 
-        CHECK(aut.delta.num_of_transitions() == 2);
-        CHECK(aut.delta.contains(0, alphabet["a"], {}));
-        CHECK(aut.delta.contains(1, alphabet["h"], {0,0,0}));
+        CHECK(aut_n.delta.num_of_transitions() == 2);
+        CHECK(aut_n.delta.contains(0, alphabet["a"], {}));
+        CHECK(aut_n.delta.contains(1, alphabet["h"], {0,0,0}));
     }
 }
+

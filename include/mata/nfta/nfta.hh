@@ -296,6 +296,7 @@ namespace mata::nfta {
      * @brief Determinize an automaton with no optimizations.
      */
     Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+    Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
 
 } // namespace mata::nfta
