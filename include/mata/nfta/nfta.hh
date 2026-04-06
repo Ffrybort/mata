@@ -298,6 +298,8 @@ namespace mata::nfta {
     Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
     Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
+    Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H
