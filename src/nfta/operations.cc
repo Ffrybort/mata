@@ -633,43 +633,11 @@ void Nfta::determinize(std::unordered_map<StateSet, State>* state_mapping) {
     *this = determinize_naive(*this, state_mapping);
 }
 
-// shared stuff between determinization versions
-struct DeterminizationContext {
-    Nfta& result;
-    const Nfta& aut;
-
-    std::unordered_map<StateSet, State>& state_mapping;
-    std::vector<StateSet> det_state_to_sets;
-    std::vector<std::pair<State, StateSet>>& worklist;
-
-    State get_det_state(const StateSet& orig_states) {
-        assert(!orig_states.empty());
-
-        if (auto it = state_mapping.find(orig_states);
-            it != state_mapping.end())
-            return it->second;
-
-        State q_det = result.delta.add_state();
-        state_mapping[orig_states] = q_det;
-
-        det_state_to_sets.resize(q_det + 1);
-        det_state_to_sets[q_det] = orig_states;
-
-        worklist.emplace_back(q_det, orig_states);
-
-        if (aut.initial_states.intersects_with(orig_states))
-            result.add_initial_state(q_det);
-
-        return q_det;
-    }
-};
-
 struct MacrostateConstructionContext {
     Nfta result{};
     std::unordered_map<StateSet, State>*mapping;
     std::vector<StateSet> det_to_macro;
 
-    ReversedDelta rev_delta;
     std::vector<std::pair<State, StateSet>> worklist;
     const utils::SparseSet<State>& aut_initial_states;
 
@@ -681,7 +649,6 @@ struct MacrostateConstructionContext {
         : result(),
           mapping(state_mapping ? state_mapping : &local_mapping),
           det_to_macro(),
-          rev_delta(aut.delta.get_reversed()),
           worklist(),
           aut_initial_states(aut.initial_states),
           processed_states(),
@@ -698,33 +665,42 @@ struct MacrostateConstructionContext {
 
     // find or create det state from macro state
     // push to worklist if new
-    State get_det_state(const StateSet& orig_states) {
-        assert(!orig_states.empty());
+    State get_or_create_macrostate(const StateSet& orig_states, const bool add_to_initial) {
+        std::cout << "get macro called with " << orig_states << std::endl;
         assert(mapping);
-        if (const auto it = mapping->find(orig_states);
-            it != mapping->end()) {
+        if (const auto it = mapping->find(orig_states); it != mapping->end()) {
             return it->second;
-            }
+        }
 
-        State q_det = result.delta.add_state();
-        (*mapping)[orig_states] = q_det;
+        State new_s = result.delta.add_state();
+        (*mapping)[orig_states] = new_s;
 
-        det_to_macro.resize(q_det + 1);
-        det_to_macro[q_det] = orig_states;
+        det_to_macro.resize(new_s + 1);
+        det_to_macro[new_s] = orig_states;
 
-        worklist.emplace_back(q_det, orig_states);
-        if (aut_initial_states.intersects_with(orig_states)) { result.add_initial_state(q_det); }
+        if (!orig_states.empty()) {  // only push non-empty to worklist
+            worklist.emplace_back(new_s, orig_states);
+        }        if (add_to_initial && aut_initial_states.intersects_with(orig_states)) { result.add_initial_state(new_s); }
 
-        return q_det;
+        return new_s;
     }
 
-    void initialize_with_bottom_up_initial() {
+    // initialize the worklist and result with constant transitions (used in determinizing)
+    void initialize_bottom_up(const ReversedDelta& rev_delta) {
         // initialize with constant transitions
         for (auto bottom_up = rev_delta.get_initial_states_by_symbol();
              const auto& [symbol, states_orig] : bottom_up) {
-            State q_det = get_det_state(states_orig);
+            const State q_det = get_or_create_macrostate(states_orig, true);
             result.delta.add(q_det, symbol, {});
         }
+    }
+
+    // initialize the worklist and result with an initial macrostate
+    void initialize_top_down() {
+        // initialize with constant transitions
+        const State q_det = get_or_create_macrostate(StateSet(aut_initial_states.begin(),
+            aut_initial_states.end()),  false);
+        result.add_initial_state(q_det);
     }
 };
 
@@ -732,19 +708,20 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
     MacrostateConstructionContext ctx(aut, state_mapping);
     if (aut.delta.empty()) { return ctx.result; }
 
+    ReversedDelta rev_delta = aut.delta.get_reversed();
     // initialize with constant transitions
-    ctx.initialize_with_bottom_up_initial();
+    ctx.initialize_bottom_up(rev_delta);
 
     // process reachable states
     while (!ctx.worklist.empty()) {
-        auto [new_q, new_macro] = std::move(ctx.worklist.back());
+        auto [new_s, new_macro] = std::move(ctx.worklist.back());
         ctx.worklist.pop_back();
         assert(!new_macro.empty() && "determinize_naive: empty macro state in worklist");
-        ctx.processed_states.push_back(new_q);
+        ctx.processed_states.push_back(new_s);
 
-        for (const auto& symbol_tr : ctx.rev_delta.symbol_transitions) {
+        for (const auto& symbol_tr : rev_delta.symbol_transitions) {
             // try to match every tuple containing the new state
-            unsigned arity = symbol_tr.get_arity();
+            const unsigned arity = symbol_tr.get_arity();
             if (arity == 0) { continue; }
 
 
@@ -762,10 +739,10 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
                     small_tuple[i] = ctx.processed_states[index_tuple[i]];
                 }
 
-                // insert new_q into every possible position
+                // insert new_s into every possible position
                 for (unsigned pos = 0; pos < arity; ++pos) {
                     for (unsigned i = 0, k = 0; i < arity; ++i) {
-                        det_tuple[i] = (i == pos) ? new_q : small_tuple[k++];
+                        det_tuple[i] = (i == pos) ? new_s : small_tuple[k++];
                     }
 
                     std::vector<State> targets;
@@ -779,7 +756,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
                                 !macrostate.contains(src_tr.sources[i])) {
                                 match = false;
                                 break;
-                                }
+                            }
                         }
 
                         if (match) { std::ranges::copy(src_tr.targets, std::back_inserter(targets)); }
@@ -787,7 +764,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
 
                     // add a deterministic transition
                     if (targets.empty()) { continue; }
-                    State q_target = ctx.get_det_state(utils::OrdVector<State>(targets));
+                    State q_target = ctx.get_or_create_macrostate(StateSet(targets), true);
                     ctx.result.delta.add(q_target, symbol_tr.symbol, det_tuple);
                 }
             } while(next_tuple(index_tuple, base));
@@ -810,30 +787,31 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         SymbolCache() : by_state() {}
     };
 
+    ReversedDelta rev_delta = aut.delta.get_reversed();
     MacrostateConstructionContext ctx(aut, state_mapping);
 
     if (aut.delta.empty()) { return ctx.result; }
 
     std::unordered_map<Symbol, SymbolCache> cache;
-    cache.reserve(ctx.rev_delta.symbol_transitions.size());
+    cache.reserve(rev_delta.symbol_transitions.size());
 
     // initialize with constant transitions
-    ctx.initialize_with_bottom_up_initial();
+    ctx.initialize_bottom_up(rev_delta);
 
     // process reachable states
     while (!ctx.worklist.empty()) {
-        auto [new_q, new_macro] = std::move(ctx.worklist.back());
+        auto [new_s, new_macro] = std::move(ctx.worklist.back());
         ctx.worklist.pop_back();
         assert(!new_macro.empty() && "determinize_optimized: empty macro state in worklist");
-        ctx.processed_states.push_back(new_q);
+        ctx.processed_states.push_back(new_s);
 
-        for (const auto& symbol_tr : ctx.rev_delta.symbol_transitions) {
+        for (const auto& symbol_tr : rev_delta.symbol_transitions) {
             // try to match every tuple containing the new state
             Symbol symbol = symbol_tr.symbol;
             unsigned arity = symbol_tr.get_arity();
             if (arity == 0) { continue; }
-            cache[symbol].by_state.resize(new_q + 1);
-            auto& state_cache = cache[symbol].by_state[new_q];
+            cache[symbol].by_state.resize(new_s + 1);
+            auto& state_cache = cache[symbol].by_state[new_s];
             state_cache.resize(arity);
 
 
@@ -860,11 +838,11 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
                     small_tuple[i] = ctx.processed_states[index_tuple[i]];
                 }
 
-                // insert new_q into every possible position
+                // insert new_s into every possible position
                 for (unsigned pos = 0; pos < arity; ++pos) {
                     // new state appears in position i first time - all other states should be there
                     for (unsigned i = 0, k = 0; i < arity; ++i) {
-                        det_tuple[i] = (i == pos) ? new_q : small_tuple[k++];
+                        det_tuple[i] = (i == pos) ? new_s : small_tuple[k++];
                     }
 
                     // intersect targets
@@ -883,7 +861,7 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
 
                     // add a deterministic transition
                     if (targets.empty()) { continue; }
-                    State q_target = ctx.get_det_state(targets);
+                    State q_target = ctx.get_or_create_macrostate(targets, true);
                     ctx.result.delta.add(q_target, symbol_tr.symbol, det_tuple);
                 }
             } while(next_tuple(index_tuple, base));
@@ -903,6 +881,85 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
     // }
 
     assert(ctx.result.is_bottom_up_deterministic());
+    return ctx.result;
+}
+
+
+
+Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
+    MacrostateConstructionContext ctx(aut, state_mapping);
+    // if (aut.alphabet) { symbols = aut.alphabet->get_alphabet_symbols(); }
+    utils::OrdVector<SymbolArity> symbols = aut.delta.get_used_symbols_arities(); //  todo this is not efficient
+    assert(aut.is_top_down_complete(symbols) &&
+        "mata::nfta::complement_top_down automaton must be top down complete (i think)");
+
+    if (aut.delta.empty() || aut.initial_states.empty()) { return Nfta{}; /* todo probably call classical complement */ }
+
+    auto leafAccepts = [&](const StateSet& s, const Symbol a) {
+        for (const State q : s) {
+            if (auto it = aut.delta[q].find(SymbolPost{ a });
+                it != aut.delta[q].end() && !it->target_tuples.empty()) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    ctx.initialize_top_down();
+
+    while (!ctx.worklist.empty()) {
+        auto [new_s, new_macro] = std::move(ctx.worklist.back());
+        ctx.worklist.pop_back();
+        ctx.processed_states.push_back(new_s); // todo here a bool vector or nothing at all will likely suffice
+        std::cout << "new state: " << new_s << " " << new_macro << std::endl;
+
+        for (const auto& [symbol, arity] : symbols) {
+            // constant -> if there are no transitions over symbol from any q, add to result
+            if (arity == 0) {
+                if (leafAccepts(new_macro, symbol)) {
+                    ctx.result.delta.add(new_s, symbol, {});
+                }
+                continue;
+            }
+
+            std::vector<std::vector<State>> constrains; // all target tuples of any q over symbol
+            for (const State q : new_macro) { // todo this is unnecessary copying, optimize later
+                auto it = aut.delta[q].find(SymbolPost{symbol});
+                assert(it != aut.delta[q].end() && "mata::nfta::complement_top_down missing symbol post");
+                for (auto& tup : aut.delta[q].find(symbol)->target_tuples) {
+                    constrains.push_back(tup);
+                }
+            }
+            std::cout << "constrains found: " << constrains.size() << std::endl;
+
+
+            unsigned m = constrains.size();
+            SymbolPost res_symbol_post(symbol);
+
+            // iterate over all selector assignments: n^m combinations.
+            // prune later or todo pune right away
+            std::vector<unsigned> selector(m, 0);
+            utils::OrdVector<std::vector<StateSet>> results; // collected tuples of macrostates
+            do {
+                std::cout << "main loop starting" << std::endl;
+                std::vector<StateSet> macro_tuple(arity);  // tuple of macrostates
+                std::vector<State> s_tuple(arity);  // tuple of result states
+                for (int t = 0; t < m; ++t) {
+                    macro_tuple[selector[t]].insert(constrains[t][selector[t]]);
+                }
+                std::cout <<"macro tuple assembled" << std::endl;
+                results.insert(macro_tuple);
+                for (unsigned i = 0; i < arity; ++i) { s_tuple[i] = ctx.get_or_create_macrostate(macro_tuple[i], false); }
+                ctx.result.delta.add(new_s, symbol, s_tuple);
+                // res_symbol_post.insert(s_tuple);
+
+            } while (next_tuple(selector, arity));
+            // todo prune now (or while creating tuples)
+
+            auto tmp = ctx.result.delta.mutable_state_post(new_s);
+            // tmp.push_back(std::move(res_symbol_post));
+        }
+    }
     return ctx.result;
 }
 
