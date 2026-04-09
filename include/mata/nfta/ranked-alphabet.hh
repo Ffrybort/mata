@@ -7,15 +7,15 @@ namespace mata::nfta {
 /**
  * The abstract interface for ranked alphabets
  */
-class RankedAlphabet {
+class RankedAlphabet : public Alphabet {
 public:
-    using SymbolArity = std::pair<Symbol, unsigned>;
+    using Alphabet::add_new_symbol;
 
     /// translates a string into a symbol
     virtual Symbol translate_symbol(const std::string &symbol, unsigned arity) = 0;
 
     /// also translates strings to symbols
-    Symbol operator[](const StringArity sa) { return this->translate_symbol(sa.first, sa.second); }
+    Symbol operator[](const StringArity& sa) { return this->translate_symbol(sa.first, sa.second); }
 
     /**
      * @brief Get a set of all symbols and their arities in the alphabet.
@@ -36,32 +36,10 @@ public:
 
     virtual ~RankedAlphabet() = default;
 
-    /**
-     * @brief Check whether two alphabets are equal.
-     *
-     * In general, two alphabets are equal if and only if they are of the same class instance.
-     * @param other_alphabet The other alphabet to compare with for equality.
-     * @return True if equal, false otherwise.
-     */
-    virtual bool is_equal(const RankedAlphabet &other_alphabet) const { return address() == other_alphabet.address(); }
-
-    /**
-     * @brief Check whether two alphabets are equal.
-     *
-     * In general, two alphabets are equal if and only if they are of the same class instance.
-     * @param other_alphabet The other alphabet to compare with for equality.
-     * @return True if equal, false otherwise.
-     */
-    virtual bool is_equal(const RankedAlphabet *const other_alphabet) const {
-        return address() == other_alphabet->address();
-    }
-
-    bool operator==(const Alphabet &) const = delete;
-
     virtual void add_new_symbol(const std::string& symbol, unsigned arity) = 0;
 
 protected:
-    virtual const void* address() const { return this; }
+    const void* address() const override { return this; }
 }; // class RankedAlphabet.
 
 /**
@@ -69,7 +47,7 @@ protected:
  *
  * Symbols of the same name with different arities are internally represented as different symbol values.
  */
-class RankedOnTheFlyAlphabet : public Alphabet, public RankedAlphabet {
+class RankedOnTheFlyAlphabet : public RankedAlphabet {
 public:
     using SymbolArityMap = std::unordered_map<StringArity, Symbol>;
 

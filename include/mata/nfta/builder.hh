@@ -29,15 +29,22 @@ namespace mata::nfta {
             : source{}, symbol_string{}, targets{} {}
     };
 
-
     inline Nfta create_empty(Alphabet *alphabet = nullptr) {
-       return Nfta({0}, alphabet, Delta(1));
+        return Nfta({0}, alphabet, Delta(1));
     }
 
     /**
-     * @brief Create an automaton accepting any tree build from the alphabet. todo
+     * @brief Create an automaton accepting any tree build from the alphabet.
      */
-    Nfta create_universal(RankedAlphabet *alphabet = nullptr);
+    Nfta create_universal(RankedAlphabet *alphabet);
+
+    /**
+     * @brief Create an automaton accepting any tree build from the symbols.
+     *
+     * @param symbols [in] Symbols used in the language.
+     * @param alphabet [out, optional] Alphabet will be assigned to the automaton and filled with symbols.
+     */
+    Nfta create_universal(const utils::OrdVector<StringArity>& symbols, Alphabet *alphabet);
 
     /**
     * @brief Helper function to extract a transition from an inter_aut.

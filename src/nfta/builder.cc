@@ -3,7 +3,35 @@
 namespace mata::nfta {
 
 Nfta create_universal(RankedAlphabet *alphabet) {
-    return Nfta{}; // todo
+    Nfta aut({ 0 }, alphabet, Delta(1));
+    bool has_constant = false;
+    for (const auto [symbol, arity] : alphabet->get_alphabet_symbols_arities()) {
+        const std::vector<State> targets(arity, 0);
+        aut.delta.add(0, symbol, targets);
+        if (arity == 0) { has_constant = true; }
+    }
+
+    if (!has_constant) {
+        std::cerr << "warning: mata::nfta::create_universal alphabet does not contain any constant" << std::endl;
+    }
+    return aut;
+}
+
+Nfta create_universal(const utils::OrdVector<StringArity>& symbols, Alphabet *alphabet) {
+    Nfta aut({ 0 }, alphabet, Delta(1));
+    bool has_constant = false;
+    for (const auto& [string, arity] : symbols) {
+        const std::vector<State> targets(arity, 0);
+        alphabet->add_new_symbol(string);
+        const Symbol symbol = (*alphabet)[string];
+        aut.delta.add(0, symbol, targets);
+        if (arity == 0) { has_constant = true; }
+    }
+
+    if (!has_constant) {
+        std::cerr << "warning: mata::nfta::create_universal symbols do not contain any constant" << std::endl;
+    }
+    return aut;
 }
 
 
@@ -78,13 +106,11 @@ void add_states(NameStateMap& state_map, const std::vector<std::string>& state_n
     }
 } // add_states
 
-// todo this is a really shitty solution or at least explain
-// alphabet and orig alph are pointing the the same object
-Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedAlphabet *alphabet, Alphabet *orig_alph) {
+Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedAlphabet *alphabet) {
     // this might cause memory leaks if not handled right
     if (alphabet == nullptr) { alphabet = new RankedOnTheFlyAlphabet(); }
     Nfta aut;
-    aut.alphabet = orig_alph;
+    aut.alphabet = alphabet;
     NameStateMap state_map = {};
     add_states(state_map, inter_aut->states_names, aut.delta);
 
@@ -153,7 +179,7 @@ Nfta parse_from_mata(std::istream& input, Alphabet *alphabet) {
     const parser::Parsed parsed = parser::parse_mf(input, true);
     const IntermediateAut ia = IntermediateAut::parse_from_mf(parsed)[0];
     if (RankedAlphabet *ranked; (ranked = dynamic_cast<RankedAlphabet*>(alphabet))) {
-        return construct_from_inter_aut(&ia, ranked, alphabet);
+        return construct_from_inter_aut(&ia, ranked);
     }
     // if symbol overload is allowed, RankedOnTheFlyAlphabet must be used
     if (ia.overload) { throw std::runtime_error("Symbol overload requires a ranked alphabet."); }

@@ -18,6 +18,77 @@ TEST_CASE("mata::nfta::builder") {
     IntAlphabet i_alphabet = IntAlphabet();
     RankedOnTheFlyAlphabet ranked_alphabet = RankedOnTheFlyAlphabet();
 
+    SECTION("Create empty") {
+        const Nfta aut = create_empty();
+
+        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.delta.empty());
+        CHECK(aut.delta.num_of_states() == 1);
+    }
+
+    SECTION("Create empty") {
+        const Nfta aut = create_empty(&alphabet);
+
+        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.delta.empty());
+        CHECK(aut.delta.num_of_states() == 1);
+        CHECK(aut.alphabet == &alphabet);
+    }
+
+    SECTION("Create universal empty alphabet") {
+        Nfta aut = create_universal(&ranked_alphabet);
+
+        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.delta.empty());
+        CHECK(aut.delta.num_of_states() == 1);
+        CHECK(aut.alphabet == &ranked_alphabet);
+        CHECK(ranked_alphabet.empty());
+        ranked_alphabet.clear();
+    }
+
+    SECTION("Create universal empty symbols") {
+        Nfta aut = create_universal({}, &alphabet);
+
+        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.delta.empty());
+        CHECK(aut.delta.num_of_states() == 1);
+        CHECK(aut.alphabet == &alphabet);
+    }
+
+    SECTION("Create universal ranked alphabet") {
+        ranked_alphabet.add_new_symbol("a", 0);
+        ranked_alphabet.add_new_symbol("s", 1);
+        ranked_alphabet.add_new_symbol("k", 5);
+
+        Nfta aut = create_universal(&ranked_alphabet);
+
+        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.delta.num_of_states() == 1);
+        CHECK(aut.alphabet == &ranked_alphabet);
+        REQUIRE_FALSE(aut.delta.empty());
+
+        CHECK(aut.delta.contains(0, ranked_alphabet.translate_symbol("a", 0), {}));
+        CHECK(aut.delta.contains(0, ranked_alphabet.translate_symbol("s", 1), {0}));
+        CHECK(aut.delta.contains(0, ranked_alphabet.translate_symbol("k", 5), {0, 0, 0, 0, 0}));
+
+        ranked_alphabet.clear();
+    }
+
+    SECTION("Create universal symbols") {
+        utils::OrdVector<StringArity> symbols = {{"0", 0}, {"1", 1}};
+        EnumAlphabet e_alphabet = EnumAlphabet();
+        Nfta aut = create_universal(symbols, &e_alphabet);
+
+        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.delta.num_of_states() == 1);
+        REQUIRE_FALSE(aut.delta.empty());
+        CHECK_NOTHROW(e_alphabet["0"]);
+        CHECK_NOTHROW(e_alphabet["1"]);
+
+        CHECK(aut.delta.contains(0, e_alphabet["0"], {}));
+        CHECK(aut.delta.contains(0, e_alphabet["1"], {0}));
+    }
+
     SECTION("Basic NFTA") {
         std::string input = R"(
             @NFTA-explicit
