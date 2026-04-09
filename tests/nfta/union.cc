@@ -135,7 +135,7 @@ TEST_CASE("mata::nfta::union_product") {
 
          Nfta C = union_product(A, B);
 
-         CHECK(C == A);
+         CHECK(C.is_identical_to(A));
      }
 
      SECTION("Identical automata") {
@@ -147,7 +147,7 @@ TEST_CASE("mata::nfta::union_product") {
 
          Nfta C = union_product(A, B);
 
-         CHECK(C == A);
+         CHECK(C.is_identical_to(A));
      }
 
 

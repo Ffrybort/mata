@@ -35,6 +35,11 @@ namespace mata::nfta {
     }
 
     /**
+     * @brief Create an automaton accepting any tree build from the alphabet. todo
+     */
+    Nfta create_universal(RankedAlphabet *alphabet = nullptr);
+
+    /**
     * @brief Helper function to extract a transition from an inter_aut.
     * @param formula_node A node containing the left-hand side (source state).
     * @param formula_graph A graph containing the right-hand side (symbol and target(s)).

@@ -170,7 +170,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
 
-        aut.remove_epsilon(eps);
+        aut = remove_epsilon(aut, eps);
 
         auto transitions = aut.delta.get_transitions();
 
@@ -199,7 +199,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        aut.remove_epsilon(eps);
+        aut = remove_epsilon(aut, eps);
         auto transitions = aut.delta.get_transitions();
 
         REQUIRE(std::none_of(transitions.begin(), transitions.end(),
@@ -229,7 +229,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
 
-        aut.remove_epsilon(eps);
+        aut = remove_epsilon(aut, eps);
 
         auto transitions = aut.delta.get_transitions();
 

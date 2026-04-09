@@ -2,6 +2,10 @@
 
 namespace mata::nfta {
 
+Nfta create_universal(RankedAlphabet *alphabet) {
+    return Nfta{}; // todo
+}
+
 
 /// brief Get state from a string, insert to @p delta if not already in the @p state_map.
 static State get_state(const std::string& state_str, std::unordered_map<std::string, State>& state_map, Delta& delta) {
@@ -74,11 +78,13 @@ void add_states(NameStateMap& state_map, const std::vector<std::string>& state_n
     }
 } // add_states
 
-Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAlphabet *alphabet) {
+// todo this is a really shitty solution or at least explain
+// alphabet and orig alph are pointing the the same object
+Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedAlphabet *alphabet, Alphabet *orig_alph) {
     // this might cause memory leaks if not handled right
     if (alphabet == nullptr) { alphabet = new RankedOnTheFlyAlphabet(); }
     Nfta aut;
-    aut.alphabet = alphabet;
+    aut.alphabet = orig_alph;
     NameStateMap state_map = {};
     add_states(state_map, inter_aut->states_names, aut.delta);
 
@@ -90,7 +96,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
     assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
                "The number of symbols and arities don't match");
     for (std::size_t i = 0; i < inter_aut->symbols_names.size(); i++) {
-        alphabet->translate_or_add_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
+        alphabet->add_new_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
     }
 
     // todo states can be enumerated too
@@ -146,8 +152,8 @@ Nfta construct_from_parsed_object(const parser::Parsed *parsed, Alphabet *alphab
 Nfta parse_from_mata(std::istream& input, Alphabet *alphabet) {
     const parser::Parsed parsed = parser::parse_mf(input, true);
     const IntermediateAut ia = IntermediateAut::parse_from_mf(parsed)[0];
-    if (RankedOnTheFlyAlphabet *ranked; (ranked = dynamic_cast<RankedOnTheFlyAlphabet*>(alphabet))) {
-        return construct_from_inter_aut(&ia, ranked);
+    if (RankedAlphabet *ranked; (ranked = dynamic_cast<RankedAlphabet*>(alphabet))) {
+        return construct_from_inter_aut(&ia, ranked, alphabet);
     }
     // if symbol overload is allowed, RankedOnTheFlyAlphabet must be used
     if (ia.overload) { throw std::runtime_error("Symbol overload requires a ranked alphabet."); }

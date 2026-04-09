@@ -24,6 +24,10 @@ public:
      */
     virtual utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const { throw std::runtime_error("Unimplemented"); }
 
+    virtual utils::OrdVector<Symbol> get_non_constant_symbols() const { throw std::runtime_error("Unimplemented"); }
+
+    virtual utils::OrdVector<Symbol> get_constant_symbols() const { throw std::runtime_error("Unimplemented"); }
+
     /// complement of a set of symbols wrt the alphabet
     virtual utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const { // {{{
         (void) symbols;
@@ -135,7 +139,11 @@ public:
      *
      * This operation is slow as a new OrdVector is built.
      */
-    utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const;
+    utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const override;
+
+    utils::OrdVector<Symbol> get_non_constant_symbols() const override;
+
+    utils::OrdVector<Symbol> get_constant_symbols() const override;
 
     utils::OrdVector<Symbol> get_alphabet_symbols() const override;
 

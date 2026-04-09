@@ -286,7 +286,6 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // todo check with equality
     }
 
-
     SECTION("Single state and constant, using ranked alphabet") {
         RankedOnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a", 0);

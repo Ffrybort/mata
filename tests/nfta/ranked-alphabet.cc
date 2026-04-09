@@ -320,5 +320,73 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
         CHECK(a.translate_symbol("a", 2) == 99);
     }
+
+    SECTION("get_non_constant_symbols returns only non-constant symbols") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_symbol("a", 0);
+        a.translate_or_add_symbol("f", 1);
+        a.translate_or_add_symbol("p", 2);
+
+        auto non_const = a.get_non_constant_symbols();
+        auto sym_f = a.translate_symbol("f", 1);
+        auto sym_p = a.translate_symbol("p", 2);
+        auto sym_a = a.translate_symbol("a", 0);
+
+        CHECK(non_const.contains(sym_f));
+        CHECK(non_const.contains(sym_p));
+        CHECK_FALSE(non_const.contains(sym_a));
+        CHECK(non_const.size() == 2);
+    }
+
+    SECTION("get_constant_symbols returns only constants") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_symbol("a", 0);
+        a.translate_or_add_symbol("b", 0);
+        a.translate_or_add_symbol("f", 1);
+
+        auto consts = a.get_constant_symbols();
+        auto sym_a = a.translate_symbol("a", 0);
+        auto sym_b = a.translate_symbol("b", 0);
+        auto sym_f = a.translate_symbol("f", 1);
+
+        CHECK(consts.contains(sym_a));
+        CHECK(consts.contains(sym_b));
+        CHECK_FALSE(consts.contains(sym_f));
+        CHECK(consts.size() == 2);
+    }
+
+    SECTION("get_constant_symbols empty when no constants") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_symbol("f", 1);
+        a.translate_or_add_symbol("p", 2);
+
+        CHECK(a.get_constant_symbols().empty());
+    }
+
+    SECTION("get_non_constant_symbols empty when only constants") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_symbol("a", 0);
+        a.translate_or_add_symbol("b", 0);
+
+        CHECK(a.get_non_constant_symbols().empty());
+    }
+
+    SECTION("get_constant_symbols and get_non_constant_symbols partition the alphabet") {
+        RankedOnTheFlyAlphabet a{};
+        a.translate_or_add_symbol("a", 0);
+        a.translate_or_add_symbol("b", 0);
+        a.translate_or_add_symbol("f", 1);
+        a.translate_or_add_symbol("p", 2);
+
+        auto consts     = a.get_constant_symbols();
+        auto non_consts = a.get_non_constant_symbols();
+
+        CHECK(consts.size() + non_consts.size() == a.get_number_of_symbols());
+
+        // no overlap
+        for (const Symbol s : consts) {
+            CHECK(!non_consts.contains(s));
+        }
+    }
 }
 

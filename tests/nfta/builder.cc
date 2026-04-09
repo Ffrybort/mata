@@ -287,11 +287,11 @@ TEST_CASE("mata::nfta::builder") {
         std::ostringstream out;
         CHECK_NOTHROW(aut1.print_mata(out));
         std::string printed = out.str();
+        alphabet.clear();
 
-        OnTheFlyAlphabet alphabet2;
-        Nfta aut2 = parse_from_mata(printed, &alphabet2);
+        Nfta aut2 = parse_from_mata(printed, &alphabet);
 
-        bool check = aut1.has_equal_structure(aut2);
+        bool check = aut1.is_identical_to(aut2);
         CHECK(check);
     }
 

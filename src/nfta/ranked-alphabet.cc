@@ -10,6 +10,22 @@ mata::utils::OrdVector<SymbolArity> mata::nfta::RankedOnTheFlyAlphabet::get_alph
     return result;
 }
 
+utils::OrdVector<Symbol> RankedOnTheFlyAlphabet::get_constant_symbols() const {
+    utils::OrdVector<Symbol> result; result.reserve(symbol_map_.size());
+    for (const auto& [string_arity, symbol] : symbol_map_) {
+        if (string_arity.second == 0) { result.insert(symbol); }
+    }
+    return result;
+}
+
+utils::OrdVector<Symbol> RankedOnTheFlyAlphabet::get_non_constant_symbols() const {
+    utils::OrdVector<Symbol> result; result.reserve(symbol_map_.size());
+    for (const auto& [string_arity, symbol] : symbol_map_) {
+        if (string_arity.second > 0) { result.insert(symbol); }
+    }
+    return result;
+}
+
 mata::utils::OrdVector<Symbol> mata::nfta::RankedOnTheFlyAlphabet::get_alphabet_symbols() const {
     utils::OrdVector<Symbol> result; result.reserve(symbol_map_.size());
     for (const auto& symbol : symbol_map_ | std::views::values) {
@@ -22,9 +38,9 @@ mata::utils::OrdVector<Symbol> mata::nfta::RankedOnTheFlyAlphabet::get_complemen
     return get_alphabet_symbols().difference(symbols);
 }
 
-std::string mata::nfta::RankedOnTheFlyAlphabet::reverse_translate_symbol(mata::Symbol symbol) const {
+std::string mata::nfta::RankedOnTheFlyAlphabet::reverse_translate_symbol(const mata::Symbol symbol) const {
     for (const auto& [symbol_name, symbol_val]: symbol_map_) {
-        if (symbol_val == symbol) { // todo
+        if (symbol_val == symbol) { // todo throw if more than one
             return symbol_name.first;
         }
     }

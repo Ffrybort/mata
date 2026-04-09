@@ -10,10 +10,8 @@
 
 #include <string>
 #include <iostream>
-#include <set>
 #include <utility>
 #include <vector>
-#include <utility>
 
 #include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
@@ -28,17 +26,8 @@ namespace mata::nfta {
         Alphabet* alphabet;
         Delta delta; // states live in delta, so do functions like add_state()
 
-    public:
-        explicit Nfta(
-            utils::SparseSet<State> initial_states = {},
-            Alphabet* alphabet = nullptr,
-            Delta delta = {}
-        )
-            :
-              initial_states(std::move(initial_states)),
-              alphabet(alphabet),
-              delta(std::move(delta))
-        {}
+        explicit Nfta(utils::SparseSet<State> initial_states = {}, Alphabet* alphabet = nullptr, Delta delta = {})
+            : initial_states(std::move(initial_states)), alphabet(alphabet), delta(std::move(delta)) {}
         explicit Nfta(const size_t num_of_states) : initial_states({}), alphabet(nullptr), delta(num_of_states) {}
 
         Nfta(const Nfta& other) = default;
@@ -50,27 +39,27 @@ namespace mata::nfta {
         /**
          * @brief Add an initial state, the state itself is also added if it didn't exist already.
          */
-        void add_initial_state(const State state) {
+        void add_initial_state(const State state) { // {{{
             delta.add_state(state);
             initial_states.insert(state);
-		}
+	} // }}}
 
         /**
          * @brief Add multiple initial states from an iterable structure.
          */
         template <typename Iterable>
-        void add_initial_states(const Iterable& states) {
+        void add_initial_states(const Iterable& states) { // {{{
             add_state(*std::max_element(states.begin(), states.end()));
             initial_states.insert(states.begin(), states.end());
-        }
+        } // }}}
 
         /**
          * @brief Add multiple final states from an initializer list.
          */
-        void add_initial_states(const std::initializer_list<State> states) {
+        void add_initial_states(const std::initializer_list<State> states) { // {{{
             delta.add_state(*std::ranges::max_element(states));
             initial_states.insert(states);
-        }
+        } // }}}
 
         /**
          * @brief Check whether a state is initial.
@@ -86,8 +75,15 @@ namespace mata::nfta {
          * @brief Print the automaton in an easy-to-read format.
          */
         void print_readable(std::ostream& os = std::cout) const;
+
+        /**
+         * @brief Print the automaton is a bottom up format.
+         */
         void print_readable_bottom_up(std::ostream& os = std::cout) const;
 
+        /**
+         * @brief Print the automaton is timbuk parsable format.
+         */
         void print_timbuk(std::ostream& os = std::cout, const std::string& name = "A") const;
 
         /**
@@ -96,32 +92,21 @@ namespace mata::nfta {
         const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
 
         /**
-         * @brief Check if the automaton is empty - no initial states and no transitions in delta.
+         * @brief Check if the accepted language is empty.
          */
         bool is_lang_empty() const;
 
         /**
-         * @brief Remove unused states and rename the rest.
+         * @brief Remove given states and rename the rest.
          */
         void defragment(const BoolVector& is_staying);
 
-
         /**
-         * @brief Check if the two automata are identical. Alphabets are compared as pointers.
-         */
-        bool operator== (const Nfta& other) const;
-
-        /**
-         * @brief Check if the two automata are identical. Alphabets are ignored.
-         */
-        bool has_equal_structure (const Nfta& other) const;
-
-        /**
-         * @brief Remove epsilon transitions from an automaton.
+         * @brief Check if the automata have identical initial states and transitions. Alphabets are ignored.
          *
-         * A new automaton is build and replaces this one.
+         * This does NOT check language equality.
          */
-        void remove_epsilon(Symbol epsilon);
+        bool is_identical_to (const Nfta& other) const;
 
         /**
          * @brief Remove epsilon transitions from an automaton.
@@ -185,6 +170,11 @@ namespace mata::nfta {
          * Symbols need to exclude constants.
          */
         bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
+
+        /**
+         * @brief Check top-down completeness using its alphabet (if a ranked alphabet is used) or symbols in delta.
+         *
+         */
         bool is_top_down_complete() const;
 
         /**
@@ -225,32 +215,24 @@ namespace mata::nfta {
          * @param symbols_arities OrdVector of symbols to be added if missing, and their arities - arity 0 symbols are ignored.
          * @param sink Sink state may be custom defined, the default value will use the next available state.
          *
-         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
-         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
-         * case existing from it are NOT deleted.
+         * Using default sink value or an existing state is recommended, as using a higher sink value will lead to
+         * adding all states before it, and all possible transitions from those states. If an existing state is used,
+         * existing transitions from it are deleted.
          */
         void make_top_down_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink = Limits::max_state);
 
         /**
-         * @brief Complete the automaton with symbols either from its alphabet (if a ranked alphabet is used), or with all used symbols in delta.
+         * @brief Complete the automaton using its alphabet (if a ranked alphabet is used), or all used symbols in delta.
          *
          * @param sink Sink state may be custom defined, the default value will use the next available state.
-         *
-         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
-         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
-         * case existing from it are NOT deleted.
+         * Using default sink value or an existing state is recommended, as using a higher sink value will lead to
+         * adding all states before it, and all possible transitions from those states. If an existing state is used,
+         * existing transitions from it are deleted.
          */
         void make_top_down_complete(State sink = Limits::max_state);
 
         BoolVector get_top_down_reachable() const;
         BoolVector get_bottom_up_reachable() const;
-
-        /**
-         * @brief
-         *
-         * todo some parameter to choose an algorithm
-         */
-        void determinize(std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
         /**
         * @brief Remove top-down unreachable states
@@ -264,9 +246,14 @@ namespace mata::nfta {
     }; // class Nfta
 
     /**
-     * @brief Compute epsilon closures for each state.
+     * @brief Compute epsilon closures for each state. todo move to delta?
      */
     std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon, bool include_state);
+
+    /**
+     * @brief Remove epsilon transitions from an automaton.
+     */
+    Nfta remove_epsilon(const Nfta& aut, Symbol epsilon);
 
     /**
      * @brief Union of two automata not preserving determinism.
@@ -288,14 +275,13 @@ namespace mata::nfta {
     Nfta intersection(const Nfta& A, const Nfta& B);
 
     /**
-    * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
-    */
+     * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
+     */
     Nfta complement_classical(const Nfta& aut);
 
-
     /**
-    * @brief Create a product automaton. Used for union and intersection.
-    */
+     * @brief Create a product automaton. Used for union and intersection.
+     */
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
@@ -320,14 +306,13 @@ namespace mata::nfta {
      * @param symbols_arities [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
      * @return Nfta The complement automaton.
      *
-     * If @ symbols_arities are not provided, the function defaults to alphabet symbols (todo) (if a ranked alphabet is used)
+     * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
      * or to used symbols in delta.
      */
     Nfta complement_top_down(
       const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
       const utils::OrdVector<SymbolArity>* symbols_arities = nullptr
     );
-
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

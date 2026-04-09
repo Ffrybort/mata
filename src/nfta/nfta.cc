@@ -236,17 +236,11 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     }
 }
 
-bool Nfta::operator== (const Nfta& other) const {
+bool Nfta::is_identical_to (const Nfta& other) const {
     return delta.num_of_states() == other.delta.num_of_states()
         && initial_states == other.initial_states
         && delta == other.delta
         && alphabet == other.alphabet;
 } // operator==
-
-bool Nfta::has_equal_structure (const Nfta& other) const {
-    return delta.num_of_states() == other.delta.num_of_states()
-        && initial_states == other.initial_states
-        && delta == other.delta;
-} // has_equal_structure
 
 }
