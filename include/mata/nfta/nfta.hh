@@ -98,7 +98,7 @@ namespace mata::nfta {
         /**
          * @brief Check if the automaton is empty - no initial states and no transitions in delta.
          */
-        bool is_empty() const { return initial_states.empty() || delta.empty(); }
+        bool is_lang_empty() const;
 
         /**
          * @brief Remove unused states and rename the rest.
@@ -293,12 +293,34 @@ namespace mata::nfta {
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
-     * @brief Determinize an automaton with no optimizations.
+     * @brief Determinize an automaton.
+     *
+     * Only optimization is that only (bottom-up) reachable states are constructed.
      */
     Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+
+    /**
+     * @brief Determinize an automaton.
+     *
+     * Only (bottom-up) reachable states are constructed. todo describe
+     */
     Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
-    Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+    /**
+     * @brief Construct a complement automaton without determinizing, directly top down.
+     *
+     * @param aut [in] Input automaton to complement.
+     * @param state_mapping [out, optional] Optional mapping macrostate (set of states) -> result state.
+     * @param symbols_arities [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
+     * @return Nfta The complement automaton.
+     *
+     * If @ symbols_arities are not provided, the function defaults to alphabet symbols (todo) (if a ranked alphabet is used)
+     * or to used symbols in delta.
+     */
+    Nfta complement_top_down(
+      const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
+      const utils::OrdVector<SymbolArity>* symbols_arities = nullptr
+    );
 
 
 } // namespace mata::nfta

@@ -53,7 +53,7 @@ TEST_CASE("mata::nfta") {
 
     SECTION("Print sanity") {
         Nfta aut({0}, &alphabet, {});
-        aut.delta.add(alphabet["f"], 0, {0,1});
+        aut.delta.add(0, alphabet["f"], {0,1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
         CHECK_NOTHROW(aut.print_readable(std::cout));
         CHECK_NOTHROW(aut.print_timbuk(std::cout));
@@ -80,9 +80,9 @@ TEST_CASE("mata::nfta") {
         State s1 = aut.delta.add_state();
         State s2 = aut.delta.add_state();
 
-        aut.delta.add(alphabet["f"], s0, {s1, s2});
-        aut.delta.add(alphabet["f"], s1, {s2});
-        aut.delta.add(alphabet["a"], s2, {s0});
+        aut.delta.add(s0, alphabet["f"], {s1, s2});
+        aut.delta.add(s1, alphabet["f"], {s2});
+        aut.delta.add(s2, alphabet["a"], {s0});
 
         aut.add_initial_state(2);
 
@@ -114,7 +114,7 @@ TEST_CASE("mata::nfta") {
         State s0 = aut.delta.add_state();
         State s1 = aut.delta.add_state();
 
-        aut.delta.add(alphabet["f"], s0, {s1});
+        aut.delta.add(s0, alphabet["f"], {s1});
 
         BoolVector is_staying{true, true};
         aut.defragment(is_staying);

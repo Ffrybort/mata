@@ -23,7 +23,7 @@ TEST_CASE("mata::nfta::intersection") {
 
         Nfta C = intersection(A, B);
 
-        CHECK(C.is_empty());
+        CHECK(C.is_lang_empty());
     }
 
     SECTION("Single final state only on one side") {
@@ -35,7 +35,7 @@ TEST_CASE("mata::nfta::intersection") {
 
         Nfta C = intersection(A, B);
 
-        CHECK(C.is_empty());
+        CHECK(C.is_lang_empty());
     }
 
     SECTION("Identical automata") {
