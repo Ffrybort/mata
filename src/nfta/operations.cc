@@ -1,7 +1,7 @@
 #include "mata/nfta/nfta.hh"
 #include "mata/utils/two-dimensional-map.hh"
 #include <cmath>
-#include <bits/locale_facets_nonio.h>
+#include "mata/nfta/ranked-alphabet.hh"
 
 namespace mata::nfta {
 inline void unknown_symbol_in_delta(const std::optional<std::string> &symbol = std::nullopt) {
@@ -97,11 +97,21 @@ void Nfta::swap_initial_states() {
     initial_states.complement(num_of_states);
 }
 
-Nfta complement(const Nfta& aut) {
-    if (aut.initial_states.empty() || aut.delta.empty()) { return Nfta{}; }
-    Nfta result = determinize_naive(aut);
-    result.make_bottom_up_complete();
-    result.swap_initial_states();
+void Nfta::complement_as_deterministic() {
+    assert(is_bottom_up_deterministic() &&
+        "mata::nfta::complement_as_deterministic automaton is not bottom-up deterministic");
+    make_bottom_up_complete(); // todo chose a sink in some smart way
+    swap_initial_states();
+}
+
+Nfta complement_classical(const Nfta& aut) {
+    Nfta result;
+    if (aut.initial_states.empty() || aut.delta.empty()) {
+        return result;
+        // todo create universal
+    }
+    result = determinize_optimized(aut);
+    result.complement_as_deterministic();
     return result;
 }
 
@@ -906,8 +916,8 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
         const utils::OrdVector<SymbolArity>* symbols_arities) {
     utils::OrdVector<SymbolArity> local_symbols;
     if (!symbols_arities) { // todo update if other ranked alphabets are implemented
-        if (auto ranked = dynamic_cast<const RankedOnTheFlyAlphabet*>(aut.alphabet)) {
-            local_symbols = ranked->get_alphabet_symbols_arities(); // override tmp
+        if (auto* ranked = dynamic_cast<RankedAlphabet*>(aut.alphabet)) {
+            local_symbols = ranked->get_alphabet_symbols_arities();
 
         } else {
             local_symbols = aut.delta.get_used_symbols_arities();
@@ -915,9 +925,7 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
         symbols_arities = &local_symbols;
     }
 
-    // todo use symbols from the alphabet if possible
     MacrostateConstructionContext ctx(aut, state_mapping);
-    // if (aut.alphabet) { symbols = aut.alphabet->get_alphabet_symbols(); }
 
     for (const auto& [symbol, arity] : *symbols_arities) {
         std::cout << aut.alphabet->try_reverse_translate_symbol(symbol) << ":" << arity << '\n';
@@ -998,10 +1006,6 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
                     s_tuple[i] = ctx.get_or_create_macrostate(macro_tuple[i], false);
                 res_symbol_post.insert(s_tuple);
             }
-
-            std::cout << "symbol " << symbol << " macro " << new_macro
-                      << " constraints: " << m
-                      << " minimal tuples: " << minimal_macro_tuples.size() << std::endl;
 
             if (!res_symbol_post.empty()) {
                 auto& tmp = ctx.result.delta.mutable_state_post(new_s);

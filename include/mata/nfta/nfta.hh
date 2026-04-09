@@ -142,6 +142,11 @@ namespace mata::nfta {
          */
         void swap_initial_states();
 
+        /**
+         * @brief Complement an already deterministic automaton.
+         */
+        void complement_as_deterministic();
+
 
         /**
          * @brief Check if the automaton is bottom-up deterministic.
@@ -282,10 +287,11 @@ namespace mata::nfta {
      */
     Nfta intersection(const Nfta& A, const Nfta& B);
 
-    /** todo
-    *
+    /**
+    * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
     */
-    Nfta complement(const Nfta& aut);
+    Nfta complement_classical(const Nfta& aut);
+
 
     /**
     * @brief Create a product automaton. Used for union and intersection.

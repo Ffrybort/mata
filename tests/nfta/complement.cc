@@ -5,6 +5,7 @@
 #include <mata/nfta/delta.hh>
 #include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/ranked-alphabet.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -18,9 +19,7 @@ static size_t count_tuples(const Nfta& aut, State src, Symbol sym) {
     return it->target_tuples.size();
 }
 
-// ---------------------------------------------------------------------------
-// tests
-// ---------------------------------------------------------------------------
+// todo classical and det tests
 TEST_CASE("mata::nfta::complement_top_down") {
 
     // todo empty delta, empty initial
@@ -292,8 +291,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         RankedOnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a", 0);
         alphabet.add_new_symbol("f", 1);
-        Symbol a = alphabet.translate_ranked_symbol("a", 0);
-        Symbol f = alphabet.translate_ranked_symbol("f", 1);
+        Symbol a = alphabet.translate_symbol("a", 0);
+        Symbol f = alphabet.translate_symbol("f", 1);
 
         Nfta aut({ 0 }, &alphabet, Delta(1));
         aut.delta.add(0, f, { 0 });
@@ -309,33 +308,27 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // f should loop: {0} on f -> ({0})
         CHECK(comp.delta.contains(m0, f, { m0 }));
     }
-    //
-    // SECTION("Complement of universal automaton is empty") {
-    //     // one state that accepts everything
-    //     Nfta aut({0}, &alphabet, Delta(1));
-    //     aut.delta.add(0, a, {});
-    //     aut.delta.add(0, f, {0});
-    //
-    //     std::unordered_map<StateSet, State> mapping;
-    //     Nfta comp = complement_top_down(aut, &mapping);
-    //     CHECK(is_empty(comp));
-    // }
-    // SECTION("Complement of empty-language automaton is non-empty") {
-    //     OnTheFlyAlphabet alphabet;
-    //     alphabet.add_new_symbol("a");
-    //     alphabet.add_new_symbol("f");
-    //     Symbol a = alphabet["a"];
-    //     Symbol f = alphabet["f"];
-    //
-    //     // state 0 has transitions but never reaches a leaf
-    //     Nfta aut({0}, &alphabet, Delta(2));
-    //     aut.delta.add(0, f, {1});
-    //     aut.delta.add(1, f, {0});
-    //     // no a-transition from 0 or 1, so make complete first
-    //     aut.make_top_down_complete();
-    //
-    //     std::unordered_map<StateSet, State> mapping;
-    //     Nfta comp = complement_top_down(aut, &mapping);
-    //     CHECK(!is_empty(comp));
-    // }
+
+    SECTION("Complement of universal automaton is empty") {
+        IntAlphabet alphabet;
+        // one state that accepts everything
+        Nfta aut({0}, &alphabet, Delta(1));
+        aut.delta.add(0, 0, {});
+        aut.delta.add(0, 1, {0});
+
+        Nfta comp = complement_top_down(aut);
+        CHECK(comp.is_lang_empty());
+    }
+    SECTION("Complement of empty-language automaton is non-empty") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 0);
+        alphabet.add_new_symbol("f", 1);
+        // state 0 has transitions but never reaches a leaf
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, alphabet.translate_symbol("f", 1), {1});
+        aut.delta.add(1, alphabet.translate_symbol("f", 1), {0});
+
+        Nfta comp = complement_top_down(aut);
+        CHECK_FALSE(comp.is_lang_empty());
+    }
 }

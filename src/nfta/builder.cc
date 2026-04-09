@@ -90,7 +90,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
     assert(inter_aut->symbols_names.size() ==  inter_aut->symbols_arities.size() &&
                "The number of symbols and arities don't match");
     for (std::size_t i = 0; i < inter_aut->symbols_names.size(); i++) {
-        alphabet->translate_or_add_ranked_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
+        alphabet->translate_or_add_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
     }
 
     // todo states can be enumerated too
@@ -102,7 +102,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedOnTheFlyAl
         auto [source, symbol_str, targets] = get_transition(
             formula_node, formula_graph, state_map);
         const auto arity = static_cast<unsigned>(targets.size());
-        const Symbol symbol = alphabet->translate_ranked_symbol(symbol_str, arity);
+        const Symbol symbol = alphabet->translate_symbol(symbol_str, arity);
         aut.delta.add(source, symbol, targets);
     } // for transitions
     return aut;

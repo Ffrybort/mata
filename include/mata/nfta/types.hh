@@ -16,6 +16,8 @@ namespace mata::nfta
     using StateSet = utils::OrdVector<State>;
 
     using SymbolArity = std::pair<Symbol, unsigned>;
+    using StringArity = std::pair<std::string, unsigned>;
+
     inline utils::OrdVector<Symbol> collect_symbols(const utils::OrdVector<SymbolArity>& sa, const bool ignore_constants = false) {
         utils::OrdVector<Symbol> symbols;
         for (auto [symbol, arity] : sa) {

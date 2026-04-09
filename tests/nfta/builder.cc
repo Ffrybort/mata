@@ -334,7 +334,7 @@ TEST_CASE("mata::nfta::builder") {
 
         // arities inferred from transitions
         CHECK(ranked_alphabet.get_arity(
-            ranked_alphabet.translate_ranked_symbol("f", 3)
+            ranked_alphabet.translate_symbol("f", 3)
         ) == std::vector<unsigned>{3});
     }
 
@@ -355,7 +355,7 @@ TEST_CASE("mata::nfta::builder") {
         CHECK(aut.delta.num_of_transitions() == 1);
         CHECK(ranked_alphabet.get_alphabet_symbols().size() == 1);
 
-        Symbol c = ranked_alphabet.translate_ranked_symbol("c", 0);
+        Symbol c = ranked_alphabet.translate_symbol("c", 0);
         CHECK(ranked_alphabet.get_arity(c) == std::vector<unsigned>{0});
     }
 

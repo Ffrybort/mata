@@ -2,8 +2,11 @@
 #include <catch2/matchers/catch_matchers_string.hpp>
 
 #include "mata/alphabet.hh"
+#include "mata/nfta/ranked-alphabet.hh"
+#include "mata/nfta/types.hh"
 
 using namespace mata;
+using namespace mata::nfta;
 using namespace mata::utils;
 
 TEST_CASE("mata::RankedOnTheFlyAlphabet") {
@@ -19,7 +22,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("translate_or_add_ranked_symbol inserts and returns symbol") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s = a.translate_or_add_ranked_symbol("a", 2);
+        Symbol s = a.translate_or_add_symbol("a", 2);
         CHECK(s == 0);
         CHECK(a.get_number_of_symbols() == 1);
         CHECK(a.get_next_value() == 1);
@@ -27,42 +30,42 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("translate_or_add_ranked_symbol ignores duplicits") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s1 = a.translate_or_add_ranked_symbol("a", 2);
-        Symbol s2 = a.translate_or_add_ranked_symbol("a", 2);
+        Symbol s1 = a.translate_or_add_symbol("a", 2);
+        Symbol s2 = a.translate_or_add_symbol("a", 2);
         CHECK(s1 == s2);
         CHECK(a.get_number_of_symbols() == 1);
     }
 
     SECTION("same name different arity yields different symbol") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s1 = a.translate_or_add_ranked_symbol("a", 1);
-        Symbol s2 = a.translate_or_add_ranked_symbol("a", 2);
+        Symbol s1 = a.translate_or_add_symbol("a", 1);
+        Symbol s2 = a.translate_or_add_symbol("a", 2);
         CHECK(s1 != s2);
         CHECK(a.get_number_of_symbols() == 2);
     }
 
     SECTION("translate_ranked_symbol throws if missing") {
         RankedOnTheFlyAlphabet a{};
-        CHECK_THROWS(a.translate_ranked_symbol("missing", 0));
+        CHECK_THROWS(a.translate_symbol("missing", 0));
     }
 
     SECTION("translate_ranked_symbol returns existing symbol") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s = a.translate_or_add_ranked_symbol("a", 3);
-        CHECK(a.translate_ranked_symbol("a", 3) == s);
+        Symbol s = a.translate_or_add_symbol("a", 3);
+        CHECK(a.translate_symbol("a", 3) == s);
     }
 
     SECTION("initializer_list constructor (StringArity -> Symbol)") {
         RankedOnTheFlyAlphabet a{
             { {{"a", 1}, 5}, {{"b", 2}, 7} }
         };
-        CHECK(a.translate_ranked_symbol("a", 1) == 5);
-        CHECK(a.translate_ranked_symbol("b", 2) == 7);
+        CHECK(a.translate_symbol("a", 1) == 5);
+        CHECK(a.translate_symbol("b", 2) == 7);
         CHECK(a.get_next_value() == 8);
     }
 
     SECTION("vector<StringArity> constructor") {
-        std::vector<RankedOnTheFlyAlphabet::StringArity> v{
+        std::vector<StringArity> v{
             {"a", 1}, {"b", 2}
         };
         RankedOnTheFlyAlphabet a{v};
@@ -70,7 +73,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
     }
 
     SECTION("iterator constructor") {
-        std::vector<RankedOnTheFlyAlphabet::StringArity> v{
+        std::vector<StringArity> v{
             {"x", 0}, {"y", 1}
         };
         RankedOnTheFlyAlphabet a{v.begin(), v.end()};
@@ -79,50 +82,50 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("get_alphabet_symbols_arities returns ordered vector") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("b", 1);
-        a.translate_or_add_ranked_symbol("a", 2);
+        a.translate_or_add_symbol("b", 1);
+        a.translate_or_add_symbol("a", 2);
         auto syms = a.get_alphabet_symbols_arities();
         CHECK(syms.size() == 2);
     }
 
     SECTION("get_alphabet_symbols returns symbols only") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
-        a.translate_or_add_ranked_symbol("b", 2);
+        a.translate_or_add_symbol("a", 1);
+        a.translate_or_add_symbol("b", 2);
         auto syms = a.get_alphabet_symbols();
         CHECK(syms.size() == 2);
     }
 
     SECTION("reverse_translate_symbol works") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s = a.translate_or_add_ranked_symbol("a", 1);
+        Symbol s = a.translate_or_add_symbol("a", 1);
         CHECK(a.reverse_translate_symbol(s) == "a");
     }
 
     SECTION("get_arity returns correct arity") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s = a.translate_or_add_ranked_symbol("a", 4);
+        Symbol s = a.translate_or_add_symbol("a", 4);
         CHECK(a.get_arity(s) == std::vector<unsigned>{4});
     }
 
     SECTION("change_arity updates arity") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s = a.translate_or_add_ranked_symbol("a", 1);
+        Symbol s = a.translate_or_add_symbol("a", 1);
         a.change_arity(s, 3);
         CHECK(a.get_arity(s) == std::vector<unsigned>{3});
     }
 
     SECTION("erase by symbol removes entry") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s = a.translate_or_add_ranked_symbol("a", 1);
+        Symbol s = a.translate_or_add_symbol("a", 1);
         CHECK(a.erase(s) == 1);
         CHECK(a.empty());
     }
 
     SECTION("clear resets alphabet") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
-        a.translate_or_add_ranked_symbol("b", 2);
+        a.translate_or_add_symbol("a", 1);
+        a.translate_or_add_symbol("b", 2);
         a.clear();
         CHECK(a.empty());
         CHECK(a.get_number_of_symbols() == 0);
@@ -131,8 +134,8 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
      SECTION("translate_or_add_ranked_symb adds and reuses symbol") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s1 = a.translate_or_add_ranked_symbol("a", 2);
-        Symbol s2 = a.translate_or_add_ranked_symbol("a", 2);
+        Symbol s1 = a.translate_or_add_symbol("a", 2);
+        Symbol s2 = a.translate_or_add_symbol("a", 2);
         CHECK(s1 == s2);
         CHECK(a.get_number_of_symbols() == 1);
     }
@@ -144,8 +147,8 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("get_complement returns missing symbols") {
         RankedOnTheFlyAlphabet a{};
-        Symbol s1 = a.translate_or_add_ranked_symbol("a", 0);
-        Symbol s2 = a.translate_or_add_ranked_symbol("b", 0);
+        Symbol s1 = a.translate_or_add_symbol("a", 0);
+        Symbol s2 = a.translate_or_add_symbol("b", 0);
 
         utils::OrdVector<Symbol> subset{ s1 };
         auto complement = a.get_complement(subset);
@@ -157,7 +160,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("add_symbols_from(vector<StringArity>) inserts all symbols") {
         RankedOnTheFlyAlphabet a{};
-        std::vector<RankedOnTheFlyAlphabet::StringArity> symbols{
+        std::vector<StringArity> symbols{
             {"a", 1}, {"b", 2}
         };
         a.add_symbols_from(symbols);
@@ -166,7 +169,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("add_symbols_from(SymbolArityMap) does not overwrite existing symbols") {
         RankedOnTheFlyAlphabet a{};
-        Symbol existing = a.translate_or_add_ranked_symbol("a", 1);
+        Symbol existing = a.translate_or_add_symbol("a", 1);
 
         RankedOnTheFlyAlphabet::SymbolArityMap map{
             {{"a", 1}, 42},
@@ -175,8 +178,8 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
         a.add_symbols_from(map);
 
-        CHECK(a.translate_ranked_symbol("a", 1) == existing);
-        CHECK(a.translate_ranked_symbol("b", 2) == 7);
+        CHECK(a.translate_symbol("a", 1) == existing);
+        CHECK(a.translate_symbol("b", 2) == 7);
     }
 
     SECTION("add_new_symbol throws on duplicate") {
@@ -193,31 +196,31 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("erase by StringArity removes symbol") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
-        CHECK(a.erase(RankedOnTheFlyAlphabet::StringArity{"a", 1}) == 1);
+        a.translate_or_add_symbol("a", 1);
+        CHECK(a.erase(StringArity{"a", 1}) == 1);
         CHECK(a.empty());
     }
 
     SECTION("erase by name and arity removes symbol") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
         CHECK(a.erase("a", 1) == 1);
         CHECK(a.empty());
     }
 
     SECTION("copy constructor copies alphabet") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
 
         RankedOnTheFlyAlphabet b{ a };
         CHECK(b.get_number_of_symbols() == 1);
-        CHECK(b.translate_ranked_symbol("a", 1) ==
-              a.translate_ranked_symbol("a", 1));
+        CHECK(b.translate_symbol("a", 1) ==
+              a.translate_symbol("a", 1));
     }
 
     SECTION("move constructor transfers alphabet") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
 
         RankedOnTheFlyAlphabet b{ std::move(a) };
         CHECK(b.get_number_of_symbols() == 1);
@@ -225,14 +228,14 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("pointer constructor") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
         RankedOnTheFlyAlphabet b{ &a };
         CHECK(b.get_number_of_symbols() == 1);
     }
 
     SECTION("copy assignment") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
 
         RankedOnTheFlyAlphabet b{};
         b = a;
@@ -247,13 +250,13 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     RankedOnTheFlyAlphabet a{ map };
 
-    CHECK(a.translate_ranked_symbol("a", 1) == 5);
-    CHECK(a.translate_ranked_symbol("b", 2) == 7);
+    CHECK(a.translate_symbol("a", 1) == 5);
+    CHECK(a.translate_symbol("b", 2) == 7);
 }
 
     SECTION("move assignment") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
 
         RankedOnTheFlyAlphabet b{};
         b = std::move(a);
@@ -263,7 +266,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("get_symbol_map returns internal map") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
 
         const auto& map = a.get_symbol_map();
         CHECK(map.size() == 1);
@@ -281,7 +284,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("erase by iterator removes symbol") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
+        a.translate_or_add_symbol("a", 1);
 
         auto it = a.get_symbol_map().begin();
         a.erase(it);
@@ -291,8 +294,8 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("erase iterator range removes symbols") {
         RankedOnTheFlyAlphabet a{};
-        a.translate_or_add_ranked_symbol("a", 1);
-        a.translate_or_add_ranked_symbol("b", 2);
+        a.translate_or_add_symbol("a", 1);
+        a.translate_or_add_symbol("b", 2);
 
         auto first = a.get_symbol_map().begin();
         auto last = a.get_symbol_map().end();
@@ -305,9 +308,9 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
     SECTION("add_new_symbol with explicit value") {
         RankedOnTheFlyAlphabet a{};
 
-        a.add_new_symbol(RankedOnTheFlyAlphabet::StringArity{"a", 1}, 42);
+        a.add_new_symbol(StringArity{"a", 1}, 42);
 
-        CHECK(a.translate_ranked_symbol("a", 1) == 42);
+        CHECK(a.translate_symbol("a", 1) == 42);
     }
 
     SECTION("add_new_symbol string arity value overload") {
@@ -315,9 +318,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
         a.add_new_symbol("a", 2, 99);
 
-        CHECK(a.translate_ranked_symbol("a", 2) == 99);
+        CHECK(a.translate_symbol("a", 2) == 99);
     }
 }
-
-
 
