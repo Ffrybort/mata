@@ -258,7 +258,7 @@ concept Iterable = requires(T t) {
          * Complements the set with respect to a given number of elements = the maximum number + 1.
          */
         void complement(Number new_domain_size) {
-            Number old_domain_size = domain_size_;
+            auto old_domain_size = static_cast<Number>(domain_size_);
             for (Number i = 0; i < new_domain_size; ++i) {
                 if (contains(i))
                     erase_nocheck(i);
