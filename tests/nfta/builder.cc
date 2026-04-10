@@ -47,7 +47,8 @@ TEST_CASE("mata::nfta::builder") {
     }
 
     SECTION("Create universal empty symbols") {
-        Nfta aut = create_universal({}, &alphabet);
+        const OrdVector<SymbolArity> symbols;
+        Nfta aut = create_universal(&symbols, &alphabet);
 
         CHECK(aut.initial_states.size() == 1);
         CHECK(aut.delta.empty());
@@ -75,18 +76,17 @@ TEST_CASE("mata::nfta::builder") {
     }
 
     SECTION("Create universal symbols") {
-        utils::OrdVector<StringArity> symbols = {{"0", 0}, {"1", 1}};
-        EnumAlphabet e_alphabet = EnumAlphabet();
-        Nfta aut = create_universal(symbols, &e_alphabet);
+        OrdVector<SymbolArity> symbols = {{0, 0}, {1, 1}};
+        Nfta aut = create_universal(&symbols, &i_alphabet);
 
         CHECK(aut.initial_states.size() == 1);
         CHECK(aut.delta.num_of_states() == 1);
         REQUIRE_FALSE(aut.delta.empty());
-        CHECK_NOTHROW(e_alphabet["0"]);
-        CHECK_NOTHROW(e_alphabet["1"]);
+        CHECK_NOTHROW(i_alphabet["0"]);
+        CHECK_NOTHROW(i_alphabet["1"]);
 
-        CHECK(aut.delta.contains(0, e_alphabet["0"], {}));
-        CHECK(aut.delta.contains(0, e_alphabet["1"], {0}));
+        CHECK(aut.delta.contains(0, i_alphabet["0"], {}));
+        CHECK(aut.delta.contains(0, i_alphabet["1"], {0}));
     }
 
     SECTION("Basic NFTA") {

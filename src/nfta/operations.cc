@@ -1,6 +1,8 @@
 #include "mata/nfta/nfta.hh"
 #include "mata/utils/two-dimensional-map.hh"
 #include <cmath>
+#include <mata/nfta/builder.hh>
+
 #include "mata/nfta/ranked-alphabet.hh"
 
 namespace mata::nfta {
@@ -10,6 +12,23 @@ inline void unknown_symbol_in_delta(const std::optional<std::string> &symbol = s
     }
     assert(false && "Unknown symbol in delta");
 } // unknown_symbol_in_delta
+
+// helper to resolve symbols and arities - use given or default
+const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
+    const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in, utils::OrdVector<SymbolArity>& tmp
+    ) {
+    if (symbols_arities_in) { return *symbols_arities_in; }
+
+    if (const auto* ranked = dynamic_cast<const RankedAlphabet*>(aut.alphabet)) {
+        tmp = ranked->get_alphabet_symbols_arities();
+        return tmp;
+    }
+
+    tmp = aut.delta.get_used_symbols_arities();
+    return tmp;
+}
+
+
 
 std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon, const bool include_state = true) {
     const size_t num_of_states = delta.num_of_states();
@@ -92,11 +111,6 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     }
 } // remove_epsilon_in_place
 
-void Nfta::swap_initial_states() {
-    const auto num_of_states = static_cast<State>(delta.num_of_states());
-    initial_states.complement(num_of_states);
-}
-
 void Nfta::complement_as_deterministic() {
     assert(is_bottom_up_deterministic() &&
         "mata::nfta::complement_as_deterministic automaton is not bottom-up deterministic");
@@ -104,13 +118,11 @@ void Nfta::complement_as_deterministic() {
     swap_initial_states();
 }
 
-Nfta complement_classical(const Nfta& aut) {
-    Nfta result;
+Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities)  {
     if (aut.initial_states.empty() || aut.delta.empty()) {
-        return result;
-        // todo create universal
+        return create_universal(symbols_arities, aut.alphabet);
     }
-    result = determinize_optimized(aut);
+    Nfta result = determinize_optimized(aut);
     result.complement_as_deterministic();
     return result;
 }
@@ -308,7 +320,14 @@ bool Nfta::is_top_down_deterministic() const {
     return true;
 } // is_top_down_deterministic
 
-bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const { // todo test
+bool Nfta::is_bottom_up_complete() const {
+    if (alphabet) {
+        return is_bottom_up_complete(alphabet->get_alphabet_symbols());
+    }
+    return is_bottom_up_complete(delta.get_used_symbols());
+}
+
+bool Nfta::is_bottom_up_complete(const utils::OrdVector<Symbol> &symbols) const {
     const size_t num_of_states = delta.num_of_states();
     ReversedDelta rev_delta = delta.get_reversed();
     if (rev_delta.symbol_transitions.size() < symbols.size()) {
@@ -333,7 +352,7 @@ bool Nfta::is_bottom_up_complete(const ReversedDelta& rev_delta) const { // todo
     const size_t num_of_states = delta.num_of_states();
     for (const auto& symbol_tr : rev_delta.symbol_transitions) {
         assert(!symbol_tr.sources_transitions.empty() && "Source transitions not empty");
-        const size_t arity = symbol_tr.sources_transitions.at(0).sources.size(); // todo use arity
+        const size_t arity = symbol_tr.get_arity();
         if (symbol_tr.sources_transitions.size() != ipow(num_of_states, arity)) { return false; }
 
         for (const auto& source_tr : symbol_tr.sources_transitions) {
@@ -343,7 +362,6 @@ bool Nfta::is_bottom_up_complete(const ReversedDelta& rev_delta) const { // todo
     return true;
 } // is_bottom_up_complete
 
-/// symbols need to exclude constants
 bool Nfta::is_top_down_complete(const utils::OrdVector<Symbol>& symbols) const {
     for (const auto s : symbols) {
         std::cout << " " << alphabet->try_reverse_translate_symbol(s);
@@ -423,8 +441,10 @@ State get_sink(State sink, Delta& delta) {
     return sink;
 } // get_sink
 
-void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
-    // todo leave it alone if it already was complete
+void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in, State sink) {
+    utils::OrdVector<SymbolArity> tmp;
+    const utils::OrdVector<SymbolArity> symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
+
     auto rev_delta = delta.get_reversed();
 
     // if the sink is default and delta is complete, it is left alone
@@ -507,22 +527,11 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_
     #endif
 } // make_bottom_up_complete
 
-void Nfta::make_bottom_up_complete(const State sink) { // todo ranked alph
-    make_bottom_up_complete(delta.get_used_symbols_arities(), sink);
-} // make_bottom_up_complete
-
-void Nfta::make_top_down_complete(const State sink) { // todo ranked alph
-    utils::OrdVector<SymbolArity> symbols;
-    if (const auto* ranked = dynamic_cast<RankedAlphabet*>(alphabet)) {
-        symbols = ranked->get_alphabet_symbols_arities();
-    } else {
-        symbols = delta.get_used_symbols_arities();
-    }
-    make_top_down_complete(symbols, sink);
-} // make_top_down_complete
-
-void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink) {
+void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in, State sink) {
     // if the sink is default, automaton is checked for completeness before adding a sink state
+
+    utils::OrdVector<SymbolArity> tmp;
+    const utils::OrdVector<SymbolArity> symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
     if (sink == Limits::max_state && is_top_down_complete(symbols_arities)) { return; } // todo
     sink = get_sink(sink, delta);
     const auto num_of_states = static_cast<State>(delta.num_of_states());
@@ -652,6 +661,7 @@ void Nfta::reduce_bottom_up_down() {
 }
 
 bool Nfta::is_lang_empty() const {
+    // todo bottom up reachable -> vidím koncový stav tak končí
     // an is empty iff no run reaches a leaf transition
     // i.e. no initial state can reach a state with a constant transition
     if (initial_states.empty() || delta.empty()) { return true; }
@@ -915,29 +925,18 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
 }
 
 Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,
-        const utils::OrdVector<SymbolArity>* symbols_arities) {
-    utils::OrdVector<SymbolArity> local_symbols;
-    if (!symbols_arities) {
-        if (auto* ranked = dynamic_cast<RankedAlphabet*>(aut.alphabet)) {
-            local_symbols = ranked->get_alphabet_symbols_arities();
+        const utils::OrdVector<SymbolArity>* symbols_arities_in) {
+    // todo does it have to be complete?
 
-        } else {
-            local_symbols = aut.delta.get_used_symbols_arities();
-        }
-        symbols_arities = &local_symbols;
-    }
-
+    utils::OrdVector<SymbolArity> tmp;
+    const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
     MacrostateConstructionContext ctx(aut, state_mapping);
 
-    for (const auto& [symbol, arity] : *symbols_arities) {
+    for (const auto& [symbol, arity] : symbols_arities) {
         std::cout << aut.alphabet->try_reverse_translate_symbol(symbol) << ":" << arity << '\n';
     }
 
-    // does it have to be complete?
-    assert(aut.is_top_down_complete(*symbols_arities) &&
-        "mata::nfta::complement_top_down automaton must be top down complete (i think)");
-
-    if (aut.delta.empty() || aut.initial_states.empty()) { return Nfta{}; /* todo probably call classical complement */ }
+    if (aut.delta.empty() || aut.initial_states.empty()) { return create_universal(&symbols_arities); }
     ctx.initialize_top_down();
 
     // component-wise subset: returns true iff a is dominated by b (b ≤ a, i.e. b is smaller-or-equal)
@@ -953,10 +952,8 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
     while (!ctx.worklist.empty()) {
         auto [new_s, new_macro] = std::move(ctx.worklist.back());
         ctx.worklist.pop_back();
-        ctx.processed_states.push_back(new_s); // todo here a bool vector or nothing at all will likely suffice
-        std::cout << "new state: " << new_s << " " << new_macro << std::endl;
 
-        for (const auto& [symbol, arity] : *symbols_arities) {
+        for (const auto& [symbol, arity] : symbols_arities) {
             // constant -> if there are no transitions over symbol from any q, add to result
             if (arity == 0) {
                 bool leaf_accepts = true;
@@ -971,14 +968,15 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
                 continue;
             }
 
-            std::vector<std::vector<State>> constrains; // all target tuples of any q over symbol
-            for (const State q : new_macro) { // todo this is unnecessary copying, optimize later
+            std::vector<std::vector<State>> constrains_vector; // all target tuples of any q over symbol
+            for (const State q : new_macro) {
                 auto it = aut.delta[q].find(SymbolPost{symbol});
                 assert(it != aut.delta[q].end() && "mata::nfta::complement_top_down missing symbol post");
                 for (auto& tup : aut.delta[q].find(symbol)->target_tuples) {
-                    constrains.push_back(tup);
+                    constrains_vector.push_back(tup);
                 }
             }
+            utils::OrdVector constrains(constrains_vector);
 
             size_t m = constrains.size();
             SymbolPost res_symbol_post(symbol);
@@ -989,7 +987,7 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
             do {
                 std::vector<StateSet> macro_tuple(arity);
                 for (size_t t = 0; t < m; ++t)
-                    macro_tuple[selector[t]].insert(constrains[t][selector[t]]);
+                    macro_tuple[selector[t]].insert(constrains.at(t)[selector[t]]);
 
                 bool is_redundant = false;
                 for (const auto& existing : minimal_macro_tuples) {
@@ -1010,12 +1008,17 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
             }
 
             if (!res_symbol_post.empty()) {
-                auto& tmp = ctx.result.delta.mutable_state_post(new_s);
-                tmp.push_back(std::move(res_symbol_post));
+                auto& new_s_state_post = ctx.result.delta.mutable_state_post(new_s);
+                new_s_state_post.push_back(std::move(res_symbol_post));
             }
         }
     }
     return ctx.result;
+} // complement_top_down
+
+bool  is_included(const Nfta& small, const Nfta& big) {
+    return false;
 }
+
 
 } // namespace mata::nfta

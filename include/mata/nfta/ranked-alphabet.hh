@@ -28,13 +28,7 @@ public:
 
     virtual utils::OrdVector<Symbol> get_constant_symbols() const { throw std::runtime_error("Unimplemented"); }
 
-    /// complement of a set of symbols wrt the alphabet
-    virtual utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const { // {{{
-        (void) symbols;
-        throw std::runtime_error("Unimplemented");
-    } // }}}
-
-    virtual ~RankedAlphabet() = default;
+    ~RankedAlphabet() override = default;
 
     virtual void add_new_symbol(const std::string& symbol, unsigned arity) = 0;
 

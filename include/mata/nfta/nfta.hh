@@ -106,7 +106,7 @@ namespace mata::nfta {
          *
          * This does NOT check language equality.
          */
-        bool is_identical_to (const Nfta& other) const;
+        bool is_identical_to(const Nfta& other) const;
 
         /**
          * @brief Remove epsilon transitions from an automaton.
@@ -125,13 +125,12 @@ namespace mata::nfta {
          *
          * New initial states consist of all states from delta that but current initial states.
          */
-        void swap_initial_states();
+        void swap_initial_states() { initial_states.complement(static_cast<State>(delta.num_of_states())); }
 
         /**
-         * @brief Complement an already deterministic automaton.
+         * @brief Complement an already and deterministic automaton.
          */
         void complement_as_deterministic();
-
 
         /**
          * @brief Check if the automaton is bottom-up deterministic.
@@ -149,20 +148,19 @@ namespace mata::nfta {
         bool is_top_down_deterministic() const;
 
         /**
-         * @brief Check if the automaton is complete. todo
+         * @brief Check if the automaton is complete.
          */
-        bool is_bottom_up_complete(const utils::OrdVector<Symbol>& symbols) const;
-        bool is_bottom_up_complete(const ReversedDelta& rev_delta) const;
-
+        bool is_bottom_up_complete(const utils::OrdVector<Symbol> &symbols) const;
+        /**
+         * @brief Check if the automaton is complete.
+         *  todo test
+         */
+        bool is_bottom_up_complete() const;
 
         /**
-         * @brief Check bottom-up completeness.
-         *
-         * Arities are disregarded.
+         * @brief Check bottom-up completeness directly on a reversed delta.
          */
-        bool is_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const {
-            return is_bottom_up_complete(collect_symbols(symbols_arities));
-        }
+        bool is_bottom_up_complete(const ReversedDelta& rev_delta) const;
 
         /**
          * @brief Check top-down completeness.
@@ -173,7 +171,6 @@ namespace mata::nfta {
 
         /**
          * @brief Check top-down completeness using its alphabet (if a ranked alphabet is used) or symbols in delta.
-         *
          */
         bool is_top_down_complete() const;
 
@@ -196,47 +193,32 @@ namespace mata::nfta {
          * before it, and all possible transitions from those states. An existing state may be used as sink, in that
          * case existing from it are NOT deleted.
          */
-        void make_bottom_up_complete(const utils::OrdVector<SymbolArity>& symbols_arities, State sink = Limits::max_state);
-
-        /**
-         * @brief Complete the automaton with symbols either from its alphabet (if a ranked alphabet is used), or with all used symbols in delta.
-         *
-         * @param sink Sink state may be custom defined, the default value will use the next available state.
-         *
-         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
-         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
-         * case existing from it are NOT deleted.
-         */
-        void make_bottom_up_complete(State sink = Limits::max_state);
+        void make_bottom_up_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr, State sink = Limits::max_state);
 
         /**
          * @brief Complete the automaton top-down with given symbols, add missing transitions leading to a sink state.
          *
-         * @param symbols_arities OrdVector of symbols to be added if missing, and their arities - arity 0 symbols are ignored.
-         * @param sink Sink state may be custom defined, the default value will use the next available state.
+         * @param sink [in, optional] Sink state may be custom defined or default value will use the next available state.
+         * @param symbols_arities_in [in, optional] Symbols and arities to consider instead of alphabet/used symbols.
+         * @return Complement automaton.
+         *
+         * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
+         * or to used symbols in delta.
          *
          * Using default sink value or an existing state is recommended, as using a higher sink value will lead to
          * adding all states before it, and all possible transitions from those states. If an existing state is used,
          * existing transitions from it are deleted.
          */
-        void make_top_down_complete(const utils::OrdVector<std::pair<Symbol, unsigned>>& symbols_arities, State sink = Limits::max_state);
+        void make_top_down_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr,
+          State sink = Limits::max_state);
 
-        /**
-         * @brief Complete the automaton using its alphabet (if a ranked alphabet is used), or all used symbols in delta.
-         *
-         * @param sink Sink state may be custom defined, the default value will use the next available state.
-         * Using default sink value or an existing state is recommended, as using a higher sink value will lead to
-         * adding all states before it, and all possible transitions from those states. If an existing state is used,
-         * existing transitions from it are deleted.
-         */
-        void make_top_down_complete(State sink = Limits::max_state);
 
         BoolVector get_top_down_reachable() const;
         BoolVector get_bottom_up_reachable() const;
 
         /**
-        * @brief Remove top-down unreachable states
-        */
+         * @brief Remove top-down unreachable states
+         */
         void reduce_top_down();
 
         /**
@@ -276,8 +258,15 @@ namespace mata::nfta {
 
     /**
      * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
+     *
+     * @param aut [in] Input automaton to complement.
+     * @param symbols_arities [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
+     * @return Complement automaton.
+     *
+     * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
+     * or to used symbols in delta.
      */
-    Nfta complement_classical(const Nfta& aut);
+    Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities = nullptr);
 
     /**
      * @brief Create a product automaton. Used for union and intersection.
@@ -303,16 +292,18 @@ namespace mata::nfta {
      *
      * @param aut [in] Input automaton to complement.
      * @param state_mapping [out, optional] Optional mapping macrostate (set of states) -> result state.
-     * @param symbols_arities [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
-     * @return Nfta The complement automaton.
+     * @param symbols_arities_in [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
+     * @return Complement automaton.
      *
      * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
      * or to used symbols in delta.
      */
     Nfta complement_top_down(
       const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
-      const utils::OrdVector<SymbolArity>* symbols_arities = nullptr
+      const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr
     );
+
+    bool  is_included(const Nfta& small, const Nfta& big, Alphabet* alphabet = nullptr);
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

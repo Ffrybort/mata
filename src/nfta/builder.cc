@@ -15,32 +15,29 @@ Nfta create_universal(RankedAlphabet *alphabet) {
         std::cerr << "warning: mata::nfta::create_universal alphabet does not contain any constant" << std::endl;
     }
     return aut;
-}
+} // create_universal
 
-Nfta create_universal(const utils::OrdVector<StringArity>& symbols, Alphabet *alphabet) {
+Nfta create_universal(const utils::OrdVector<SymbolArity> *symbols, Alphabet *alphabet) {
     Nfta aut({ 0 }, alphabet, Delta(1));
     bool has_constant = false;
-    for (const auto& [string, arity] : symbols) {
+    for (const auto [symbol, arity] : *symbols) {
         const std::vector<State> targets(arity, 0);
-        alphabet->add_new_symbol(string);
-        const Symbol symbol = (*alphabet)[string];
         aut.delta.add(0, symbol, targets);
         if (arity == 0) { has_constant = true; }
     }
 
     if (!has_constant) {
-        std::cerr << "warning: mata::nfta::create_universal symbols do not contain any constant" << std::endl;
+        std::cerr << "warning: mata::nfta::create_universal alphabet does not contain any constant" << std::endl;
     }
     return aut;
-}
-
+} // create_universal
 
 /// brief Get state from a string, insert to @p delta if not already in the @p state_map.
 static State get_state(const std::string& state_str, std::unordered_map<std::string, State>& state_map, Delta& delta) {
     auto [it, inserted] = state_map.try_emplace(state_str, State{});
     if (inserted) { it->second = delta.add_state(); }
     return it->second;
-} // get_state
+}
 
 /// Add initial and final states as final states to nfta.
 void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap &state_map, Nfta &aut) {

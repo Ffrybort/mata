@@ -39,24 +39,26 @@ namespace mata::nfta {
     Nfta create_universal(RankedAlphabet *alphabet);
 
     /**
+     * todo what to do with alphabet
+     * todo test
      * @brief Create an automaton accepting any tree build from the symbols.
      *
-     * @param symbols [in] Symbols used in the language.
-     * @param alphabet [out, optional] Alphabet will be assigned to the automaton and filled with symbols.
+     * @param symbols [in] Symbols and arities used in the language.
+     * @param alphabet [in, optional] Alphabet is only assigned to the automaton and otherwise left alone.
      */
-    Nfta create_universal(const utils::OrdVector<StringArity>& symbols, Alphabet *alphabet);
+    Nfta create_universal(const utils::OrdVector<SymbolArity> *symbols, Alphabet *alphabet = nullptr);
 
     /**
-    * @brief Helper function to extract a transition from an inter_aut.
-    * @param formula_node A node containing the left-hand side (source state).
-    * @param formula_graph A graph containing the right-hand side (symbol and target(s)).
-    * @param alphabet An alphabet to translate the symbol
-    * @param state_map A mapping of state names to numbers used by the constructor.
-    * @return A transition, with the symbol remaining a std::string, and states translated to internal numeric values.
-    *
-    * The reason for not translating a symbol right away is there is currently no unified way to do so for every possible
-    * construction. todo this might have been resolved in alphabet already
-    */
+     * @brief Helper function to extract a transition from an inter_aut.
+     * @param formula_node A node containing the left-hand side (source state).
+     * @param formula_graph A graph containing the right-hand side (symbol and target(s)).
+     * @param alphabet An alphabet to translate the symbol
+     * @param state_map A mapping of state names to numbers used by the constructor.
+     * @return A transition, with the symbol remaining a std::string, and states translated to internal numeric values.
+     *
+     * The reason for not translating a symbol right away is there is currently no unified way to do so for every possible
+     * construction. todo this might have been resolved in alphabet already
+     */
     RawTransition get_transition(const FormulaNode &formula_node, const FormulaGraph &formula_graph, Alphabet &alphabet,
         const NameStateMap &state_map);
 
