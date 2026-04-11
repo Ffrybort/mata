@@ -613,4 +613,98 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym5_tr.at(1).sources == std::vector<State>{3});
         CHECK(sym5_tr.at(1).targets == utils::OrdVector<State>{5});
     }
+
+    SECTION("Reversed delta with allowed filter — basic filtering") {
+        delta.clear();
+
+        delta.add(0, 1, {2, 3});
+        delta.add(1, 1, {2, 3});
+        delta.add(2, 1, {4, 5});
+
+        BoolVector allowed{ true, true, true, true, false, true }; // state 4 not allowed
+        auto rev = delta.get_reversed(&allowed);
+
+        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
+        REQUIRE(sym1_it != rev.symbol_transitions.end());
+
+        bool found_2_3 = false;
+        for (const auto& src : sym1_it->sources_transitions) {
+            if (src.sources == std::vector<State>{2, 3}) { found_2_3 = true; }
+        }
+        CHECK(found_2_3);
+
+        bool found_4_5 = false;
+        for (const auto& src : sym1_it->sources_transitions) {
+            if (src.sources == std::vector<State>{4, 5}) { found_4_5 = true; }
+        }
+        CHECK_FALSE(found_4_5);
+    }
+
+    SECTION("Reversed delta with allowed filter — all transitions filtered") {
+        delta.clear();
+
+        delta.add(0, 1, {2, 3});
+        delta.add(1, 1, {4, 5});
+
+        // only states 0 and 1 allowed — both tuples contain disallowed states
+        BoolVector allowed{ true, true, false, false, false, false };
+        auto rev = delta.get_reversed(&allowed);
+
+        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
+        // either no symbol entry at all, or no source transitions
+        bool empty = sym1_it == rev.symbol_transitions.end()
+                  || sym1_it->sources_transitions.empty();
+        CHECK(empty);
+    }
+
+    SECTION("Reversed delta with allowed filter — no filtering") {
+        delta.clear();
+
+        delta.add(0, 1, {2, 3});
+        delta.add(1, 1, {2, 3});
+
+        BoolVector allowed{ true, true, true, true };
+        auto rev_filtered = delta.get_reversed(&allowed);
+        auto rev_unfiltered = delta.get_reversed();
+
+        CHECK(rev_filtered.is_equal(rev_unfiltered));
+    }
+
+    SECTION("Reversed delta with allowed filter — source state not allowed") {
+        delta.clear();
+
+        // state 0 is source, tuple {2,3} is fine — but what if source 0 is not allowed?
+        // allowed filter applies to tuple targets, not sources — verify source 0 still appears
+        delta.add(0, 1, {2, 3});
+
+        BoolVector allowed{ false, true, true, true };
+        auto rev = delta.get_reversed(&allowed);
+
+        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
+        CHECK(sym1_it == rev.symbol_transitions.end());
+    }
+
+    SECTION("Reversed delta with allowed filter — partial tuple filtering across symbols") {
+        delta.clear();
+
+        delta.add(0, 1, {1, 2}); // allowed
+        delta.add(0, 1, {1, 3}); // filtered — state 3 not allowed
+        delta.add(0, 2, {2, 3}); // filtered — state 3 not allowed
+        delta.add(0, 2, {1, 2}); // allowed
+
+        BoolVector allowed{ true, true, true, false }; // state 3 not allowed
+        auto rev = delta.get_reversed(&allowed);
+
+        // symbol 1: only {1,2} survives
+        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
+        REQUIRE(sym1_it != rev.symbol_transitions.end());
+        CHECK(sym1_it->sources_transitions.size() == 1);
+        CHECK(sym1_it->sources_transitions.at(0).sources == std::vector<State>{1, 2});
+
+        // symbol 2: only {1,2} survives
+        auto sym2_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{2});
+        REQUIRE(sym2_it != rev.symbol_transitions.end());
+        CHECK(sym2_it->sources_transitions.size() == 1);
+        CHECK(sym2_it->sources_transitions.at(0).sources == std::vector<State>{1, 2});
+    }
 }

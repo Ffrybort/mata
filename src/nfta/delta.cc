@@ -505,27 +505,30 @@ std::vector<std::pair<Symbol, OrdVector<State>>> ReversedDelta::get_initial_stat
             result.emplace_back(sym_trans.symbol, OrdVector<State>(targets));
         }
     }
-
     return result;
 } // get_initial_states_by_symbol
 
-ReversedDelta Delta::get_reversed() const { // todo optionally reserve symbols?
+ReversedDelta Delta::get_reversed(const BoolVector *allowed) const { // todo test and optimize
     ReversedDelta result;
 
     for (State q = 0; q < state_posts_.size(); ++q) {
+        if (allowed && !(*allowed)[q]) { continue; }
         for (const auto& symbol_post : state_posts_[q]) {
             ReversedDelta::SymbolTransitions sym { symbol_post.symbol };
-
             auto sym_it = result.symbol_transitions.find(sym);
-            if (sym_it == result.symbol_transitions.end())
+            if (sym_it == result.symbol_transitions.end()) {
                 sym_it = result.symbol_transitions.insert(sym).first;
+            }
 
             for (const auto& tuple : symbol_post.target_tuples) {
+                if (allowed && std::ranges::any_of(tuple, [&](const State s) {
+                    return !(*allowed)[s]; })) { continue; }
+
                 ReversedDelta::SourceTransitions src{tuple};
                 auto src_it = sym_it->sources_transitions.find(src);
-
-                if (src_it == sym_it->sources_transitions.end())
+                if (src_it == sym_it->sources_transitions.end()) {
                     src_it = sym_it->sources_transitions.insert(src).first;
+                }
                 src_it->targets.insert(q);
             }
         } // for all symbol posts

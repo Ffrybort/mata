@@ -131,6 +131,31 @@ public:
      */
     utils::OrdVector<State> get_initial_states() const; /// initial here means the state has a constant transition
     std::vector<std::pair<Symbol, utils::OrdVector<State>>>get_initial_states_by_symbol() const; /// initial here means the state has a constant transition
+
+    static bool equal(const SymbolTransitions& a, const SymbolTransitions& b) {
+        return a.symbol == b.symbol && a.sources_transitions == b.sources_transitions;
+    }
+
+    static bool equal(const SourceTransitions& a, const SourceTransitions& b) {
+        return a.sources == b.sources && a.targets == b.targets;
+    }
+
+    bool is_equal(const ReversedDelta& other) const {
+      if (symbol_transitions.size() != other.symbol_transitions.size()) return false;
+      for (size_t i = 0; i < symbol_transitions.size(); ++i) {
+        const auto& a = symbol_transitions.at(i);
+        const auto& b = other.symbol_transitions.at(i);
+        if (a.symbol != b.symbol) return false;
+        if (a.sources_transitions.size() != b.sources_transitions.size()) return false;
+        for (size_t j = 0; j < a.sources_transitions.size(); ++j) {
+          const auto& sa = a.sources_transitions.at(j);
+          const auto& sb = b.sources_transitions.at(j);
+          if (sa.sources != sb.sources) return false;
+          if (sa.targets != sb.targets) return false;
+        }
+      }
+      return true;
+    }
 };
 
 /**
@@ -673,9 +698,11 @@ public:
     /**
      * Reversed delta for bottom-up operations.
      *
+     * @param allowed [in, optional] Filter out transitions containing any state that is not allowed.
+     *
      * symbols -> sources -> targets
      */
-    ReversedDelta get_reversed() const;
+    ReversedDelta get_reversed(const BoolVector *allowed = nullptr) const;
 
 protected:
     std::vector<StatePost> state_posts_;
