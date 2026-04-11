@@ -150,8 +150,10 @@ void Nfta::unite_nondet_with(const Nfta& aut) {
 } // unite_nondet_with
 
 Nfta union_nondet(const Nfta& A, const Nfta& B) {
-    if (A.initial_states.empty() && B.initial_states.empty()) {return Nfta();}
-    Nfta result{A}; result.unite_nondet_with(B); return result;
+    if (A.initial_states.empty() && B.initial_states.empty()) { return Nfta(); }
+    Nfta result{ A };
+    result.unite_nondet_with(B);
+    return result;
 } // union_nondet
 
 /// nfta must be epsilon free
@@ -165,6 +167,7 @@ Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>
 /// automata must be top down complete over the same set of symbols
 Nfta product(const Nfta& A, const Nfta& B, Condition cond, utils::TwoDimensionalMap<State> *state_mapping_out) {
     // todo this may be wrong, rewrite after consulting
+    // it was, in fact, a complete bullshit
     #ifndef NDEBUG
     auto symbols = A.delta.get_used_symbols(true);
     symbols.insert(B.delta.get_used_symbols(true));
@@ -598,41 +601,54 @@ void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity> *symbols_a
     #endif
 } // make_top_down_complete
 
-BoolVector Nfta::get_top_down_reachable() const {
+BoolVector Nfta::get_top_down_reachable(const BoolVector *allowed) const {
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
     std::deque<State> worklist{};
 
+    auto mark = [&marked, allowed, &worklist](const State state) {
+        if (!allowed || (*allowed)[state]) {
+            marked[state] = true;
+            worklist.push_back(state);
+        }
+    };
+
     worklist.insert(worklist.end(), initial_states.begin(), initial_states.end());
-    for (const State state : initial_states) { marked[state] = true; }
+    for (const State state : initial_states) { mark(state); }
 
     while (!worklist.empty()) {
         const State current_state = worklist.front();
         worklist.pop_front();
         for (const auto successor : delta.get_successors(current_state)) {
             if (!marked[successor]) {
-                marked[successor] = true;
-                worklist.push_back(successor);
+                mark(successor);
             }
         }
     }
     return marked;
 } // get_top_down_reachable
 
-// todo general loop over reachable states could be implemented and shared
-BoolVector Nfta::get_bottom_up_reachable() const {
-    const ReversedDelta rev_delta = delta.get_reversed();
+template<typename OnMarked>
+BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const BoolVector *allowed) const {
+    const ReversedDelta rev_delta = delta.get_reversed(allowed);
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
-    std::deque<State> worklist{};
 
-    const auto bottom_up_initial = rev_delta.get_initial_states();
-    for (const State state : bottom_up_initial) { marked[state] = true; }
-    worklist.insert(worklist.end(), bottom_up_initial.begin(), bottom_up_initial.end());
+    bool changed = false;
+    auto mark = [&marked, allowed, &changed](const State state) {
+        if (!allowed || (*allowed)[state]) {
+            marked[state] = true;
+            changed = true;
+        }
+    };
 
-    while (!worklist.empty()) {
-        worklist.pop_front();
+    for (const auto bottom_up_initial = rev_delta.get_initial_states();
+        const State state : bottom_up_initial) {
+        mark(state);
+    }
 
+    do {
+        changed = false;
         for (const auto& sym_trans : rev_delta.symbol_transitions) {
             if (sym_trans.is_constant()) continue;
             for (const auto& src_tr : sym_trans.sources_transitions) {
@@ -641,34 +657,54 @@ BoolVector Nfta::get_bottom_up_reachable() const {
                 if (!all_marked) { continue; }
                 for (State target : src_tr.targets) {
                     if (!marked[target]) {
-                        marked[target] = true;
-                        worklist.push_back(target);
+                        mark(target);
+                        if (early_exit_fn(target, marked)) { return marked; }
                     }
                 }
             }
         }
-    }
+    } while (changed);
+
     return marked;
-} // get_bottom_up_reachable
+}
+
+BoolVector Nfta::get_bottom_up_reachable(const BoolVector *allowed) const {
+    return get_bottom_up_reachable_impl([](State, const BoolVector&) { return false; }, allowed);
+}
+
+bool Nfta::is_lang_empty() const {
+    if (initial_states.empty() || delta.empty()) return true;
+    const BoolVector reachable = get_bottom_up_reachable_impl(
+        [&](const State s, const BoolVector&) {
+            return initial_states.contains(s);
+        }
+    );
+    for (const State s : initial_states) {
+        if (reachable[s]) { return false; }
+    }
+    return true;
+}
 
 void Nfta::reduce_top_down() {
     const BoolVector marked = get_top_down_reachable();
     defragment(marked);
 }
-void Nfta::reduce_bottom_up_down() {
+void Nfta::reduce_bottom_up() {
     const BoolVector marked = get_bottom_up_reachable();
     defragment(marked);
 }
 
-bool Nfta::is_lang_empty() const {
-    // lang is empty iff no bottom-up reachable state is final
-    if (initial_states.empty() || delta.empty()) { return true; }
-    // check if any top-down reachable state has a leaf transition
-    const BoolVector reachable = get_bottom_up_reachable();
-    for (const State s : initial_states) {
-        if (reachable[s]) { return false; }
-    }
-    return true;
+void Nfta::reduce_top_bottom_top() {
+    BoolVector marked = get_top_down_reachable();
+    marked = get_bottom_up_reachable(&marked);
+    marked = get_top_down_reachable(&marked);
+    defragment(marked);
+}
+
+void Nfta::reduce_bottom_top() {
+    BoolVector marked = get_bottom_up_reachable();
+    marked = get_top_down_reachable(&marked);
+    defragment(marked);
 }
 
 struct MacrostateConstructionContext {

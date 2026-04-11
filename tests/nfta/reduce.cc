@@ -427,7 +427,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
     SECTION("Empty") {
         Nfta aut({}, &alphabet, Delta(10));
 
-        aut.reduce_bottom_up_down();
+        aut.reduce_bottom_up();
         CHECK(aut.delta.num_of_states() == 0);
     }
 
@@ -438,7 +438,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(3, alphabet["f"], {2});
 
-        aut.reduce_bottom_up_down();
+        aut.reduce_bottom_up();
 
         CHECK(aut.delta.num_of_states() == 2);
         CHECK(aut.delta.contains(1, alphabet["a"], {}));
@@ -452,7 +452,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(1, alphabet["f"], {2});
         aut.delta.add(0, alphabet["f"], {1});
 
-        aut.reduce_bottom_up_down();
+        aut.reduce_bottom_up();
 
         CHECK(aut.delta.num_of_states() == 3);
     }
@@ -463,7 +463,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(1, alphabet["f"], {0});
 
-        aut.reduce_bottom_up_down();
+        aut.reduce_bottom_up();
 
         CHECK(aut.delta.num_of_states() == 0);
     }
@@ -476,7 +476,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(0, alphabet["g"], {1, 2});
         aut.delta.add(0, alphabet["g"], {3, 2});
 
-        aut.reduce_bottom_up_down();
+        aut.reduce_bottom_up();
 
         CHECK(aut.delta.num_of_states() == 3);
     }
@@ -494,8 +494,152 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(5, alphabet["f"], {6});
         aut.delta.add(4, alphabet["f"], {5});
 
-        aut.reduce_bottom_up_down();
+        aut.reduce_bottom_up();
 
         CHECK(aut.delta.num_of_states() == 4);
+    }
+}
+
+TEST_CASE("mata::nfta::reduce_top_bottom_top and reduce_bottom_top") { // todo check with equality
+    OnTheFlyAlphabet alphabet;
+    alphabet.add_new_symbol("a"); // arity 0
+    alphabet.add_new_symbol("f"); // arity 1
+    alphabet.add_new_symbol("g"); // arity 2
+
+    // helper — run both reductions on separate copies and check they agree
+    auto check_both = [](Nfta aut_tbt, Nfta aut_bt, auto check_fn) {
+        aut_tbt.reduce_top_bottom_top();
+        aut_bt.reduce_bottom_top();
+        check_fn(aut_tbt);
+        check_fn(aut_bt);
+    };
+
+    SECTION("Empty automaton") {
+        Nfta aut({}, &alphabet, Delta(10));
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 0);
+        });
+    }
+
+    SECTION("Only initial state, no transitions") {
+        Nfta aut({0}, &alphabet, Delta(5));
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 0);
+        });
+    }
+
+    SECTION("Simple — all states useful") {
+        Nfta aut({0}, &alphabet, Delta(3));
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(2, alphabet["a"], {});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 3);
+        });
+    }
+
+    SECTION("State reachable top-down but not bottom-up — removed") {
+        Nfta aut({0}, &alphabet, Delta(4));
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(1, alphabet["f"], {2});
+        // state 2 has no leaf, so 1 and 2 are dead
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 1);
+        });
+    }
+
+    SECTION("State bottom-up reachable but not top-down — removed") {
+        Nfta aut({0}, &alphabet, Delta(4));
+        aut.delta.add(0, alphabet["a"], {});
+        // states 1,2,3 are bottom-up reachable but unreachable from initial state 0
+        aut.delta.add(2, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(3, alphabet["f"], {1});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 1);
+        });
+    }
+
+    SECTION("Binary — both children must be reachable") {
+        Nfta aut({0}, &alphabet, Delta(5));
+        aut.delta.add(1, alphabet["a"], {});
+        aut.delta.add(2, alphabet["a"], {});
+        aut.delta.add(0, alphabet["g"], {1, 2});
+        aut.delta.add(3, alphabet["a"], {});
+        aut.delta.add(4, alphabet["f"], {3});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 3);
+        });
+    }
+
+    SECTION("Dead branch") {
+        Nfta aut({0}, &alphabet, Delta(6));
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(2, alphabet["a"], {});
+        aut.delta.add(0, alphabet["f"], {3});
+        aut.delta.add(3, alphabet["f"], {4});
+        aut.delta.add(5, alphabet["a"], {});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 3);
+        });
+    }
+
+    SECTION("Cycle — all reachable") {
+        Nfta aut({0}, &alphabet, Delta(3));
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(1, alphabet["f"], {0});
+        aut.delta.add(1, alphabet["a"], {});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 2);
+        });
+    }
+
+    SECTION("Cycle without leaf — all removed") {
+        Nfta aut({0}, &alphabet, Delta(4));
+        aut.delta.add(0, alphabet["f"], {1});
+        aut.delta.add(1, alphabet["f"], {0});
+        aut.delta.add(3, alphabet["a"], {});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 0);
+        });
+    }
+
+    SECTION("Multiple initial states — partial reduction") {
+        Nfta aut({0, 1}, &alphabet, Delta(5));
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["f"], {2});
+        aut.delta.add(2, alphabet["a"], {});
+        // states 3, 4 unreachable
+        aut.delta.add(3, alphabet["a"], {});
+        aut.delta.add(4, alphabet["f"], {3});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 3);
+        });
+    }
+
+    SECTION("Mixed reachability") {
+        Nfta aut({0}, &alphabet, Delta(8));
+        aut.delta.add(0, alphabet["g"], {1, 2});
+        aut.delta.add(1, alphabet["a"], {});
+        aut.delta.add(2, alphabet["f"], {3});
+        aut.delta.add(3, alphabet["a"], {});
+        aut.delta.add(0, alphabet["f"], {4});
+        aut.delta.add(4, alphabet["f"], {5});
+        aut.delta.add(6, alphabet["a"], {});
+        aut.delta.add(7, alphabet["f"], {6});
+
+        check_both(aut, aut, [](const Nfta& a) {
+            CHECK(a.delta.num_of_states() == 4);
+        });
     }
 }

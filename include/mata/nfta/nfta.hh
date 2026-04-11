@@ -186,14 +186,15 @@ namespace mata::nfta {
         /**
          * @brief Complete the automaton bottom-up with given symbols, add missing transitions leading to a sink state.
          *
-         * @param symbols_arities OrdVector of symbols to be added if missing, and their arities.
+         * @param symbols_arities_in OrdVector of symbols to be added if missing, and their arities.
          * @param sink Sink state may be custom defined, the default value will use the next available state.
          *
          * Using default sink value is recommended, as using a higher sink value will lead to adding all states
          * before it, and all possible transitions from those states. An existing state may be used as sink, in that
          * case existing from it are NOT deleted.
          */
-        void make_bottom_up_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr, State sink = Limits::max_state);
+        void make_bottom_up_complete(
+          const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr, State sink = Limits::max_state);
 
         /**
          * @brief Complete the automaton top-down with given symbols, add missing transitions leading to a sink state.
@@ -213,8 +214,10 @@ namespace mata::nfta {
           State sink = Limits::max_state);
 
 
-        BoolVector get_top_down_reachable() const;
-        BoolVector get_bottom_up_reachable() const;
+        BoolVector get_top_down_reachable(const BoolVector *allowed = nullptr) const;
+        BoolVector get_bottom_up_reachable(const BoolVector *allowed = nullptr) const;
+        template<typename OnMarked>
+        BoolVector get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const BoolVector *allowed = nullptr) const;
 
         /**
          * @brief Remove top-down unreachable states
@@ -224,7 +227,16 @@ namespace mata::nfta {
         /**
          * @brief Remove bottom-up unreachable states
          */
-        void reduce_bottom_up_down();
+        void reduce_bottom_up();
+
+        /**
+         * @brief Reduce top-down, then bottom-up, then top-down again.
+         */
+        void reduce_top_bottom_top();
+        /**
+         * @brief Reduce bottom-up, then top-down.
+         */
+        void reduce_bottom_top();
     }; // class Nfta
 
     /**
@@ -269,7 +281,9 @@ namespace mata::nfta {
     Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities = nullptr);
 
     /**
-     * @brief Create a product automaton. Used for union and intersection.
+     * @brief Create a product automaton.
+     *
+     * Both automata must be complete over the same set of symbols.
      */
     Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
