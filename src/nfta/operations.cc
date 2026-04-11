@@ -661,17 +661,12 @@ void Nfta::reduce_bottom_up_down() {
 }
 
 bool Nfta::is_lang_empty() const {
-    // todo bottom up reachable -> vidím koncový stav tak končí
-    // an is empty iff no run reaches a leaf transition
-    // i.e. no initial state can reach a state with a constant transition
+    // lang is empty iff no bottom-up reachable state is final
     if (initial_states.empty() || delta.empty()) { return true; }
     // check if any top-down reachable state has a leaf transition
-    const BoolVector reachable = get_top_down_reachable();
-    for (State s = 0; s < delta.num_of_states(); ++s) {
-        if (!reachable[s]) { continue; }
-        for (const auto& symbol_post : delta[s]) {
-            if (symbol_post.is_constant()) return false;
-        }
+    const BoolVector reachable = get_bottom_up_reachable();
+    for (const State s : initial_states) {
+        if (reachable[s]) { return false; }
     }
     return true;
 }
