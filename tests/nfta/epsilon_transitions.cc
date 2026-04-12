@@ -19,7 +19,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {2});
         delta.add(2, eps, {3});
 
-        auto closures = get_epsilon_closures(delta, eps, true);
+        auto closures = delta.get_epsilon_closures(eps, true);
 
         // Every state must contain itself
         for (State s = 0; s < static_cast<State>(closures.size()); s++) {
@@ -35,7 +35,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {2});
         delta.add(2, eps, {3});
 
-        auto closures = get_epsilon_closures(delta, eps, true);
+        auto closures = delta.get_epsilon_closures(eps, true);
         auto& c0 = closures[0];
 
         REQUIRE(c0.contains(1));
@@ -52,8 +52,8 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {2});
         delta.add(2, eps, {3});
 
-        auto closures1 = get_epsilon_closures(delta, eps, true);
-        auto closures2 = get_epsilon_closures(delta, eps, true);
+        auto closures1 = delta.get_epsilon_closures(eps, true);
+        auto closures2 = delta.get_epsilon_closures(eps, true);
 
         REQUIRE(closures1 == closures2);
     }
@@ -65,7 +65,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {0});
         delta.add(1, eps, {2});
 
-        auto closures = get_epsilon_closures(delta, eps, true);
+        auto closures = delta.get_epsilon_closures(eps, true);
 
         REQUIRE(closures[0].count(2));
         REQUIRE(closures[1].count(2));
@@ -87,7 +87,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(5, eps, {6});
         delta.add(2, eps, {7});
 
-        auto closures = get_epsilon_closures(delta, eps, true);
+        auto closures = delta.get_epsilon_closures(eps, true);
         REQUIRE(closures.size() == 8);
         auto check_set = [](const StateSet& set,
                             const std::vector<State>& expected) {
@@ -114,7 +114,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(0, eps, {1});
         delta.add(1, eps, {2});
 
-        auto closures = get_epsilon_closures(delta, eps, false);
+        auto closures = delta.get_epsilon_closures(eps, false);
 
         REQUIRE(closures[0].count(0) == 0);
         REQUIRE(closures[1].count(1) == 0);
@@ -137,7 +137,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {0});
         delta.add(1, eps, {2});
 
-        auto closures = get_epsilon_closures(delta, eps, false);
+        auto closures = delta.get_epsilon_closures(eps, false);
 
         REQUIRE(closures[0].contains(1));
         REQUIRE(closures[0].contains(0));

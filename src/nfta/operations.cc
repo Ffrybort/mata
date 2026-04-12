@@ -28,15 +28,15 @@ const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
     return tmp;
 }
 
-std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsilon, const bool include_state = true) {
-    const size_t num_of_states = delta.num_of_states();
-    std::vector<StateSet> result{ num_of_states };
-    std::vector<StateSet> epsilon_successors { num_of_states };
+std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon, const bool include_state = true) const {
+    const size_t num_states = num_of_states();
+    std::vector<StateSet> result{ num_states };
+    std::vector<StateSet> epsilon_successors { num_states };
 
     // adding immediate successors
-    for (State i = 0; i < static_cast<State>(num_of_states); i++) {
+    for (State i = 0; i < static_cast<State>(num_states); i++) {
         if (include_state) { result[i] = {i}; }
-        const auto& state_post = delta[i];
+        const auto& state_post = state_posts_[i];
         const SymbolPost* symbol_post_ptr = nullptr;
 
         if (epsilon == EPSILON) {
@@ -49,8 +49,8 @@ std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsi
             if (it != state_post.end() && it->symbol == epsilon) { symbol_post_ptr = std::addressof(*it); }
         }
         if (symbol_post_ptr) {
+            assert(symbol_post_ptr->get_arity() == 1 && "mata::nfta::get_epsilon_closures epsilon must be unary");
             for (const auto& tr : symbol_post_ptr->target_tuples) {
-                assert(tr.size() == 1);
                 epsilon_successors[i].insert(tr.front());
                 result[i].insert(tr.front());
             }
@@ -60,7 +60,7 @@ std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsi
     bool changed = true;
     while (changed) {
         changed = false;
-        for (size_t i = 0; i < num_of_states; ++i) {
+        for (size_t i = 0; i < num_states; ++i) {
             StateSet& src_eps_cl = result[i];
             for (const State tgt : epsilon_successors[i]) {
                 const StateSet& tgt_eps_cl = result[tgt];
@@ -73,7 +73,7 @@ std::vector<StateSet> get_epsilon_closures(const Delta& delta, const Symbol epsi
 
 Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(aut.delta.num_of_states());
-    std::vector<StateSet> epsilon_closures = get_epsilon_closures(aut.delta, epsilon);
+    std::vector<StateSet> epsilon_closures = aut.delta.get_epsilon_closures(epsilon);
 
     Nfta result { aut.root_states, aut.alphabet, Delta { num_of_states } };
     for (State i = 0; i < num_of_states; i++) {
@@ -90,7 +90,7 @@ Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) {
 
 void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(delta.num_of_states());
-    std::vector<StateSet> epsilon_closures = get_epsilon_closures(delta, epsilon, false);
+    std::vector<StateSet> epsilon_closures = delta.get_epsilon_closures(epsilon, false);
 
     // remove epsilon transitions
     for (State i = 0; i < num_of_states; i++) {

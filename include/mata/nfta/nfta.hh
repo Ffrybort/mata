@@ -261,11 +261,6 @@ namespace mata::nfta {
     }; // class Nfta
 
     /**
-     * @brief Compute epsilon closures for each state. todo move to delta?
-     */
-    std::vector<StateSet> get_epsilon_closures(const Delta& delta, Symbol epsilon, bool include_state);
-
-    /**
      * @brief Remove epsilon transitions from an automaton.
      */
     Nfta remove_epsilon(const Nfta& aut, Symbol epsilon);

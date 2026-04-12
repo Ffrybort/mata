@@ -184,12 +184,16 @@ public:
      *
      * todo some better way of representing a constant?
      */
-    bool is_constant() const {
-        assert(!target_tuples.empty() && "Empty target tuples");
-        const bool result = target_tuples.at(0).empty();
+    bool is_constant() const { // {{{
+        const bool result = get_arity() == 0;
         if (result) { assert(target_tuples.size() == 1 && "Target tuples of a constant must have size one"); }
         return result;
-    }
+    } // }}}
+
+    size_t get_arity() const { // {{{
+        assert(!target_tuples.empty() && "Empty target tuples");
+        return target_tuples.at(0).size();
+    } // }}}
 
     StateVectorSet::iterator begin() { return target_tuples.begin(); }
     StateVectorSet::iterator end() { return target_tuples.end(); }
@@ -703,6 +707,11 @@ public:
      * symbols -> sources -> targets
      */
     ReversedDelta get_reversed(const BoolVector *allowed = nullptr) const;
+
+    /**
+     * @brief Compute epsilon closures for each state.
+     */
+    std::vector<StateSet> get_epsilon_closures(Symbol epsilon, bool include_state)const;
 
 protected:
     std::vector<StatePost> state_posts_;
