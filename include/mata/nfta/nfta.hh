@@ -116,7 +116,10 @@ namespace mata::nfta {
         void remove_epsilon_in_place(Symbol epsilon);
 
         /**
-         * @brief In-place union. Does not preserve determinism.
+         * @brief In-place union that does not preserve determinism.
+         *
+         * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
+         * contain symbols that are not in its alphabet.
          */
         void unite_nondet_with(const Nfta& aut);
 
@@ -251,28 +254,30 @@ namespace mata::nfta {
 
     /**
      * @brief Union of two automata not preserving determinism.
+     *
+     * @param A, B Automata to unite.
+     *
+     *
+     * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
+     * contain symbols that are not in its alphabet.
      */
     Nfta union_nondet(const Nfta& A, const Nfta& B);
 
     /**
-     * @brief Union preserving determinism, computed by product construction.
+     * @brief Union preserving bottom-up determinism, computed by product construction.
      *
-     * Both input automata must be epsilon free.
-     */
-    Nfta union_product(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
-
-    /**
-     * @brief Intersection.
+     * @param A, B Automata to unite.
+     * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
      *
-     * Both input automata must be epsilon free.
+     * This implementation is slow.
      */
-    Nfta intersection(const Nfta& A, const Nfta& B);
+    Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
      * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
      *
      * @param aut [in] Input automaton to complement.
-     * @param symbols_arities [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
+     * @param symbols_arities [in, optional] Vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
      * @return Complement automaton.
      *
      * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
@@ -283,9 +288,13 @@ namespace mata::nfta {
     /**
      * @brief Create a product automaton.
      *
-     * Both automata must be complete over the same set of symbols.
+     * @param A, B Automata to intersect.
+     * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
+     *
+     * Both automata must be complete over the same set of symbols. The result automaton is constructed directly
+     * top-down.
      */
-    Nfta product(const Nfta& A, const Nfta& B, Condition cond,utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
+    Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
      * @brief Determinize an automaton.
