@@ -93,6 +93,8 @@ namespace mata::nfta {
 
         /**
          * @brief Remove given states and rename the rest.
+         *
+         * @param is_staying[state] is false -> state gets removed.
          */
         void defragment(const BoolVector& is_staying);
 
@@ -107,34 +109,35 @@ namespace mata::nfta {
          * @brief Remove epsilon transitions from an automaton.
          *
          * The automaton is modified in-place.
+         *
+         * @param epsilon Default or user defined epsilon symbol, it has to be unary.
          */
-        void remove_epsilon_in_place(Symbol epsilon);
+        void remove_epsilon_in_place(Symbol epsilon = EPSILON);
 
         /**
          * @brief In-place union that does not preserve determinism.
          *
-         * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
-         * contain symbols that are not in its alphabet.
+         * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet
+         * and may contain symbols that are not in its alphabet.
          */
         void unite_nondet_with(const Nfta& aut);
 
         /**
-         *@brief Swap root and non-root states.
+         *@brief Swap root and non-root states. Complement a deterministic and complete automaton.
          *
          * New root states consist of all states from delta that but current root states.
          */
         void swap_root_non_root() { root_states.complement(static_cast<State>(delta.num_of_states())); }
 
         /**
-         * @brief Complement an already and deterministic automaton.
+         * @brief Complement a and deterministic automaton. Automaton gets completed.
          */
         void complement_as_deterministic();
 
         /**
          * @brief Check if the automaton is bottom-up deterministic.
          *
-         * Every combination of symbol + set of targets appears at most once in delta.
-         * This function is expensive.
+         * Every combination of symbol + set of targets appears at most once in delta. This function is expensive.
          */
         bool is_bottom_up_deterministic() const;
 
@@ -150,8 +153,7 @@ namespace mata::nfta {
          */
         bool is_bottom_up_complete(const utils::OrdVector<Symbol> &symbols) const;
         /**
-         * @brief Check if the automaton is complete.
-         *  todo test
+         * @brief Check if the automaton is complete using alphabet symbols or delta symbols (if alphabet is null).
          */
         bool is_bottom_up_complete() const;
 
@@ -163,7 +165,7 @@ namespace mata::nfta {
         /**
          * @brief Check top-down completeness.
          *
-         * Symbols need to exclude constants.
+         * @param [in] symbols need to exclude constants
          */
         bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
 
@@ -175,11 +177,11 @@ namespace mata::nfta {
         /**
          * @brief Check top-down completeness.
          *
-         * Constant (arity 0) symbols are automatically ignored.
+         * @param [in] symbols_arities constant (arity 0) symbols are automatically ignored
          */
-        bool is_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const {
+        bool is_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const { //{{{
             return is_top_down_complete(collect_symbols(symbols_arities, true));
-        }
+        } //}}}
 
         /**
          * @brief Complete the automaton bottom-up with given symbols, add missing transitions leading to a sink state.
@@ -212,8 +214,28 @@ namespace mata::nfta {
           State sink = Limits::max_state);
 
 
+        /**
+         * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
+         *
+         * @param allowed [in, optional] filter out already unuseful states
+         */
         BoolVector get_top_down_reachable(const BoolVector *allowed = nullptr) const;
+        /**
+         * @brief Get a bool vector where vector[state] is true iff the state is bottom-up reachable.
+         *
+         * @param allowed [in, optional] filter out already unuseful states
+         */
         BoolVector get_bottom_up_reachable(const BoolVector *allowed = nullptr) const;
+
+        /**
+         * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
+         *
+         * @param early_exit_fn [in, optional] if true, this function ends
+         * @param allowed [in, optional] filter out already unuseful states
+         *
+         * The optional function @ early_exit_fn is applied to any newly found reachable state. If it returns true,
+         * this function ends immediately, leaving any unexplored states marked as false.
+         */
         template<typename OnMarked>
         BoolVector get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const BoolVector *allowed = nullptr) const;
 
@@ -235,6 +257,7 @@ namespace mata::nfta {
          * @brief Reduce bottom-up, then top-down.
          */
         void reduce_bottom_top();
+
     }; // class Nfta
 
     /**
@@ -250,8 +273,7 @@ namespace mata::nfta {
     /**
      * @brief Union of two automata not preserving determinism.
      *
-     * @param A, B Automata to unite.
-     *
+     * @param A, B [in] Automata to unite
      *
      * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
      * contain symbols that are not in its alphabet.
@@ -261,10 +283,10 @@ namespace mata::nfta {
     /**
      * @brief Union preserving bottom-up determinism, computed by product construction.
      *
-     * @param A, B Automata to unite.
-     * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
+     * @param A, B [in] Automata to unite
+     * @param state_mapping_out [out, optional] Mapping state pairs -> product state
      *
-     * This implementation is slow.
+     * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
      */
     Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
@@ -276,7 +298,7 @@ namespace mata::nfta {
      * @return Complement automaton.
      *
      * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
-     * or to used symbols in delta.
+     * or to used symbols in delta. Result is bottom-up deterministic, complete and reduced.
      */
     Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities = nullptr);
 
@@ -287,7 +309,7 @@ namespace mata::nfta {
      * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
      *
      * Both automata must be complete over the same set of symbols. The result automaton is constructed directly
-     * top-down.
+     * top-down. Result is top-down reduced, but not bottom-up reduced.
      */
     Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
@@ -314,13 +336,16 @@ namespace mata::nfta {
      * @return Complement automaton.
      *
      * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
-     * or to used symbols in delta.
+     * or to used symbols in delta. Result is top-down reduced.
      */
     Nfta complement_top_down(
       const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
       const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr
     );
 
+    /**
+     * @brief todo
+     */
     bool  is_included(const Nfta& small, const Nfta& big, Alphabet* alphabet = nullptr);
 
 } // namespace mata::nfta
