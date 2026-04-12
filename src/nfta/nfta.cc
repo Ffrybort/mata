@@ -47,7 +47,7 @@ void Nfta::print_mata(std::ostream& os) const {
     os << "%States-marked " << std::endl;
     os << "%Alphabet-auto " << std::endl;
     os << "%Initial ";
-    for (const State state : initial_states) { os << "q" << state << " "; }
+    for (const State state : root_states) { os << "q" << state << " "; }
     os << std::endl;
 
     for (const auto& transition : delta.get_transitions())
@@ -84,7 +84,7 @@ void Nfta::print_readable(std::ostream& os) const {
     // Initial states
     os << "Initial states: ";
 
-    for (const State s : initial_states) {
+    for (const State s : root_states) {
         os << s << " ";
     }
     os << std::endl;
@@ -120,7 +120,7 @@ void Nfta::print_readable_bottom_up(std::ostream& os) const {
     // Initial states
     os << "Final states: ";
 
-    for (const State s : initial_states) {
+    for (const State s : root_states) {
         os << s << " ";
     }
     os << std::endl;
@@ -158,13 +158,13 @@ void Nfta::defragment(const BoolVector& is_staying) {
     delta.defragment(is_staying, renaming);
 
     utils::SparseSet<State> new_inital_states;
-    for (const State s : initial_states) {
+    for (const State s : root_states) {
         if (is_staying[s]) {
             assert(s < renaming.size());
             new_inital_states.insert(renaming[s]);
         }
     }
-    initial_states = std::move(new_inital_states);
+    root_states = std::move(new_inital_states);
 } // defragment
 
 void sanitize_symbol(std::string &s) {
@@ -207,7 +207,7 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     }
     os << std::endl;
     os << "Final States ";
-    for (const State s : initial_states) {
+    for (const State s : root_states) {
         os << "q" << s << " ";
     }
     os << std::endl;
@@ -238,7 +238,7 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
 
 bool Nfta::is_identical_to (const Nfta& other) const {
     return delta.num_of_states() == other.delta.num_of_states()
-        && initial_states == other.initial_states
+        && root_states == other.root_states
         && delta == other.delta
         && alphabet == other.alphabet;
 } // operator==

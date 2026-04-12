@@ -379,7 +379,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
         CHECK(mapping.size() == 2);
         CHECK(aut_n.delta.num_of_states() == 2);
         CHECK(aut_n.delta.num_of_transitions() == 2);
-        CHECK(aut_n.is_state_initial(mapping[{1, 2}]));
+        CHECK(aut_n.is_state_root(mapping[{1, 2}]));
 
         bool found = false;
 
@@ -443,7 +443,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
         CHECK(mapping.size() == 2);
         CHECK(aut_n.delta.num_of_states() == 2);
         CHECK(aut_n.delta.num_of_transitions() == 2);
-        CHECK(aut_n.is_state_initial(mapping[{2, 3, 4}]));
+        CHECK(aut_n.is_state_root(mapping[{2, 3, 4}]));
     }
 
     SECTION("Ternary chain") {
@@ -471,8 +471,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
         CHECK(mapping.size() >= 3);
         CHECK(aut_n.delta.num_of_states() >= 3);
         CHECK(aut_n.delta.num_of_transitions() >= 3);
-        CHECK(aut_n.is_state_initial(mapping[{2, 3}]));
-        CHECK(aut_n.is_state_initial(mapping[{4, 5, 6, 7}]));
+        CHECK(aut_n.is_state_root(mapping[{2, 3}]));
+        CHECK(aut_n.is_state_root(mapping[{4, 5, 6, 7}]));
     }
 
     SECTION("Arity 4 combinatorial") {
@@ -501,7 +501,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
         CHECK(mapping.size() >= 2);
         CHECK(aut_n.delta.num_of_states() == 2);
         CHECK(aut_n.delta.num_of_transitions() == 2);
-        CHECK(aut_n.initial_states.empty());
+        CHECK(aut_n.root_states.empty());
     }
 
     SECTION("Propagation") {

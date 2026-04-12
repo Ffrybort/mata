@@ -75,10 +75,10 @@ Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(aut.delta.num_of_states());
     std::vector<StateSet> epsilon_closures = get_epsilon_closures(aut.delta, epsilon);
 
-    Nfta result { aut.initial_states, aut.alphabet, Delta { num_of_states } };
+    Nfta result { aut.root_states, aut.alphabet, Delta { num_of_states } };
     for (State i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
-            if (aut.is_state_initial(closure_of_i)) { result.add_initial_state(i); }
+            if (aut.is_state_root(closure_of_i)) { result.add_root(i); }
             for (const SymbolPost& symbol_post : aut.delta[closure_of_i]) {
                 if (symbol_post.symbol == epsilon) { continue; }
                 result.delta.add(i, symbol_post);
@@ -100,7 +100,7 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     // add new transitions
     for (State i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
-            if (is_state_initial(closure_of_i)) { add_initial_state(i); } // should work right?
+            if (is_state_root(closure_of_i)) { add_root(i); } // should work right?
             for (const SymbolPost& symbol_post : delta[closure_of_i]) {
                 if (symbol_post.symbol == epsilon) { continue; }
                 delta.add(i, symbol_post);
@@ -113,11 +113,11 @@ void Nfta::complement_as_deterministic() {
     assert(is_bottom_up_deterministic() &&
         "mata::nfta::complement_as_deterministic automaton is not bottom-up deterministic");
     make_bottom_up_complete();
-    swap_initial_states();
+    swap_root_non_root();
 }
 
 Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities)  {
-    if (aut.initial_states.empty() || aut.delta.empty()) {
+    if (aut.root_states.empty() || aut.delta.empty()) {
         return create_universal(symbols_arities, aut.alphabet);
     }
     Nfta result = determinize_optimized(aut);
@@ -127,8 +127,8 @@ Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* 
 
 void Nfta::unite_nondet_with(const Nfta& aut) {
     if (this == &aut) { return; }
-    if (initial_states.empty()) { *this = aut; return; }
-    if (aut.initial_states.empty()) { return; }
+    if (root_states.empty()) { *this = aut; return; }
+    if (aut.root_states.empty()) { return; }
 
     const size_t orig_num_of_states{ delta.num_of_states() };
     const size_t aut_num_of_states{ aut.delta.num_of_states() };
@@ -141,14 +141,14 @@ void Nfta::unite_nondet_with(const Nfta& aut) {
     this->delta.append(aut.delta.renumber_targets(renumber_states));
 
     // Set accepting states.
-    this->initial_states.reserve(new_num_of_states);
-    for(const State& aut_fin: aut.initial_states) {
-        this->initial_states.insert(renumber_states(aut_fin));
+    this->root_states.reserve(new_num_of_states);
+    for(const State& aut_fin: aut.root_states) {
+        this->root_states.insert(renumber_states(aut_fin));
     }
 } // unite_nondet_with
 
 Nfta union_nondet(const Nfta& A, const Nfta& B) {
-    if (A.initial_states.empty() && B.initial_states.empty()) { return create_empty(A.alphabet); }
+    if (A.root_states.empty() && B.root_states.empty()) { return create_empty(A.alphabet); }
     Nfta result{ A };
     result.unite_nondet_with(B);
     return result;
@@ -228,11 +228,11 @@ struct ProductContext {
     // initialize with pairs of initial states
     void initialize_top_down(const Nfta& A, const Nfta& B) {
         // Initialize worklist with initial state pairs
-        for (const State initial_A : A.initial_states) {
-            for (const State initial_B : B.initial_states) {
+        for (const State initial_A : A.root_states) {
+            for (const State initial_B : B.root_states) {
                 // Update product with initial state pairs.
                 const State product_initial_state = get_product_state_worklist(initial_A, initial_B);
-                result.initial_states.insert(product_initial_state);
+                result.root_states.insert(product_initial_state);
             }
         }
     }
@@ -256,8 +256,8 @@ struct ProductContext {
             for (const State state_A : const_it_A->second) {
                 for (const State state_B : const_it_B->second) {
                     const State product_state = get_product_state_fixpoint(state_A, state_B);
-                    if (A.initial_states.contains(state_A) || B.initial_states.contains(state_B)) {
-                        result.add_initial_state(product_state);
+                    if (A.root_states.contains(state_A) || B.root_states.contains(state_B)) {
+                        result.add_root(product_state);
                     }
                     result.delta.add(product_state, symbol_A, {});
                 }
@@ -271,7 +271,7 @@ struct ProductContext {
 };
 
 Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
-    if (A.initial_states.empty() && B.initial_states.empty()) { return create_empty(); }
+    if (A.root_states.empty() && B.root_states.empty()) { return create_empty(); }
 
     const ReversedDelta rev_delta_A = A.delta.get_reversed();
     const ReversedDelta rev_delta_B = B.delta.get_reversed();
@@ -297,8 +297,8 @@ Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* st
     auto process_target_pair = [&](const Symbol symbol, const std::vector<State>& source_tuple,
         const State target_A, const State target_B) {
         const State product_target = ctx.get_product_state_fixpoint(target_A, target_B);
-        if (A.initial_states.contains(target_A) || B.initial_states.contains(target_B)) {
-            ctx.result.add_initial_state(product_target);
+        if (A.root_states.contains(target_A) || B.root_states.contains(target_B)) {
+            ctx.result.add_root(product_target);
         }
         ctx.result.delta.add(product_target, symbol, source_tuple);
     };
@@ -334,7 +334,7 @@ Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* st
 }
 
 Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
-    if (A.initial_states.empty() || B.initial_states.empty()) { return create_empty(); }
+    if (A.root_states.empty() || B.root_states.empty()) { return create_empty(); }
 
     #ifndef NDEBUG
     auto symbols = A.delta.get_used_symbols(true);
@@ -414,7 +414,7 @@ bool Nfta::is_bottom_up_deterministic() const {
 } // is_bottom_up_deterministic
 
 bool Nfta::is_top_down_deterministic() const {
-    if (initial_states.size() > 1) { return false; }
+    if (root_states.size() > 1) { return false; }
     if (delta.empty()) { return true; }
 
     const auto num_of_states = static_cast<State>(delta.num_of_states());
@@ -689,8 +689,8 @@ BoolVector Nfta::get_top_down_reachable(const BoolVector *allowed) const {
         }
     };
 
-    worklist.insert(worklist.end(), initial_states.begin(), initial_states.end());
-    for (const State state : initial_states) { mark(state); }
+    worklist.insert(worklist.end(), root_states.begin(), root_states.end());
+    for (const State state : root_states) { mark(state); }
 
     while (!worklist.empty()) {
         const State current_state = worklist.front();
@@ -749,13 +749,13 @@ BoolVector Nfta::get_bottom_up_reachable(const BoolVector *allowed) const {
 }
 
 bool Nfta::is_lang_empty() const {
-    if (initial_states.empty() || delta.empty()) return true;
+    if (root_states.empty() || delta.empty()) return true;
     const BoolVector reachable = get_bottom_up_reachable_impl(
         [&](const State s, const BoolVector&) {
-            return initial_states.contains(s);
+            return root_states.contains(s);
         }
     );
-    for (const State s : initial_states) {
+    for (const State s : root_states) {
         if (reachable[s]) { return false; }
     }
     return true;
@@ -800,7 +800,7 @@ struct MacrostateConstructionContext {
           mapping(state_mapping ? state_mapping : &local_mapping),
           s_to_macro(),
           worklist(),
-          aut_initial_states(aut.initial_states),
+          aut_initial_states(aut.root_states),
           processed_states(),
           local_mapping()
     {
@@ -829,7 +829,7 @@ struct MacrostateConstructionContext {
         }
 
         worklist.emplace_back(new_s, orig_states);
-        if (add_to_initial && aut_initial_states.intersects_with(orig_states)) { result.add_initial_state(new_s); }
+        if (add_to_initial && aut_initial_states.intersects_with(orig_states)) { result.add_root(new_s); }
 
         return new_s;
     }
@@ -849,7 +849,7 @@ struct MacrostateConstructionContext {
         // initialize with constant transitions
         const State q_det = get_or_create_macrostate(StateSet(aut_initial_states.begin(),
             aut_initial_states.end()),  false);
-        result.add_initial_state(q_det);
+        result.add_root(q_det);
     }
 };
 
@@ -1043,7 +1043,7 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
         std::cout << aut.alphabet->try_reverse_translate_symbol(symbol) << ":" << arity << '\n';
     }
 
-    if (aut.delta.empty() || aut.initial_states.empty()) { return create_universal(&symbols_arities); }
+    if (aut.delta.empty() || aut.root_states.empty()) { return create_universal(&symbols_arities); }
     ctx.initialize_top_down();
 
     // component-wise subset: returns true iff a is dominated by b (b ≤ a, i.e. b is smaller-or-equal)

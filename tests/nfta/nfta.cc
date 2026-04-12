@@ -20,17 +20,17 @@ TEST_CASE("mata::nfta") {
 
     SECTION("Add initial") {
         Nfta aut({}, &alphabet, {});
-        aut.add_initial_state(0);
-        CHECK(aut.is_state_initial(0));
+        aut.add_root(0);
+        CHECK(aut.is_state_root(0));
         CHECK(aut.delta.num_of_states() == 1); // adding initial state increases num of states
     }
 
     SECTION("Duplicate initial") {
         Nfta aut({}, &alphabet, {});
-        aut.add_initial_state(0);
-        aut.add_initial_state(0);
+        aut.add_root(0);
+        aut.add_root(0);
         // Initial states are tracked separately; duplicates ignored
-        CHECK(aut.get_initial_states().size() == 1);
+        CHECK(aut.root_states.size() == 1);
     }
 
 
@@ -38,7 +38,7 @@ TEST_CASE("mata::nfta") {
         Nfta aut({}, &alphabet, {});
         State s = aut.delta.add_state();
         CHECK(aut.delta.contains_state(s));
-        CHECK(!aut.is_state_initial(s));
+        CHECK(!aut.is_state_root(s));
         CHECK(!aut.delta.contains_state(static_cast<State>(aut.delta.num_of_states()))); // should out of range
     }
 
@@ -46,8 +46,8 @@ TEST_CASE("mata::nfta") {
         Nfta aut( {1}, &alphabet, Delta(2)); // 2 states: 0 and 1, initial state 1
         CHECK(aut.delta.contains_state(0));
         CHECK(aut.delta.contains_state(1));
-        CHECK(aut.is_state_initial(1));
-        CHECK(!aut.is_state_initial(0));
+        CHECK(aut.is_state_root(1));
+        CHECK(!aut.is_state_root(0));
         CHECK(aut.delta.num_of_states() == 2);
     }
 
@@ -61,17 +61,17 @@ TEST_CASE("mata::nfta") {
 
     SECTION("Swap initial") {
         Nfta aut({0, 3, 6, 9}, &alphabet, {Delta(10)});
-        aut.swap_initial_states();
-        CHECK(!aut.is_state_initial(0));
-        CHECK(aut.is_state_initial(1));
-        CHECK(aut.is_state_initial(2));
-        CHECK(!aut.is_state_initial(3));
-        CHECK(aut.is_state_initial(4));
-        CHECK(aut.is_state_initial(5));
-        CHECK(!aut.is_state_initial(6));
-        CHECK(aut.is_state_initial(7));
-        CHECK(aut.is_state_initial(8));
-        CHECK(!aut.is_state_initial(9));
+        aut.swap_root_non_root();
+        CHECK(!aut.is_state_root(0));
+        CHECK(aut.is_state_root(1));
+        CHECK(aut.is_state_root(2));
+        CHECK(!aut.is_state_root(3));
+        CHECK(aut.is_state_root(4));
+        CHECK(aut.is_state_root(5));
+        CHECK(!aut.is_state_root(6));
+        CHECK(aut.is_state_root(7));
+        CHECK(aut.is_state_root(8));
+        CHECK(!aut.is_state_root(9));
     }
 
     SECTION("Defragment basic") {
@@ -84,14 +84,14 @@ TEST_CASE("mata::nfta") {
         aut.delta.add(s1, alphabet["f"], {s2});
         aut.delta.add(s2, alphabet["a"], {s0});
 
-        aut.add_initial_state(2);
+        aut.add_root(2);
 
         BoolVector is_staying{true, false, true};
         aut.defragment(is_staying);
 
         CHECK(aut.delta.num_of_states() == 2);
         CHECK(aut.delta.contains(0, alphabet["f"], {1,2}) == false);
-        CHECK(aut.is_state_initial(1));
+        CHECK(aut.is_state_root(1));
     }
 
     SECTION("DefragmentAllStatesRemoved") {
@@ -99,13 +99,13 @@ TEST_CASE("mata::nfta") {
 
         aut.delta.add_state();
         aut.delta.add_state();
-        aut.add_initial_state(1);
+        aut.add_root(1);
 
         BoolVector is_staying{false, false};
         aut.defragment(is_staying);
 
         CHECK(aut.delta.num_of_states() == 0);
-        CHECK(aut.get_initial_states().empty());
+        CHECK(aut.root_states.empty());
     }
 
     SECTION("DefragmentIdentityCase") {

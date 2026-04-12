@@ -21,7 +21,7 @@ TEST_CASE("mata::nfta::builder") {
     SECTION("Create empty") {
         const Nfta aut = create_empty();
 
-        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.root_states.size() == 1);
         CHECK(aut.delta.empty());
         CHECK(aut.delta.num_of_states() == 1);
     }
@@ -29,7 +29,7 @@ TEST_CASE("mata::nfta::builder") {
     SECTION("Create empty") {
         const Nfta aut = create_empty(&alphabet);
 
-        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.root_states.size() == 1);
         CHECK(aut.delta.empty());
         CHECK(aut.delta.num_of_states() == 1);
         CHECK(aut.alphabet == &alphabet);
@@ -38,7 +38,7 @@ TEST_CASE("mata::nfta::builder") {
     SECTION("Create universal empty alphabet") {
         Nfta aut = create_universal(&ranked_alphabet);
 
-        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.root_states.size() == 1);
         CHECK(aut.delta.empty());
         CHECK(aut.delta.num_of_states() == 1);
         CHECK(aut.alphabet == &ranked_alphabet);
@@ -50,7 +50,7 @@ TEST_CASE("mata::nfta::builder") {
         const OrdVector<SymbolArity> symbols;
         Nfta aut = create_universal(&symbols, &alphabet);
 
-        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.root_states.size() == 1);
         CHECK(aut.delta.empty());
         CHECK(aut.delta.num_of_states() == 1);
         CHECK(aut.alphabet == &alphabet);
@@ -63,7 +63,7 @@ TEST_CASE("mata::nfta::builder") {
 
         Nfta aut = create_universal(&ranked_alphabet);
 
-        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.root_states.size() == 1);
         CHECK(aut.delta.num_of_states() == 1);
         CHECK(aut.alphabet == &ranked_alphabet);
         REQUIRE_FALSE(aut.delta.empty());
@@ -79,7 +79,7 @@ TEST_CASE("mata::nfta::builder") {
         OrdVector<SymbolArity> symbols = {{0, 0}, {1, 1}};
         Nfta aut = create_universal(&symbols, &i_alphabet);
 
-        CHECK(aut.initial_states.size() == 1);
+        CHECK(aut.root_states.size() == 1);
         CHECK(aut.delta.num_of_states() == 1);
         REQUIRE_FALSE(aut.delta.empty());
         CHECK_NOTHROW(i_alphabet["0"]);
@@ -158,7 +158,7 @@ TEST_CASE("mata::nfta::builder") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.delta.num_of_states() == 1);
-        CHECK(aut.get_initial_states().size() == 1);
+        CHECK(aut.root_states.size() == 1);
     }
 
     SECTION("Alphabet-marked, states-marked") {
@@ -174,7 +174,7 @@ TEST_CASE("mata::nfta::builder") {
         )";
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
-        CHECK(aut.get_initial_states().size() == 2);
+        CHECK(aut.root_states.size() == 2);
     }
 
     SECTION("Multiple transitions from same source and symbol 1") {
@@ -326,7 +326,7 @@ TEST_CASE("mata::nfta::builder") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         CHECK(aut.delta.num_of_states() >= 104);
-        CHECK(aut.get_initial_states().size() == 3);
+        CHECK(aut.root_states.size() == 3);
     }
 
     SECTION("Single state using IntAlphabet") {
@@ -511,7 +511,7 @@ TEST_CASE("mata::nfta::builder") {
         Nfta generic_aut = parse_from_mata(input, &alphabet);
 
         CHECK(ranked_aut.delta.num_of_states() == generic_aut.delta.num_of_states());
-        CHECK(ranked_aut.get_initial_states() == generic_aut.get_initial_states());
+        CHECK(ranked_aut.root_states == generic_aut.root_states);
         CHECK(ranked_aut.delta == generic_aut.delta);
     }
 

@@ -48,7 +48,7 @@ TEST_CASE("mata::nfta::intersection") {
         Nfta C = intersection(A, B);
 
         CHECK(C.delta.num_of_states() == 1);
-        CHECK(C.is_state_initial(0));
+        CHECK(C.is_state_root(0));
         CHECK(C.delta.contains(0, alphabet["a"], {}));
     }
 
@@ -66,12 +66,12 @@ TEST_CASE("mata::nfta::intersection") {
         A.delta.add(0, alphabet["f"], {1});
         A.delta.add(1, alphabet["f"], {0});
         A.delta.add(1, alphabet["a"], {});
-        A.add_initial_state(1);
+        A.add_root(1);
 
         B.delta.add(0, alphabet["f"], {1});
         B.delta.add(1, alphabet["f"], {1});
         B.delta.add(1, alphabet["a"], {});
-        B.add_initial_state(0);
+        B.add_root(0);
 
         Nfta C = intersection(A, B);
 
@@ -81,7 +81,7 @@ TEST_CASE("mata::nfta::intersection") {
         // (1, 1) 2
         // (0, 0) is unreachable
         REQUIRE(C.delta.num_of_states() == 3);
-        CHECK(C.is_state_initial(0));
+        CHECK(C.is_state_root(0));
 
         // Transition checks
         CHECK(C.delta.contains(0, alphabet["f"], {1}));

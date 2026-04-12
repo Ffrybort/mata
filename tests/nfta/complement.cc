@@ -57,8 +57,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         State mE  = mapping.at({});
 
         // initial state {0}
-        CHECK(comp.get_initial_states().size() == 1);
-        CHECK(comp.is_state_initial(m0));
+        CHECK(comp.root_states.size() == 1);
+        CHECK(comp.is_state_root(m0));
 
         // --- {0} transitions ---
         // no leaf transition on a (state 0 accepts a)
@@ -120,8 +120,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         State m0 = mapping.at({ 0 });
 
         // single initial state
-        CHECK(comp.get_initial_states().size() == 1);
-        CHECK(comp.is_state_initial(m0));
+        CHECK(comp.root_states.size() == 1);
+        CHECK(comp.is_state_root(m0));
 
         // {0} does NOT accept a (original does)
         CHECK(comp.delta.empty());
@@ -149,8 +149,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         State m1 = mapping.at({ 1 });
 
         // single initial state
-        CHECK(comp.get_initial_states().size() == 1);
-        CHECK(comp.is_state_initial(m0));
+        CHECK(comp.root_states.size() == 1);
+        CHECK(comp.is_state_root(m0));
 
         // {0} accepts a
         CHECK(comp.delta.contains(m0, a, {}));
@@ -210,8 +210,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // initial macrostate should be {0,1}
         REQUIRE(mapping.contains({ 0, 1 }));
         State m01 = mapping.at({ 0, 1 });
-        CHECK(comp.is_state_initial(m01));
-        CHECK(comp.get_initial_states().size() == 1);
+        CHECK(comp.is_state_root(m01));
+        CHECK(comp.root_states.size() == 1);
 
         // both states accept a, so {0,1} should NOT accept a in complement
         CHECK_FALSE(comp.delta.contains(m01, a, {}));
@@ -268,8 +268,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         CHECK(mapping1.size() == 2);
         const State m0 = mapping1.at({ 0 });
         const State m1 = mapping1.at({ 1 });
-        CHECK(comp1.get_initial_states().size() == 1);
-        CHECK(comp1.is_state_initial(m0));
+        CHECK(comp1.root_states.size() == 1);
+        CHECK(comp1.is_state_root(m0));
 
         CHECK(comp1.delta.contains(m0, a, {}));
         CHECK(comp1.delta.contains(m0, s, { 1 }));
@@ -278,8 +278,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // complement of a complement
         std::unordered_map<StateSet, State> mapping2;
         Nfta comp2 = complement_top_down(comp1, &mapping2);
-        CHECK(comp2.get_initial_states().size() == 1);
-        CHECK(comp2.is_state_initial(m0));
+        CHECK(comp2.root_states.size() == 1);
+        CHECK(comp2.is_state_root(m0));
         CHECK(comp2.delta.contains(m0, s, { 1 }));
         CHECK(comp2.delta.contains(m1, a, {}));
         CHECK(comp2.delta.contains(m1, s, { 0 }));

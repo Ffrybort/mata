@@ -22,13 +22,13 @@
 namespace mata::nfta {
     class Nfta {
     public:
-        utils::SparseSet<State> initial_states; // a set of initial/final states
+        utils::SparseSet<State> root_states; // a set of initial/final states
         Alphabet* alphabet;
         Delta delta; // states live in delta, so do functions like add_state()
 
-        explicit Nfta(utils::SparseSet<State> initial_states = {}, Alphabet* alphabet = nullptr, Delta delta = {})
-            : initial_states(std::move(initial_states)), alphabet(alphabet), delta(std::move(delta)) {}
-        explicit Nfta(const size_t num_of_states) : initial_states({}), alphabet(nullptr), delta(num_of_states) {}
+        explicit Nfta(utils::SparseSet<State> root_states = {}, Alphabet* alphabet = nullptr, Delta delta = {})
+            : root_states(std::move(root_states)), alphabet(alphabet), delta(std::move(delta)) {}
+        explicit Nfta(const size_t num_of_states) : root_states({}), alphabet(nullptr), delta(num_of_states) {}
 
         Nfta(const Nfta& other) = default;
         Nfta& operator=(const Nfta&) = default;
@@ -37,34 +37,34 @@ namespace mata::nfta {
         Nfta& operator=(Nfta&&) noexcept = default;
 
         /**
-         * @brief Add an initial state, the state itself is also added if it didn't exist already.
+         * @brief Add a root state, the state itself is also added if it didn't exist already.
          */
-        void add_initial_state(const State state) { // {{{
+        void add_root(const State state) { // {{{
             delta.add_state(state);
-            initial_states.insert(state);
+            root_states.insert(state);
 	} // }}}
 
         /**
-         * @brief Add multiple initial states from an iterable structure.
+         * @brief Add multiple root states from an iterable structure.
          */
         template <typename Iterable>
-        void add_initial_states(const Iterable& states) { // {{{
+        void add_root_states(const Iterable& states) { // {{{
             add_state(*std::max_element(states.begin(), states.end()));
-            initial_states.insert(states.begin(), states.end());
+            root_states.insert(states.begin(), states.end());
         } // }}}
 
         /**
          * @brief Add multiple final states from an initializer list.
          */
-        void add_initial_states(const std::initializer_list<State> states) { // {{{
+        void add_root_states(const std::initializer_list<State> states) { // {{{
             delta.add_state(*std::ranges::max_element(states));
-            initial_states.insert(states);
+            root_states.insert(states);
         } // }}}
 
         /**
-         * @brief Check whether a state is initial.
+         * @brief Check whether a state is root.
          */
-        bool is_state_initial(const State& state) const { return initial_states.contains(state); }
+        bool is_state_root(const State& state) const { return root_states.contains(state); }
 
         /**
          * @brief Print the automaton in a parsable mata format.
@@ -87,11 +87,6 @@ namespace mata::nfta {
         void print_timbuk(std::ostream& os = std::cout, const std::string& name = "A") const;
 
         /**
-         * @brief Get the set of initial states.
-         */
-        const utils::SparseSet<State>& get_initial_states() const { return initial_states; }
-
-        /**
          * @brief Check if the accepted language is empty.
          */
         bool is_lang_empty() const;
@@ -102,7 +97,7 @@ namespace mata::nfta {
         void defragment(const BoolVector& is_staying);
 
         /**
-         * @brief Check if the automata have identical initial states and transitions. Alphabets are ignored.
+         * @brief Check if the automata have identical root states and transitions. Alphabets are ignored.
          *
          * This does NOT check language equality.
          */
@@ -124,11 +119,11 @@ namespace mata::nfta {
         void unite_nondet_with(const Nfta& aut);
 
         /**
-         *@brief Swap initial and non-initial states.
+         *@brief Swap root and non-root states.
          *
-         * New initial states consist of all states from delta that but current initial states.
+         * New root states consist of all states from delta that but current root states.
          */
-        void swap_initial_states() { initial_states.complement(static_cast<State>(delta.num_of_states())); }
+        void swap_root_non_root() { root_states.complement(static_cast<State>(delta.num_of_states())); }
 
         /**
          * @brief Complement an already and deterministic automaton.

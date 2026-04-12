@@ -23,12 +23,12 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.delta.add(0, alphabet["a"], {});
         B.delta.add(0, alphabet["a"], {});
 
-        B.add_initial_state(0);
+        B.add_root(0);
 
         A.unite_nondet_with(B);
 
         CHECK(A.delta.num_of_states() == 1);
-        CHECK(A.is_state_initial(0));
+        CHECK(A.is_state_root(0));
     }
 
     SECTION("Final states are merged") {
@@ -38,13 +38,13 @@ TEST_CASE("mata::nfta::union_nondet") {
         A.delta.add(0, alphabet["a"], {});
         B.delta.add(0, alphabet["a"], {});
 
-        A.add_initial_state(0);
-        B.add_initial_state(1);
+        A.add_root(0);
+        B.add_root(1);
 
         A.unite_nondet_with(B);
 
-        CHECK(A.get_initial_states().size() == 2);
-        CHECK(A.is_state_initial(0));
+        CHECK(A.root_states.size() == 2);
+        CHECK(A.is_state_root(0));
     }
 
     SECTION("Transitions from both automata are present") {
@@ -83,7 +83,7 @@ TEST_CASE("mata::nfta::union_nondet") {
 
         CHECK(C.delta.contains(0, alphabet["a"], {1, 2, 3}));
         // B got renumbered
-        CHECK(C.is_state_initial(4));
+        CHECK(C.is_state_root(4));
         CHECK(C.delta.contains(4, alphabet["f"], {5, 6, 7}));
     }
 
@@ -136,7 +136,7 @@ TEST_CASE("mata::nfta::union_det") {
          Nfta C = union_det(A, B);
 
          CHECK(C.delta.num_of_states() == 1);
-         CHECK(C.initial_states.size() == 1);
+         CHECK(C.root_states.size() == 1);
          CHECK(C.delta.contains(0, alphabet["a"], {}));
      }
 
@@ -150,7 +150,7 @@ TEST_CASE("mata::nfta::union_det") {
         Nfta C = union_det(A, B);
 
         CHECK(C.delta.num_of_states() == 1);
-        CHECK(C.initial_states.size() == 1);
+        CHECK(C.root_states.size() == 1);
         CHECK(C.delta.contains(0, alphabet["a"], {}));
     }
 
@@ -179,11 +179,11 @@ TEST_CASE("mata::nfta::union_det") {
         State s10 = map.get(1, 0);
         State s11 = map.get(1, 1);
         State s12 = map.get(1, 2);
-        CHECK(C.initial_states.size() == 4);
-        CHECK(C.is_state_initial(s10));
-        CHECK(C.is_state_initial(s11));
-        CHECK(C.is_state_initial(s12));
-        CHECK(C.is_state_initial(s00));
+        CHECK(C.root_states.size() == 4);
+        CHECK(C.is_state_root(s10));
+        CHECK(C.is_state_root(s11));
+        CHECK(C.is_state_root(s12));
+        CHECK(C.is_state_root(s00));
 
         CHECK(C.delta.contains(s01, alphabet["a"], {}));
         CHECK(C.delta.contains(s10, alphabet["f"], {s01}));
@@ -213,7 +213,7 @@ TEST_CASE("mata::nfta::union_det") {
         // L(C) = {a, b}
 
         Nfta C = union_det(A, B);
-        // CHECK(C.initial_states.size() == 2);
+        // CHECK(C.root_states.size() == 2);
         // CHECK(C.delta.num_of_transitions() == 2);
     }
 }

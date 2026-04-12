@@ -66,8 +66,8 @@ TEST_CASE("mata::nfta determinism check") {
 
     SECTION("Top-down multiple initial") {
         Nfta aut({}, &alphabet, Delta(2));
-        aut.add_initial_state(0);
-        aut.add_initial_state(1);
+        aut.add_root(0);
+        aut.add_root(1);
 
         CHECK_FALSE(aut.is_top_down_deterministic());
     }
@@ -269,8 +269,8 @@ TEST_CASE("mata::nfta completeness check") {
 
         State s0 = aut.delta.add_state();
         State s1 = aut.delta.add_state();
-        aut.add_initial_state(s0);
-        aut.add_initial_state(s1);
+        aut.add_root(s0);
+        aut.add_root(s1);
 
         // constants
         aut.delta.add(s0, alphabet["a"], {});
@@ -292,7 +292,7 @@ TEST_CASE("mata::nfta completeness check") {
     SECTION("Top-down incomplete") {
         Nfta aut({0}, &alphabet, {});
 
-        aut.add_initial_state(0);
+        aut.add_root(0);
 
         // constant
         aut.delta.add(0, alphabet["a"], {});
@@ -352,8 +352,8 @@ TEST_CASE("mata::nfta completeness check") {
     SECTION("Top-down complete but not bottom-up complete") {
         Nfta aut({}, &alphabet, Delta(2));
 
-        aut.add_initial_state(0);
-        aut.add_initial_state(1);
+        aut.add_root(0);
+        aut.add_root(1);
 
         aut.delta.add(1, alphabet["a"], {});
 

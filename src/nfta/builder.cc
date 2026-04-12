@@ -44,7 +44,7 @@ void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap
     auto add_states = [&](const auto& states) {
         for (const auto& state_str : states) {
             const State state = get_state(state_str, state_map, aut.delta);
-            aut.add_initial_state(state);
+            aut.add_root(state);
         }
     };
     add_states(inter_aut->initial_formula.collect_node_names());
@@ -111,7 +111,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, RankedAlphabet *
     NameStateMap state_map = {};
     add_states(state_map, inter_aut->states_names, aut.delta);
 
-    // both initial and final states are added to initial_states in nfta
+    // both initial and final states are added to root_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
 
     // symbols (and arities)
@@ -147,7 +147,7 @@ Nfta construct_from_inter_aut(const IntermediateAut *inter_aut, Alphabet *alphab
     aut.alphabet = alphabet;
     add_states(state_map, inter_aut->states_names, aut.delta);
 
-    // both initial and final states are added to initial_states in nfta
+    // both initial and final states are added to root_states in nfta
     add_initial_and_final_states(inter_aut,state_map,aut);
 
     // symbols
