@@ -131,7 +131,6 @@ TEST_CASE("mata::nfta::delta") {
         CHECK_FALSE(delta.empty());
     }
 
-
     SECTION("Equality and inequality") {
         Move m1{1, {2,3}};
         Move m2{1, {2,3}};
@@ -145,11 +144,8 @@ TEST_CASE("mata::nfta::delta") {
 
     delta.clear();
 
-    SECTION("Empty StatePost produces no moves") {
-        const StatePost& sp = delta.state_post(0);
-        auto moves = sp.moves();
-
-        CHECK(moves.begin() == StatePost::Moves::end());
+    SECTION("Nonexistent state post") {
+        CHECK_THROWS(delta.state_post(0));
     }
 
     SECTION("Multiple target tuples under same symbol") {

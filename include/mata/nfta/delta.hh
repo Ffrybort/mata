@@ -426,15 +426,12 @@ public:
     /**
      * @brief Get constant reference to the state post of @p source.
      *
-     * If we try to access a state post of a @p state which is present in the automaton as an initial/final state,
-     *  yet does not have allocated space in @c Delta, an @c empty_post is returned. Hence, the function has no side
-     *  effects (no allocation is performed; iterators remain valid).
-     * @param source[in] Source state of a state post to access.
+     * @param s [in] Source state of a state post to access.
      * @return State post of @p source.
      */
     const StatePost& state_post(const State s) const {
-        if (s >= num_of_states()) { // todo maybe this should throw instead
-            return empty_state_post;
+        if (s >= num_of_states()) {
+          throw std::runtime_error("state post is out of range");
         }
         return state_posts_[s];
     }
