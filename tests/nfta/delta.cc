@@ -1,6 +1,8 @@
 /**
- * Basic delta functionality
+ * @file delta.cc
+ * Testing basic delta functionality
  */
+
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
@@ -68,20 +70,6 @@ TEST_CASE("mata::nfta::delta") {
                 return t.source == 1 && t.symbol == 1 && t.targets == std::vector<State>{0};
             }));
 
-    }
-
-    SECTION("Get transitions to a specific state vector") {
-        delta.add(0, 1, {2,3});
-        delta.add(1, 2, {3});
-        delta.add(2, 1, {2,3});
-
-        auto transitions_to_2_3 = delta.get_transitions_to({2,3});
-        CHECK(transitions_to_2_3.size() == 2);
-
-        std::vector<State> targets0 = transitions_to_2_3[0].targets;
-        std::vector<State> targets1 = transitions_to_2_3[1].targets;
-
-        CHECK((targets0 == std::vector<State>{2,3} || targets1 == std::vector<State>{2,3}));
     }
 
     SECTION("Get successors") {
@@ -265,29 +253,6 @@ TEST_CASE("mata::nfta::delta") {
         d2 = std::move(temp);
         CHECK(d2.contains(0,1,{2}));
     }
-    SECTION("Get transitions between states") {
-
-        delta.clear();
-        delta.add(0, 52, {2, 3});
-        delta.add(0, 25, {2, 3});
-        delta.add(1, 1, {2});
-
-        auto between = delta.get_transitions_between(0, {2, 3});
-        CHECK(between.size() == 2);
-        std::set<Symbol> symbols;
-        for (const auto& t : between) { symbols.insert(t.symbol); }
-        CHECK(symbols == std::set<Symbol>{25, 52});}
-
-    SECTION("Epsilon symbol posts") {
-
-        delta.clear();
-        delta.add(0, EPSILON, {1});
-        delta.add(0, 5, {2});
-
-        auto it = delta.epsilon_symbol_posts(0);
-        CHECK(it != delta.state_post(0).end());
-        CHECK(it->symbol == EPSILON);
-    }
 
     SECTION("Defragment removes deleted states and renames correctly") {
         delta.clear();
@@ -332,9 +297,9 @@ TEST_CASE("mata::nfta::delta") {
         CHECK_FALSE(delta.contains(0, 1, {0,1}));
         CHECK(delta.contains(0, 2, {1}));
 
-        auto transitions = delta.get_transitions();
+        auto delta_transitions = delta.get_transitions();
 
-        for (const auto& t : transitions) {
+        for (const auto& t : delta_transitions) {
             CHECK(t.targets.size() > 0);
 
             for (State s : t.targets) {
@@ -541,10 +506,6 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(rev.symbol_transitions.empty());
     }
 
-    SECTION("Reversed delta large mixed transitions") {
-        delta.clear();
-    }
-
     SECTION("Reversed delta lots of transitions") {
         delta.clear();
 
@@ -663,7 +624,7 @@ TEST_CASE("mata::nfta::delta") {
         auto rev_filtered = delta.get_reversed(&allowed);
         auto rev_unfiltered = delta.get_reversed();
 
-        CHECK(rev_filtered.is_equal(rev_unfiltered));
+        CHECK(rev_filtered.is_identical(rev_unfiltered));
     }
 
     SECTION("Reversed delta with allowed filter — source state not allowed") {
