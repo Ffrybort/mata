@@ -162,7 +162,8 @@ public:
         Marked,
         Enum,
         Chars,
-        Utf
+        Utf,
+        None // this is for none naming, to avoid conflicts with auto alphabet symbols starting with "n"
     };
 
     /**
@@ -179,7 +180,7 @@ public:
 
     Naming state_naming = Naming::Marked;
     Naming symbol_naming = Naming::Marked;
-    Naming node_naming = Naming::Marked;
+    Naming node_naming = Naming::None;
     AlphabetType alphabet_type{};
     AutomatonType automaton_type{};
 
