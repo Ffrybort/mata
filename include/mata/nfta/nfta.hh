@@ -338,10 +338,24 @@ namespace mata::nfta {
       const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr
     );
 
+    enum class ComplementMethod { Classical, TopDown };
     /**
-     * @brief todo
+     * @brief Check if the language recognized by @p small in a subset of the language recognized by @p big.
+     *
+     * @param smaller, bigger input automata
+     * @param method complementation method to use (classical or top-down)
+     * @return true if L(small) <= L(big), false otherwise
      */
-    bool  is_included(const Nfta& small, const Nfta& big, Alphabet* alphabet = nullptr);
+    bool is_lang_included(const Nfta& smaller, const Nfta& bigger, ComplementMethod method = ComplementMethod::Classical);
+
+    /**
+     * @brief Check if the language recognized by @p A equal to the language recognized by @p B.
+     *
+     * @param A, B input automata
+     * @param method complementation method to use (classical or top-down)
+     * @return true if L(A) == L(B), false otherwise
+     */
+    bool is_lang_equal(const Nfta& A, const Nfta& B, ComplementMethod method = ComplementMethod::Classical);
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

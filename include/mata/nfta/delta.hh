@@ -126,7 +126,7 @@ public:
     ReversedDelta() : symbol_transitions{} {}
 
     /**
-     * @brief Print in a readable format to std::cout or a given stream.
+     * @brief Print in a readable format to @c std::cout or a given stream.
      */
     void print(std::ostream& os = std::cout) const;
 
