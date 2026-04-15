@@ -3,6 +3,8 @@
 #include "mata/nfa/types.hh"
 #include "mata/parser/inter-aut.hh"
 
+using namespace mata::nfa;
+
 int load_automaton(
         const std::string& filename,
         Nfa& aut,

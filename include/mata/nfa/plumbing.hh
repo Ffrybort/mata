@@ -15,7 +15,7 @@
 #include "nfa.hh"
 #include "builder.hh"
 
-using namespace mata::nfa::builder;
+// using namespace mata::nfa::builder;
 
 /**
  * @brief Wrappers around various support functions.
@@ -58,7 +58,7 @@ inline void remove_epsilon(Nfa* result, const Nfa& aut, const Symbol epsilon = E
 /** Loads an automaton from Parsed object */
 template <class ParsedObject>
 void construct(Nfa* result, const ParsedObject& parsed, Alphabet* alphabet = nullptr,
-               NameStateMap* state_map = nullptr) {
+               builder::NameStateMap* state_map = nullptr) {
     OnTheFlyAlphabet tmp_alphabet{};
     if (!alphabet) { alphabet = &tmp_alphabet; }
     *result = builder::construct(parsed, alphabet, state_map);

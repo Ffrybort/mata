@@ -5,6 +5,8 @@
 
 #include "utils/utils.hh"
 
+using namespace mata::nfa;
+
 constexpr bool MINTERMIZE_AUTOMATA{ true};
 
 int main(int argc, char *argv[]) {

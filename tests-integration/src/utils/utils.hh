@@ -16,7 +16,7 @@
 #include <string>
 #include <cstring>
 
-using namespace mata::nfa;
+// using namespace mata::nfa;
 
 /**
  * @brief Load automaton from file at @p filename into @p aut, using @p alphabet for symbols on transitions.
@@ -31,7 +31,7 @@ using namespace mata::nfa;
  */
 int load_automaton(
         const std::string& filename,
-        Nfa& aut,
+        mata::nfa::Nfa& aut,
         mata::OnTheFlyAlphabet& alphabet,
         const bool mintermize_automata = true
 );
@@ -48,7 +48,7 @@ int load_automaton(
  */
 int load_automata(
         std::vector<std::string>& filenames,
-        std::vector<Nfa>& auts,
+        std::vector<mata::nfa::Nfa>& auts,
         mata::OnTheFlyAlphabet& alphabet,
         const bool mintermize_automata = true
 );

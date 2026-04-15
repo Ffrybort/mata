@@ -17,6 +17,8 @@
 #include "utils/utils.hh"
 #include "mata/nfa/algorithms.hh"
 
+using namespace mata::nfa;
+
 constexpr bool MINTERMIZE_AUTOMATA{ true};
 
 int main(int argc, char *argv[]) {
