@@ -8,6 +8,7 @@ add_executable (tests ${MATA_TEST_SOURCES}
         nfta/make_complete.cc
         nfta/reduce.cc
         nfta/complement.cc
+        nfta/inclusion.cc
 )
 
 target_link_libraries (tests PRIVATE libmata Catch2::Catch2WithMain)

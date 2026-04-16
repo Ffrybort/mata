@@ -132,7 +132,7 @@ namespace mata::nfta {
         /**
          * @brief Complement a and deterministic automaton. Automaton gets completed.
          */
-        void complement_as_deterministic();
+        void complement_as_deterministic(const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
 
         /**
          * @brief Check if the automaton is bottom-up deterministic.
@@ -289,13 +289,13 @@ namespace mata::nfta {
      * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
      *
      * @param aut [in] Input automaton to complement.
-     * @param symbols_arities [in, optional] Vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
+     * @param symbols_arities_in [in, optional] Vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
      * @return Complement automaton.
      *
      * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
      * or to used symbols in delta. Result is bottom-up deterministic, complete and reduced.
      */
-    Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities = nullptr);
+    Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
 
     /**
      * @brief Create a product automaton.

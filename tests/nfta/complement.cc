@@ -5,6 +5,7 @@
 #include <mata/nfta/delta.hh>
 #include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/builder.hh>
 #include <mata/nfta/ranked-alphabet.hh>
 
 using namespace mata::nfta;
@@ -19,10 +20,223 @@ static size_t count_tuples(const Nfta& aut, State src, Symbol sym) {
     return it->target_tuples.size();
 }
 
-// todo classical and det tests
-TEST_CASE("mata::nfta::complement_top_down") {
+TEST_CASE("mata::nfta::complement_classical") {
+    SECTION("Empty automaton") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 2);
+        alphabet.add_new_symbol("a", 0);
+        Nfta aut{};
+        aut.alphabet = &alphabet;
+        Nfta comp;
+        CHECK_NOTHROW(comp = complement_classical(aut));
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+    }
 
-    // todo empty delta, empty initial
+    SECTION("Empty automaton by create_empty()") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 2);
+        alphabet.add_new_symbol("a", 0);
+        Nfta aut = create_empty(&alphabet);
+        Nfta comp;
+        CHECK_NOTHROW(comp = complement_classical(aut));
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+    }
+
+    SECTION("Empty initial states") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 2);
+        alphabet.add_new_symbol("a", 0);
+        Nfta aut{};
+        aut.alphabet = &alphabet;
+        aut.delta.add(0, alphabet.translate_symbol("a", 2), {0, 0});
+        aut.delta.add(0, alphabet.translate_symbol("a", 2), {0, 2});
+        aut.delta.add(2, alphabet.translate_symbol("a", 0), {});
+        Nfta comp;
+        CHECK_NOTHROW(comp = complement_classical(aut));
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+    }
+        SECTION("Universal automaton complement is empty") {
+        IntAlphabet alphabet;
+        Nfta aut({0}, &alphabet, Delta(1));
+        aut.delta.add(0, 0, {});
+        aut.delta.add(0, 1, {0});
+
+        Nfta comp = complement_classical(aut);
+        CHECK(comp.is_lang_empty());
+    }
+
+    SECTION("Complement of empty-language automaton is non-empty") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 0);
+        alphabet.add_new_symbol("f", 1);
+        // no transitions
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, alphabet.translate_symbol("f", 1), {1});
+        aut.delta.add(1, alphabet.translate_symbol("f", 1), {0});
+
+        Nfta comp = complement_classical(aut);
+        CHECK_FALSE(comp.is_lang_empty());
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.num_of_transitions() == 2);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("f", 1), {0}));
+    }
+
+    SECTION("Double complement is equivalent to original") {
+        OnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a");
+        alphabet.add_new_symbol("s");
+        Symbol a = alphabet["a"];
+        Symbol s = alphabet["s"];
+
+        Nfta aut({ 0 }, &alphabet, Delta(2));
+        aut.delta.add(0, s, { 1 });
+        aut.delta.add(1, s, { 0 });
+        aut.delta.add(1, a, {});
+
+        Nfta comp = complement_classical(aut);
+        CHECK_FALSE(comp.is_lang_empty());
+
+        CHECK(comp.is_bottom_up_deterministic());
+        comp.complement_as_deterministic();
+
+        CHECK(comp.delta.num_of_states() == 2);
+        CHECK(comp.delta.num_of_transitions() == 3);
+        CHECK(comp.delta.contains(0, alphabet["a"], {}));
+        CHECK(comp.delta.contains(0, alphabet["s"], {1}));
+        CHECK(comp.delta.contains(1, alphabet["s"], {0}));
+
+        // complements are deterministic
+        CHECK(comp.is_bottom_up_deterministic());
+    }
+
+
+    SECTION("Only constant symbol") {
+        OnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a");
+        Symbol a = alphabet["a"];
+
+        // aut accepts the single tree 'a'
+        Nfta aut({ 0 }, &alphabet, Delta(1));
+        aut.delta.add(0, a, {});
+
+        Nfta comp = complement_classical(aut);
+        // complement should accept nothing (alphabet has only 'a' and aut accepts it)
+        CHECK(comp.is_lang_empty());
+    }
+
+    SECTION("Complement and original intersect") {
+        OnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a");
+        alphabet.add_new_symbol("f");
+        Symbol a = alphabet["a"];
+        Symbol f = alphabet["f"];
+
+        // 0 -f-> 1 -f-> 0, only 1 accepts a
+        Nfta aut({ 0 }, &alphabet, Delta(2));
+        aut.delta.add(0, f, { 1 });
+        aut.delta.add(1, f, { 0 });
+        aut.delta.add(1, a, {});
+
+        Nfta comp = complement_classical(aut);
+
+        // intersection should be empty
+        Nfta inter = intersection(aut, comp);
+        CHECK(inter.is_lang_empty());
+    }
+
+    SECTION("Universal language") {
+        OnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a");
+        alphabet.add_new_symbol("f");
+        Symbol a = alphabet["a"];
+        Symbol f = alphabet["f"];
+
+        Nfta aut({ 0, 1 }, &alphabet, Delta(2));
+        aut.delta.add(0, f, { 0 });
+        aut.delta.add(1, f, { 1 });
+        aut.delta.add(0, a, {});
+        aut.delta.add(1, a, {});
+
+        Nfta comp = complement_classical(aut);
+
+        CHECK(comp.root_states.size() == 1);
+        CHECK(comp.is_lang_empty());
+    }
+
+    SECTION("Binary symbol only") {
+        OnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("p");
+        alphabet.add_new_symbol("a");
+        Symbol a = alphabet["a"];
+        Symbol p = alphabet["p"];
+
+        Nfta aut({ 0 }, &alphabet, Delta(2));
+        aut.delta.add(0, p, { 0, 1 });
+        aut.delta.add(0, p, { 1, 0 });
+        aut.delta.add(1, p, { 0, 0 });
+        aut.delta.add(1, a, {});
+
+        Nfta comp = complement_classical(aut);
+
+        CHECK(comp.is_bottom_up_deterministic());
+        aut.make_top_down_complete();
+        comp.make_top_down_complete();
+        CHECK(intersection(aut, comp).is_lang_empty());
+
+        // union should be universal
+        const Nfta uni_comp = complement_classical(union_nondet(aut, comp));
+        CHECK(uni_comp.is_lang_empty());
+    }
+}
+
+TEST_CASE("mata::nfta::complement_top_down") {
+    SECTION("Empty automaton") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 2);
+        alphabet.add_new_symbol("a", 0);
+        Nfta aut{};
+        aut.alphabet = &alphabet;
+        Nfta comp;
+        CHECK_NOTHROW(comp = complement_top_down(aut));
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+    }
+
+    SECTION("Empty automaton by create_empty()") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 2);
+        alphabet.add_new_symbol("a", 0);
+        Nfta aut = create_empty(&alphabet);
+        Nfta comp;
+        CHECK_NOTHROW(comp = complement_top_down(aut));
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+    }
+
+    SECTION("Empty initial states") {
+        RankedOnTheFlyAlphabet alphabet;
+        alphabet.add_new_symbol("a", 2);
+        alphabet.add_new_symbol("a", 0);
+        Nfta aut{};
+        aut.alphabet = &alphabet;
+        aut.delta.add(0, alphabet.translate_symbol("a", 2), {0, 0});
+        aut.delta.add(0, alphabet.translate_symbol("a", 2), {0, 2});
+        aut.delta.add(2, alphabet.translate_symbol("a", 0), {});
+        Nfta comp;
+        CHECK_NOTHROW(comp = complement_top_down(aut));
+        CHECK(comp.delta.num_of_states() == 1);
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
+        CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
+    }
 
     SECTION("Example with parity") {
         OnTheFlyAlphabet alphabet;

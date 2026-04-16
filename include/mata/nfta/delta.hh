@@ -76,7 +76,7 @@ public:
  *   corresponds to transitions from a given tuple of states (using a given symbol), and holds a set of target states.
  * When reversing a @c Delta, target tuples become source tuples, and sources are collected into a set of targets.
  */
-class ReversedDelta {
+class ReversedDelta { // todo this could save memory by source pointers
 public:
     struct SourceTransitions {
         std::vector<State> sources;

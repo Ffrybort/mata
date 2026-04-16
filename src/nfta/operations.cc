@@ -24,7 +24,6 @@ const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
         tmp = ranked->get_alphabet_symbols_arities();
         return tmp;
     }
-
     tmp = aut.delta.get_used_symbols_arities();
     return tmp;
 }
@@ -109,16 +108,19 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     }
 } // remove_epsilon_in_place
 
-void Nfta::complement_as_deterministic() {
+void Nfta::complement_as_deterministic(const utils::OrdVector<SymbolArity>* symbols_arities_in) {
     assert(is_bottom_up_deterministic() &&
         "mata::nfta::complement_as_deterministic automaton is not bottom-up deterministic");
-    make_bottom_up_complete();
+    make_bottom_up_complete(symbols_arities_in);
     swap_root_non_root();
+    if (root_states.empty()) { *this = create_empty(alphabet); }
 }
 
-Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities)  {
+Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in)  {
+    utils::OrdVector<SymbolArity> tmp;
+    const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
     if (aut.root_states.empty() || aut.delta.empty()) {
-        return create_universal(symbols_arities, aut.alphabet);
+        return create_universal(&symbols_arities, aut.alphabet);
     }
     Nfta result = determinize_optimized(aut);
     result.complement_as_deterministic();
@@ -783,7 +785,7 @@ void Nfta::reduce_bottom_top() {
     defragment(marked);
 }
 
-struct MacrostateConstructionContext {
+struct MacrostateContext {
     Nfta result{};
     std::unordered_map<StateSet, State>*mapping;
     std::vector<StateSet> s_to_macro;
@@ -794,7 +796,7 @@ struct MacrostateConstructionContext {
     std::vector<State> processed; // already matched det states
     std::unordered_map<StateSet, State> local_mapping;
 
-    explicit MacrostateConstructionContext(const Nfta& aut,
+    explicit MacrostateContext(const Nfta& aut,
         std::unordered_map<StateSet, State>* state_mapping = nullptr)
         : result(),
           mapping(state_mapping ? state_mapping : &local_mapping),
@@ -809,8 +811,8 @@ struct MacrostateConstructionContext {
     }
 
     // delete copying
-    MacrostateConstructionContext(const MacrostateConstructionContext&) = delete;
-    MacrostateConstructionContext& operator=(const MacrostateConstructionContext&) = delete;
+    MacrostateContext(const MacrostateContext&) = delete;
+    MacrostateContext& operator=(const MacrostateContext&) = delete;
 
     // find or create det state from macro state
     // push to worklist if new
@@ -856,7 +858,7 @@ struct MacrostateConstructionContext {
 Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
     if (aut.root_states.empty() && aut.delta.empty()) { return create_empty(aut.alphabet); }
 
-    MacrostateConstructionContext ctx(aut, state_mapping);
+    MacrostateContext ctx(aut, state_mapping);
 
     ReversedDelta rev_delta = aut.delta.get_reversed();
     // initialize with constant transitions
@@ -925,19 +927,33 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
 }
 
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
+    // todo optimize for memory
+    struct StateSetDedupl {
+        std::unordered_map<StateSet, uint32_t> set_to_id;
+        std::vector<const StateSet*>           id_to_set;
+
+        uint32_t save(StateSet s) {
+            auto [it, inserted] = set_to_id.emplace(std::move(s), static_cast<uint32_t>(id_to_set.size()));
+            if (inserted) id_to_set.push_back(&it->first);
+            return it->second;
+        }
+        const StateSet& lookup(const uint32_t id) const { return *id_to_set[id]; }
+    };
+
     struct SymbolCache {
         // [det_state][position] -> vector of targets sets
         std::vector< // state
             std::vector< // position
-                StateSet
-            > // targets
+                uint32_t // targets ptr
+            >
         > by_state;
 
         SymbolCache() : by_state() {}
     };
+    StateSetDedupl dedupl{};
 
     ReversedDelta rev_delta = aut.delta.get_reversed();
-    MacrostateConstructionContext ctx(aut, state_mapping);
+    MacrostateContext ctx(aut, state_mapping);
 
     if (aut.delta.empty()) { return ctx.result; }
 
@@ -959,17 +975,20 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
             Symbol symbol = symbol_tr.symbol;
             unsigned arity = symbol_tr.get_arity();
             if (arity == 0) { continue; }
-            cache[symbol].by_state.resize(new_s + 1);
+            if (new_s >= cache[symbol].by_state.size()) { cache[symbol].by_state.resize(new_s + 1); }
             auto& state_cache = cache[symbol].by_state[new_s];
             state_cache.resize(arity);
 
+            std::vector<utils::OrdVector<State>> collected_tgt(arity);
             for (const auto& src_tr: symbol_tr.sources_transitions) {
                 for (unsigned i = 0; i < arity; ++i) {
-                    // if sources[i] in macrostate -> add
                     if (new_macro.contains(src_tr.sources[i])) {
-                        state_cache[i].insert(src_tr.targets);
+                        collected_tgt[i].insert(src_tr.targets);
                     }
                 }
+            }
+            for (unsigned i = 0; i < arity; ++i) {
+                state_cache[i] = dedupl.save(collected_tgt[i]);
             }
 
             // generate tuples of size arity - 1, then insert the new state to each position
@@ -997,7 +1016,7 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
                     StateSet targets;
                     bool first = true;
                     for (unsigned i = 0; i < arity; ++i) {
-                        const StateSet& pos_targets = cache[symbol].by_state[det_tuple[i]][i];
+                        const StateSet& pos_targets = dedupl.lookup(cache[symbol].by_state[det_tuple[i]][i]);
                         if (first) {
                             targets = pos_targets;
                             first = false;
@@ -1026,9 +1045,11 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
 
     utils::OrdVector<SymbolArity> tmp;
     const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
-    MacrostateConstructionContext ctx(aut, state_mapping);
+    MacrostateContext ctx(aut, state_mapping);
 
-    if (aut.delta.empty() || aut.root_states.empty()) { return create_universal(&symbols_arities); }
+    if (aut.delta.empty() || aut.root_states.empty()) {
+        return create_universal(&symbols_arities);
+    }
     ctx.initialize_top_down();
 
     // component-wise subset: returns true iff a is dominated by b (b ≤ a, i.e. b is smaller-or-equal)
