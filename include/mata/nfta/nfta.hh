@@ -1,8 +1,44 @@
 /**
  * @file nfta.hh
- * @brief Implementation of a nondeterministic finite tree automaton.
+ * @brief Nondeterministic Finite Tree Automaton (NFTA) and its operations.
  *
+ * This file contains the definition of the @c mata::nfta::Nfta class and related
+ * free functions implementing operations on finite tree automata.
  *
+ * @section nfta_design Design
+ *
+ * An NFTA is represented by the @c mata::nfta::Nfta class. States are integers
+ * starting from 0. The transition relation is stored in @c mata::nfta::Delta,
+ * indexed top-down: source state -> symbol -> set of target tuples. The set of
+ * root states (initial for top-down and final for bottom-up
+ * interpretation) is stored in a @c mata::utils::SparseSet.
+ *
+ * @section nfta_directions Top-down vs. Bottom-up
+ *
+ * Most algorithms in this library operate either top-down (starting from root
+ * states, following transitions toward leaves) or bottom-up (starting from
+ * constant transitions, propagating upward). The direction is noted in each
+ * function's documentation. Bottom-up operations internally use a reversed
+ * delta (@c mata::nfta::ReversedDelta).
+ *
+ * @section nfta_usage Working with NFTAs
+ *
+ * Some operations (product constructions, deterministic union) require the
+ * automaton to be complete — every state must have a transition for every
+ * non-constant symbol. Use @c make_bottom_up_complete or
+ * @c make_top_down_complete to complete an automaton before passing it to
+ * such operations.
+ *
+ * Operation outputs are not by default reduced or otherwise optimized. Apply
+ * operations such as @c mata::nfta::reduce_bottom_up() or
+ * @c mata::nfta::reduce_top_down() to get a reduced automaton.
+ *
+ * Users can create NFTAs manually by adding states and transitions using the methods provided in the @c mata::nfta::Nfta
+ * and @c mata::nfta::Delta classes, or they can load an automaton from a string using the methods in the @c mata::nfta::Builder
+ *
+ * Any alphabet implemented in Mata can be used with NFTAs, or none at all. A ranked alphabet is implemented in the @c mata::nfta::RankedAlphabet class.
+ * Some operations (like completing an automaton) require the list of all symbols and arities to use. If an unranked alphabet is used,
+ * this list can either be passed to these functions, otherwise symbols in @Delta are used by default.
  */
 
 #ifndef MATA_NFTA_H
@@ -11,7 +47,6 @@
 #include <string>
 #include <iostream>
 #include <utility>
-#include <vector>
 
 #include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
@@ -20,12 +55,17 @@
 #include <mata/utils/two-dimensional-map.hh>
 
 namespace mata::nfta {
+
+    /**
+     * @brief Class representing a nondeterministic finite tree automaton.
+     */
     class Nfta {
     public:
-        utils::SparseSet<State> root_states; // a set of initial/final states
-        Alphabet* alphabet;
-        Delta delta; // states live in delta, so do functions like add_state()
+        utils::SparseSet<State> root_states; ///< A set of root states
+        Alphabet* alphabet; ///< A shared alphabet (or null)
+        Delta delta; ///< transition relation
 
+        // constructors
         explicit Nfta(utils::SparseSet<State> root_states = {}, Alphabet* alphabet = nullptr, Delta delta = {})
             : root_states(std::move(root_states)), alphabet(alphabet), delta(std::move(delta)) {}
         explicit Nfta(const size_t num_of_states) : root_states({}), alphabet(nullptr), delta(num_of_states) {}
@@ -42,7 +82,7 @@ namespace mata::nfta {
         void add_root(const State state) { // {{{
             delta.add_state(state);
             root_states.insert(state);
-	} // }}}
+	    } // }}}
 
         /**
          * @brief Add multiple root states from an iterable structure.
@@ -212,7 +252,6 @@ namespace mata::nfta {
          */
         void make_top_down_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr,
           State sink = Limits::max_state);
-
 
         /**
          * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.

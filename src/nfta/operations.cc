@@ -134,7 +134,7 @@ Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* 
         return create_universal(&symbols_arities, aut.alphabet);
     }
     Nfta result = determinize_optimized(aut);
-    result.complement_as_deterministic();
+    result.complement_as_deterministic(&symbols_arities);
     return result;
 }
 
@@ -967,7 +967,6 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
 }
 
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
-    // todo optimize for memory
     struct StateSetDedupl {
         std::unordered_map<StateSet, uint32_t> set_to_id;
         std::vector<const StateSet*>           id_to_set;
@@ -1081,11 +1080,15 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
 
 Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,
         const utils::OrdVector<SymbolArity>* symbols_arities_in) {
+    // todo does it have to be complete?
 
     utils::OrdVector<SymbolArity> tmp;
     const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
     MacrostateContext ctx(aut, state_mapping);
 
+    if (aut.delta.empty() || aut.root_states.empty()) {
+        return create_universal(&symbols_arities);
+    }
     ctx.initialize_top_down();
 
     // component-wise subset: returns true iff a is dominated by b (b ≤ a, i.e. b is smaller-or-equal)
@@ -1163,10 +1166,7 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
             }
         }
     }
-
-    if (aut.delta.empty() || aut.root_states.empty()) {
-        return create_universal(&symbols_arities);
-    }
+    if (ctx.result.root_states.empty() || ctx.result.delta.empty()) { return create_empty(aut.alphabet); }
     return ctx.result;
 } // complement_top_down
 
