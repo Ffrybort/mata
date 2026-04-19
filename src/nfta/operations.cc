@@ -28,40 +28,50 @@ const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
     return tmp;
 }
 
-std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon, const bool include_state = true) const {
+// increment by 1 as a number with the given base, overflow => return false
+bool next_tuple(std::vector<State>& tuple, const size_t base) {
+    size_t pos = tuple.size();
+    while (pos > 0) {
+        --pos;
+        if (++tuple[pos] < base) { return true; }
+        tuple[pos] = 0;
+    }
+    return false;
+} // next_tuple
+
+// leave a given position alone todo delete
+bool next_tuple_except(std::vector<State>& tuple, const size_t base, const unsigned position ) {
+    assert(position < tuple.size() && "next_tuple_except: position out of range");
+    size_t pos = tuple.size();
+
+    while (pos > 0) {
+        --pos;
+        if (pos == position) { continue; }
+        if (++tuple[pos] < base) { return true; }
+        tuple[pos] = 0;
+    }
+    return false;
+}
+
+std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon) const {
     const size_t num_states = num_of_states();
-    std::vector<StateSet> result{ num_states };
+    std::vector<StateSet> result { num_states };
     std::vector<StateSet> epsilon_successors { num_states };
 
     // adding immediate successors
     for (State i = 0; i < static_cast<State>(num_states); i++) {
-        if (include_state) { result[i] = {i}; }
-        const auto& state_post = state_posts_[i];
-        auto state_post_it = state_post.end();
+        epsilon_successors[i] = state_posts_[i].get_successors(epsilon);
+        result[i] = epsilon_successors[i];
+        result[i].insert(i);
+    }
 
-        if (epsilon == EPSILON) {
-            if (!state_post.empty() && state_post.back().symbol == epsilon) {
-                state_post_it = state_post.end() - 1;
-            }
-        } else {
-            state_post_it = std::lower_bound(state_post.begin(), state_post.end(), epsilon,
-                [](const SymbolPost& sp, const Symbol sym) { return sp.symbol < sym; } );
-        }
-        if (state_post_it != state_post.end()) {
-            assert(state_post_it->get_arity() == 1 && "mata::nfta::get_epsilon_closures epsilon must be unary");
-            for (const auto& tr : state_post_it->target_tuples) {
-                epsilon_successors[i].insert(tr.front());
-                result[i].insert(tr.front());
-            }
-        }
-    } // for states in delta
-
+    // get closure
     bool changed = true;
     while (changed) {
         changed = false;
         for (size_t i = 0; i < num_states; ++i) {
             StateSet& src_eps_cl = result[i];
-            for (const State tgt : epsilon_successors[i]) {
+            for (const State tgt : result[i]) {
                 const StateSet& tgt_eps_cl = result[tgt];
                 changed = changed || src_eps_cl.insert(tgt_eps_cl);
             }
@@ -89,7 +99,7 @@ Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) {
 
 void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(delta.num_of_states());
-    std::vector<StateSet> epsilon_closures = delta.get_epsilon_closures(epsilon, false);
+    std::vector<StateSet> epsilon_closures = delta.get_epsilon_closures(epsilon);
 
     // remove epsilon transitions
     for (State i = 0; i < num_of_states; i++) {
@@ -99,6 +109,7 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
     // add new transitions
     for (State i = 0; i < num_of_states; i++) {
         for (const State closure_of_i : epsilon_closures[i]) {
+            if (closure_of_i == i) { continue; }
             if (is_state_root(closure_of_i)) { add_root(i); } // should work right?
             for (const SymbolPost& symbol_post : delta[closure_of_i]) {
                 if (symbol_post.symbol == epsilon) { continue; }
@@ -156,41 +167,52 @@ Nfta union_nondet(const Nfta& A, const Nfta& B) {
     return result;
 } // union_nondet
 
-// increment by 1 as a number with the given base, overflow => return false
-bool next_tuple(std::vector<State>& tuple, const size_t base) {
-    size_t pos = tuple.size();
-    while (pos > 0) {
-        --pos;
-        if (++tuple[pos] < base) { return true; }
-        tuple[pos] = 0;
-    }
-    return false;
-} // next_tuple
+// For each newly processed state, generate all tuples of processed states
+// containing it, match against rev_delta, and call on_tuple.
+// on_tuple(symbol, det_tuple, src_tr) -> void
+// processed is expected to already contain new state
+template<typename OnMatch>
+void expand_bottom_up(
+    const ReversedDelta& rev_delta, const State new_s, const std::vector<State>& processed, OnMatch&& on_tuple) {
 
-// leave a given position alone
-bool next_tuple_except(std::vector<State>& tuple, const size_t base, const unsigned position ) {
-    assert(position < tuple.size() && "next_tuple_except: position out of range");
-    size_t pos = tuple.size();
+    for (const auto& symbol_tr : rev_delta.symbol_transitions) {
+        const unsigned arity = symbol_tr.get_arity();
+        if (arity == 0) { continue; }
 
-    while (pos > 0) {
-        --pos;
-        if (pos == position) { continue; }
-        if (++tuple[pos] < base) { return true; }
-        tuple[pos] = 0;
+        const unsigned small_size = arity - 1;
+        std::vector<State> index_tuple(small_size, 0);
+        const size_t base = processed.size();  // new_s is already in processed
+
+        std::vector<State> small_tuple(small_size);
+        std::vector<State> big_tuple(arity);
+
+        do {
+            for (unsigned i = 0; i < small_size; ++i) {
+                small_tuple[i] = processed[index_tuple[i]];
+            }
+
+            // insert new_s into every position
+            for (unsigned pos = 0; pos < arity; ++pos) {
+                for (unsigned i = 0, k = 0; i < arity; ++i) {
+                    big_tuple[i] = (i == pos) ? new_s : small_tuple[k++];
+                }
+
+                on_tuple(symbol_tr, arity, big_tuple);
+            }
+        } while (next_tuple(index_tuple, base));
     }
-    return false;
 }
-
 struct ProductContext {
     Nfta result;
     std::deque<State> worklist{}; // Set of product states to process.
+    std::vector<State> processed;
     bool changed;
     utils::TwoDimensionalMap<State> *state_mapping;
     std::optional<utils::TwoDimensionalMap<State>> local_mapping;
 
     explicit ProductContext(const size_t num_states_A, const size_t num_states_B,
         utils::TwoDimensionalMap<State>* state_mapping_out)
-        : result(), worklist(), changed(false), state_mapping(), local_mapping(std::nullopt) {
+        : result(), worklist(), processed(), changed(false), state_mapping(), local_mapping(std::nullopt) {
         if (state_mapping_out) {
             state_mapping = state_mapping_out;
         }
@@ -198,6 +220,7 @@ struct ProductContext {
             local_mapping.emplace(num_states_A, num_states_B);
             state_mapping = &local_mapping.value();
         }
+        processed.reserve(num_states_A * num_states_B);
     }
 
     // get or create product state, push a new state into worklist
@@ -270,7 +293,7 @@ struct ProductContext {
     ProductContext& operator=(const ProductContext&) = delete;
 };
 
-Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
+Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
     if (A.root_states.empty() && B.root_states.empty()) { return create_empty(); }
 
     const ReversedDelta rev_delta_A = A.delta.get_reversed();
@@ -331,6 +354,22 @@ Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* st
 
     ctx.result.alphabet = A.alphabet;
     return ctx.result;
+}
+
+Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
+    if (A.alphabet == B.alphabet) {
+        if (const auto* ranked = dynamic_cast<RankedAlphabet*>(A.alphabet)) {
+            A.make_bottom_up_complete();
+            B.make_bottom_up_complete();
+        }
+    }
+    else {
+        auto symbols = A.delta.get_used_symbols_arities();
+        symbols.insert(B.delta.get_used_symbols_arities());
+        A.make_bottom_up_complete(&symbols);
+        B.make_bottom_up_complete(&symbols);
+    }
+    return union_det_on_complete(A, B, state_mapping_out);
 }
 
 Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
@@ -767,6 +806,7 @@ void Nfta::reduce_top_down() {
     const BoolVector marked = get_top_down_reachable();
     defragment(marked);
 }
+
 void Nfta::reduce_bottom_up() {
     const BoolVector marked = get_bottom_up_reachable();
     defragment(marked);
@@ -955,7 +995,7 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
     ReversedDelta rev_delta = aut.delta.get_reversed();
     MacrostateContext ctx(aut, state_mapping);
 
-    if (aut.delta.empty()) { return ctx.result; }
+    if (aut.delta.empty()) { return create_empty(); }
 
     std::unordered_map<Symbol, SymbolCache> cache;
     cache.reserve(rev_delta.symbol_transitions.size());
@@ -1041,15 +1081,11 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
 
 Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,
         const utils::OrdVector<SymbolArity>* symbols_arities_in) {
-    // todo does it have to be complete?
 
     utils::OrdVector<SymbolArity> tmp;
     const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
     MacrostateContext ctx(aut, state_mapping);
 
-    if (aut.delta.empty() || aut.root_states.empty()) {
-        return create_universal(&symbols_arities);
-    }
     ctx.initialize_top_down();
 
     // component-wise subset: returns true iff a is dominated by b (b ≤ a, i.e. b is smaller-or-equal)
@@ -1126,6 +1162,10 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
                 new_s_state_post.push_back(std::move(res_symbol_post));
             }
         }
+    }
+
+    if (aut.delta.empty() || aut.root_states.empty()) {
+        return create_universal(&symbols_arities);
     }
     return ctx.result;
 } // complement_top_down
