@@ -46,11 +46,16 @@ OrdVector<State> StatePost::get_successors() const {
 } // get_successors
 
 OrdVector<State> StatePost::get_successors(const Symbol symbol) const {
-    const auto symbol_post_it = find(symbol);
-    if (symbol_post_it == this->end()) {
-        static OrdVector<State> empty_set{};
-        return empty_set;
+    auto symbol_post_it = this->end();
+
+    // EPSILON is the maximum symbol
+    if (symbol != EPSILON) {
+        symbol_post_it = find(symbol);
+    } else if (!this->empty()) {
+        symbol_post_it = this->end() - 1;
     }
+
+    if (symbol_post_it == this->end()) { return OrdVector<State>(); }
 
     std::vector<State> successors;  // plain vector to collect everything
     for (const auto& targets : symbol_post_it->target_tuples) {

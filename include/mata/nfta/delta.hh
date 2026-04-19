@@ -304,7 +304,7 @@ public:
     OrdVector<State> get_successors() const;
 
     /**
-     * @brief Returns a reference to target states for a given symbol in the @c StatePost.
+     * @brief Returns a set of all target states for a given symbol in the @c StatePost.
      *
      * If there is no such symbol, a static empty set is returned.
      */
@@ -701,10 +701,10 @@ public:
     /**
      * @brief Compute epsilon closures for each state.
      *
-     * @param epsilon symbol to consider epsilon
-     * @param include_state [in, optional] true by default, if true, the state itself is included
+     * @param epsilon symbol to consider as epsilon
+     * @throws std::runtime_error if epsilon is not unary (arity 1)
      */
-    std::vector<StateSet> get_epsilon_closures(Symbol epsilon, bool include_state) const;
+    std::vector<StateSet> get_epsilon_closures(Symbol epsilon) const;
 
 protected:
     std::vector<StatePost> state_posts_;
