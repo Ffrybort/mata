@@ -11,6 +11,8 @@ class RankedAlphabet : public Alphabet {
 public:
     using Alphabet::add_new_symbol;
 
+    void try_add_new_symbol(const std::string& symbol) override { (void)symbol; throw std::runtime_error("Unimplemented"); }
+
     /// translates a string into a symbol
     virtual Symbol translate_symbol(const std::string &symbol, unsigned arity) = 0;
 
@@ -31,6 +33,7 @@ public:
     ~RankedAlphabet() override = default;
 
     virtual void add_new_symbol(const std::string& symbol, unsigned arity) = 0;
+    virtual void try_add_new_symbol(const std::string& symbol, unsigned arity) = 0;
 
 protected:
     const void* address() const override { return this; }
@@ -44,6 +47,7 @@ protected:
 class RankedOnTheFlyAlphabet : public RankedAlphabet {
 public:
     using SymbolArityMap = std::unordered_map<StringArity, Symbol>;
+    using Alphabet::try_add_new_symbol;
 
     explicit RankedOnTheFlyAlphabet(const Symbol init_symbol = 0) : next_symbol_value_(init_symbol) {};
     RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet& alphabet) = default;
@@ -158,6 +162,8 @@ public:
      */
      void add_new_symbol(const StringArity& key) { add_new_symbol(key, next_symbol_value_); }
 
+     void try_add_new_symbol(const std::string& symbol, unsigned arity) override;
+
     /**
      * @brief Add new symbol to the alphabet with the value of @c next_symbol_value.
      * @throws std::runtime_error if the symbol was already present.
@@ -165,7 +171,7 @@ public:
      * @param[in] str User-space representation of the symbol.
      * @param[in] arity of the symbol.
      */
-    void add_new_symbol(const std::string& str, unsigned arity) {
+    void add_new_symbol(const std::string& str, unsigned arity)override {
        add_new_symbol(StringArity{str, arity}, next_symbol_value_);
     }
 

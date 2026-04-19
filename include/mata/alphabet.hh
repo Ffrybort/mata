@@ -101,6 +101,7 @@ public:
     virtual void clear() { throw std::runtime_error("Unimplemented"); }
 
     virtual void add_new_symbol(const std::string& symbol) { (void)symbol; throw std::runtime_error("Unimplemented"); }
+    virtual void try_add_new_symbol(const std::string& symbol) { (void)symbol; throw std::runtime_error("Unimplemented"); }
 
 protected:
     virtual const void* address() const { return this; }
@@ -139,6 +140,7 @@ public:
 
     /// This function only verifies the string is translatable, to allow working with an unknown type of alphabet easily.
     void add_new_symbol(const std::string &symbol) override { translate_symb(symbol); }
+    void try_add_new_symbol(const std::string &symbol) override { translate_symb(symbol); }
 
     // todo maybe this should simply do nothing instead?
     // if an unknown type of alphabet needs to be cleared one could simply call clear
@@ -406,6 +408,10 @@ public:
      * @return Result of the insertion as @c InsertionResult.
      */
     InsertionResult try_add_new_symbol(const std::string& key, Symbol value) { return symbol_map_.insert({ key, value}); }
+    void try_add_new_symbol(const std::string& key) override {
+        try_add_new_symbol(key, next_symbol_value_);
+        next_symbol_value_++;
+    }
 
     /**
      * Get the next value for a potential new symbol.

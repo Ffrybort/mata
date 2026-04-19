@@ -68,6 +68,12 @@ void mata::nfta::RankedOnTheFlyAlphabet::add_new_symbol(const StringArity& key, 
     update_next_symbol_value(value);
 }
 
+void mata::nfta::RankedOnTheFlyAlphabet::try_add_new_symbol(const std::string& symbol, unsigned arity) {
+    StringArity key(symbol, arity);
+    symbol_map_.insert({ key, next_symbol_value_});
+    update_next_symbol_value(next_symbol_value_);
+}
+
 size_t mata::nfta::RankedOnTheFlyAlphabet::erase(Symbol symbol) {
     for (auto it = symbol_map_.begin(); it != symbol_map_.end(); ++it) {
         if (it->second == symbol) {

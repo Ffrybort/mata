@@ -19,7 +19,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {2});
         delta.add(2, eps, {3});
 
-        auto closures = delta.get_epsilon_closures(eps, true);
+        auto closures = delta.get_epsilon_closures(eps);
 
         // Every state must contain itself
         for (State s = 0; s < static_cast<State>(closures.size()); s++) {
@@ -35,7 +35,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {2});
         delta.add(2, eps, {3});
 
-        auto closures = delta.get_epsilon_closures(eps, true);
+        auto closures = delta.get_epsilon_closures(eps);
         auto& c0 = closures[0];
 
         REQUIRE(c0.contains(1));
@@ -52,8 +52,8 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {2});
         delta.add(2, eps, {3});
 
-        auto closures1 = delta.get_epsilon_closures(eps, true);
-        auto closures2 = delta.get_epsilon_closures(eps, true);
+        auto closures1 = delta.get_epsilon_closures(eps);
+        auto closures2 = delta.get_epsilon_closures(eps);
 
         REQUIRE(closures1 == closures2);
     }
@@ -65,12 +65,12 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {0});
         delta.add(1, eps, {2});
 
-        auto closures = delta.get_epsilon_closures(eps, true);
+        auto closures = delta.get_epsilon_closures(eps);
 
         REQUIRE(closures[0].count(2));
         REQUIRE(closures[1].count(2));
     }
-    SECTION("Complex graph correctness") {
+    SECTION("Slightly complex") {
         Delta delta;
         /*
             0 -> 1 -> 2 -> 3
@@ -87,7 +87,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(5, eps, {6});
         delta.add(2, eps, {7});
 
-        auto closures = delta.get_epsilon_closures(eps, true);
+        auto closures = delta.get_epsilon_closures(eps);
         REQUIRE(closures.size() == 8);
         auto check_set = [](const StateSet& set,
                             const std::vector<State>& expected) {
@@ -107,29 +107,7 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         check_set(closures[7], {7});
     }
 
-    SECTION("No reflexivity when include_state is false") {
-        Delta delta;
-
-        // 0 -> 1 -> 2
-        delta.add(0, eps, {1});
-        delta.add(1, eps, {2});
-
-        auto closures = delta.get_epsilon_closures(eps, false);
-
-        REQUIRE(closures[0].count(0) == 0);
-        REQUIRE(closures[1].count(1) == 0);
-        REQUIRE(closures[2].count(2) == 0);
-
-        REQUIRE(closures[0].contains(1));
-        REQUIRE(closures[0].contains(2));
-
-        REQUIRE(closures[1].contains(2));
-        REQUIRE(closures[1].size() == 1);
-
-        REQUIRE(closures[2].empty());
-    }
-
-    SECTION("Cycle still includes state even if include_state is false") {
+    SECTION("Cycle simple") {
         Delta delta;
 
         // 0 <-> 1, and 1 -> 2
@@ -137,17 +115,20 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
         delta.add(1, eps, {0});
         delta.add(1, eps, {2});
 
-        auto closures = delta.get_epsilon_closures(eps, false);
+        auto closures = delta.get_epsilon_closures(eps);
 
+        REQUIRE(closures[0].size() == 3);
         REQUIRE(closures[0].contains(1));
         REQUIRE(closures[0].contains(0));
         REQUIRE(closures[0].contains(2));
 
+        REQUIRE(closures[0].size() == 3);
         REQUIRE(closures[1].contains(0));
         REQUIRE(closures[1].contains(1));
         REQUIRE(closures[1].contains(2));
 
-        REQUIRE(closures[2].empty());
+        REQUIRE(closures[2].size() == 1);
+        REQUIRE(closures[2].contains(2));
     }
 }
 
@@ -248,7 +229,6 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 }
 
 TEST_CASE("mata::nfta::remove_epsilon_in_place") {
-
     Delta delta;
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("eps");
