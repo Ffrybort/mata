@@ -262,6 +262,10 @@ namespace mata::nfta {
 
     /**
      * @brief Remove epsilon transitions from an automaton.
+     *
+     * @param aut Input automaton
+     * @param epsilon Symbol to consider as epsilon
+     * @throws std::runtime_error if epsilon is not unary (arity 1)
      */
     Nfta remove_epsilon(const Nfta& aut, Symbol epsilon);
 
@@ -278,12 +282,22 @@ namespace mata::nfta {
     /**
      * @brief Union preserving bottom-up determinism, computed by product construction.
      *
-     * @param A, B [in] Automata to unite
+     * @param A, B [in] Automata to unite, both must be bottom-up complete
      * @param state_mapping_out [out, optional] Mapping state pairs -> product state
      *
      * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
      */
-    Nfta union_det(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
+    Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
+
+    /**
+    * @brief Union preserving bottom-up determinism, computed by product construction.
+    *
+    * @param A, B [in] Automata to unite, both must be bottom-up complete
+    * @param state_mapping_out [out, optional] Mapping state pairs -> product state
+    *
+    * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
+    */
+    Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
     /**
      * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
