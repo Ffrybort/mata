@@ -108,7 +108,7 @@ TEST_CASE("mata::nfta::union_nondet") {
     }
 }
 
-TEST_CASE("mata::nfta::union_det") {
+TEST_CASE("mata::nfta::union_det_on_complete") {
 
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("f");
