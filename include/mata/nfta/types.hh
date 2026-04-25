@@ -1,6 +1,6 @@
 /**
  * @file types.hh
- * @brief Basic nfta types that will likely be used for both top-down and bottom up.
+ * @brief Basic nfta-bench types.
  */
 
 #ifndef NFTA_TYPES_HH
@@ -26,7 +26,6 @@ namespace mata::nfta
         return symbols;
     }
 
-
     struct Limits {
       static constexpr State min_state = std::numeric_limits<State>::min();
       static constexpr State max_state = std::numeric_limits<State>::max();
@@ -40,7 +39,6 @@ namespace mata::nfta
         And,
         Or,
     };
-
-using StateRenaming = std::unordered_map<State, State>;
 } // namespace mata::nfta
+
 #endif //NFTA_TYPES_HH

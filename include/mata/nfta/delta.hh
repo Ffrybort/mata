@@ -1,23 +1,22 @@
 /**
- * @file delta.hh
- * @brief A top-down oriented structure to hold transitions.
+ * @file
+ *
+ * @brief An explicit, top-down oriented structure to hold the transition relation of a tree automaton.
+ *
+ *
+ *
  */
 
 #ifndef NFTA_DELTA_HH
 #define NFTA_DELTA_HH
 
 #include <mata/nfta/types.hh>
-// #include "mata/utils/sparse-set.hh"
 #include <mata/alphabet.hh>
-// #include "mata/utils/synchronized-iterator.hh"
-
 #include <algorithm>
 #include <functional>
 #include <iterator>
-// #include <list>
 #include <queue>
 #include <utility>
-// #include <ranges>
 
 namespace mata::nfta
 {
@@ -76,7 +75,7 @@ public:
  *   corresponds to transitions from a given tuple of states (using a given symbol), and holds a set of target states.
  * When reversing a @c Delta, target tuples become source tuples, and sources are collected into a set of targets.
  */
-class ReversedDelta { // todo this could save memory by source pointers
+class ReversedDelta {
 public:
     struct SourceTransitions {
         std::vector<State> sources;
@@ -124,6 +123,14 @@ public:
 
     utils::OrdVector<SymbolTransitions> symbol_transitions{};
     ReversedDelta() : symbol_transitions{} {}
+
+    Symbol max_symbol() const {
+        Symbol max = 0;
+        for (const auto& transition : symbol_transitions) {
+            max = std::max(max, transition.symbol);
+        }
+        return max;
+    }
 
     /**
      * @brief Print in a readable format to @c std::cout or a given stream.
@@ -784,7 +791,6 @@ public:
 
     bool operator==(const const_iterator& other) const;
 }; // class Delta::Transitions::const_iterator.
-
 
 } // namespace nfta
 #endif //NFTA_DELTA_HH

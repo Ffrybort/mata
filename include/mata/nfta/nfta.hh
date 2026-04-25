@@ -332,8 +332,10 @@ namespace mata::nfta {
     * @brief Union preserving bottom-up determinism, computed by product construction.
     *
     * @param A, B [in] Automata to unite, both must be bottom-up complete
-    * @param state_mapping_out [out, optional] Mapping state pairs -> product state
+    * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
     *
+    * @p state_mapping_out needs to be initialized to (num of states in A + 1, num of states in B + 1) to accommodate
+    * the additional states added by completion.
     * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
     */
     Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
