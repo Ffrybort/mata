@@ -68,6 +68,12 @@ test-performance:
 	./tests-integration/pycobench -c ./tests-integration/jobs/corr-double-param-jobs.yaml < ./tests-integration/inputs/double-automata.input -o ./tests-integration/results/corr-double-param-jobs.out
 	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/corr-double-param-jobs.out > ./tests-integration/results/corr-double-param-jobs.csv
 
+test-tree:
+	./tests-integration/pycobench -c ./tests-integration/jobs/tree-binary-jobs.yaml -t 210 -j 1 < ./tests-integration/inputs/double-tree-input-short.input -o ./tests-integration/results/tree-binary.out
+	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/tree-binary.out > ./tests-integration/results/tree-binary.csv
+#	./tests-integration/pycobench -c ./tests-integration/jobs/tree-unary-jobs.yaml -t 210 -j 1 < ./tests-integration/inputs/single-tree.input -o ./tests-integration/results/tree-unary.out
+#	./tests-integration/pyco_proc --csv ./tests-integration/results/tree-unary.out > ./tests-integration/results/tree-unary.csv
+
 check:
 	cd $(BUILD_DIR) && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. && cppcheck --project=compile_commands.json --quiet --error-exitcode=1
 
