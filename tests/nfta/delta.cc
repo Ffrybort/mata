@@ -405,12 +405,12 @@ TEST_CASE("mata::nfta::delta") {
 
         auto rev = delta.get_reversed();
 
-        REQUIRE(rev.symbol_transitions.size() == 1);
-        const auto& sym = rev.symbol_transitions.front();
+        REQUIRE(rev.symbol_posts.size() == 1);
+        const auto& sym = rev.symbol_posts.front();
         CHECK(sym.symbol == 1);
 
-        REQUIRE(sym.sources_transitions.size() == 1);
-        const auto& src = sym.sources_transitions.front();
+        REQUIRE(sym.state_tuple_posts.size() == 1);
+        const auto& src = sym.state_tuple_posts.front();
         CHECK(src.sources == std::vector<State>{2,3});
 
         CHECK(src.targets.count(0) == 1);
@@ -424,14 +424,14 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(0, 1, {3});
 
         auto rev = delta.get_reversed();
-        REQUIRE(rev.symbol_transitions.size() == 1);
+        REQUIRE(rev.symbol_posts.size() == 1);
 
-        const auto& sym = rev.symbol_transitions.front();
-        REQUIRE(sym.sources_transitions.size() == 2);
+        const auto& sym = rev.symbol_posts.front();
+        REQUIRE(sym.state_tuple_posts.size() == 2);
 
         bool found2 = false;
         bool found3 = false;
-        for (const auto& src : sym.sources_transitions) {
+        for (const auto& src : sym.state_tuple_posts) {
             if (src.sources == std::vector<State>{2}) {
                 found2 = true;
                 CHECK(src.targets.count(0) == 1);
@@ -452,23 +452,23 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(1, 2, {2});
 
         auto rev = delta.get_reversed();
-        REQUIRE(rev.symbol_transitions.size() == 2);
+        REQUIRE(rev.symbol_posts.size() == 2);
 
         bool found_sym1 = false;
         bool found_sym2 = false;
 
-        for (const auto& sym : rev.symbol_transitions) {
+        for (const auto& sym : rev.symbol_posts) {
             if (sym.symbol == 1) {
                 found_sym1 = true;
-                REQUIRE(sym.sources_transitions.size() == 1);
-                const auto& src = sym.sources_transitions.front();
+                REQUIRE(sym.state_tuple_posts.size() == 1);
+                const auto& src = sym.state_tuple_posts.front();
                 CHECK(src.sources == std::vector<State>{2});
                 CHECK(src.targets.count(0) == 1);
             }
             if (sym.symbol == 2) {
                 found_sym2 = true;
-                REQUIRE(sym.sources_transitions.size() == 1);
-                const auto& src = sym.sources_transitions.front();
+                REQUIRE(sym.state_tuple_posts.size() == 1);
+                const auto& src = sym.state_tuple_posts.front();
                 CHECK(src.sources == std::vector<State>{2});
                 CHECK(src.targets.count(1) == 1);
             }
@@ -486,11 +486,11 @@ TEST_CASE("mata::nfta::delta") {
 
         auto rev = delta.get_reversed();
 
-        REQUIRE(rev.symbol_transitions.size() == 1);
-        const auto& sym = rev.symbol_transitions.front();
-        REQUIRE(sym.sources_transitions.size() == 1);
+        REQUIRE(rev.symbol_posts.size() == 1);
+        const auto& sym = rev.symbol_posts.front();
+        REQUIRE(sym.state_tuple_posts.size() == 1);
 
-        const auto& src = sym.sources_transitions.front();
+        const auto& src = sym.state_tuple_posts.front();
         CHECK(src.sources == std::vector<State>{1,2});
         REQUIRE(src.targets.size() == 3);
         CHECK(src.targets.count(0) == 1);
@@ -503,7 +503,7 @@ TEST_CASE("mata::nfta::delta") {
         delta.clear();
 
         auto rev = delta.get_reversed();
-        CHECK(rev.symbol_transitions.empty());
+        CHECK(rev.symbol_posts.empty());
     }
 
     SECTION("Reversed delta lots of transitions") {
@@ -525,8 +525,8 @@ TEST_CASE("mata::nfta::delta") {
         auto rev = delta.get_reversed();
 
         // Symbol 1
-        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
-        auto sym1_tr = sym1_it->sources_transitions;
+        auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
+        auto sym1_tr = sym1_it->state_tuple_posts;
         REQUIRE(sym1_tr.size() == 2);
         CHECK(sym1_tr.at(0).sources == std::vector<State>{2, 3});
         CHECK(sym1_tr.at(0).targets == utils::OrdVector<State>{0, 1});
@@ -534,8 +534,8 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym1_tr.at(1).targets == utils::OrdVector<State>{0});
 
         // Symbol 2
-        auto sym2_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{2});
-        auto sym2_tr = sym2_it->sources_transitions;
+        auto sym2_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{2});
+        auto sym2_tr = sym2_it->state_tuple_posts;
         REQUIRE(sym2_tr.size() == 2);
         CHECK(sym2_tr.at(0).sources == std::vector<State>{0});
         CHECK(sym2_tr.at(0).targets == utils::OrdVector<State>{2});
@@ -543,8 +543,8 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym2_tr.at(1).targets == utils::OrdVector<State>{1});
 
         // Symbol 3
-        auto sym3_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{3});
-        auto sym3_tr = sym3_it->sources_transitions;
+        auto sym3_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{3});
+        auto sym3_tr = sym3_it->state_tuple_posts;
 
         REQUIRE(sym3_tr.size() == 2);
         CHECK(sym3_tr.at(0).sources == std::vector<State>{1, 2, 4});
@@ -553,18 +553,18 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(sym3_tr.at(1).targets == utils::OrdVector<State>{4});
 
         // Symbol 4
-        auto sym4_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{4});
-        auto sym4_tr = sym4_it->sources_transitions;
+        auto sym4_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{4});
+        auto sym4_tr = sym4_it->state_tuple_posts;
 
         REQUIRE(sym4_tr.size() == 1);
         CHECK(sym4_tr.at(0).sources == std::vector<State>{0});
         CHECK(sym4_tr.at(0).targets == utils::OrdVector<State>{4});
 
         // Symbol 5
-        auto sym5_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{5});
-        auto sym5_tr = sym5_it->sources_transitions;
+        auto sym5_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{5});
+        auto sym5_tr = sym5_it->state_tuple_posts;
 
-        REQUIRE(sym5_it->sources_transitions.size() == 2);
+        REQUIRE(sym5_it->state_tuple_posts.size() == 2);
         CHECK(sym5_tr.at(0).sources == std::vector<State>{1, 2});
         CHECK(sym5_tr.at(0).targets == utils::OrdVector<State>{0, 5});
         CHECK(sym5_tr.at(1).sources == std::vector<State>{3});
@@ -581,17 +581,17 @@ TEST_CASE("mata::nfta::delta") {
         BoolVector allowed{ true, true, true, true, false, true }; // state 4 not allowed
         auto rev = delta.get_reversed(&allowed);
 
-        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
-        REQUIRE(sym1_it != rev.symbol_transitions.end());
+        auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
+        REQUIRE(sym1_it != rev.symbol_posts.end());
 
         bool found_2_3 = false;
-        for (const auto& src : sym1_it->sources_transitions) {
+        for (const auto& src : sym1_it->state_tuple_posts) {
             if (src.sources == std::vector<State>{2, 3}) { found_2_3 = true; }
         }
         CHECK(found_2_3);
 
         bool found_4_5 = false;
-        for (const auto& src : sym1_it->sources_transitions) {
+        for (const auto& src : sym1_it->state_tuple_posts) {
             if (src.sources == std::vector<State>{4, 5}) { found_4_5 = true; }
         }
         CHECK_FALSE(found_4_5);
@@ -607,10 +607,10 @@ TEST_CASE("mata::nfta::delta") {
         BoolVector allowed{ true, true, false, false, false, false };
         auto rev = delta.get_reversed(&allowed);
 
-        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
+        auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
         // either no symbol entry at all, or no source transitions
-        bool empty = sym1_it == rev.symbol_transitions.end()
-                  || sym1_it->sources_transitions.empty();
+        bool empty = sym1_it == rev.symbol_posts.end()
+                  || sym1_it->state_tuple_posts.empty();
         CHECK(empty);
     }
 
@@ -637,8 +637,8 @@ TEST_CASE("mata::nfta::delta") {
         BoolVector allowed{ false, true, true, true };
         auto rev = delta.get_reversed(&allowed);
 
-        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
-        CHECK(sym1_it == rev.symbol_transitions.end());
+        auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
+        CHECK(sym1_it == rev.symbol_posts.end());
     }
 
     SECTION("Reversed delta with allowed filter — partial tuple filtering across symbols") {
@@ -653,15 +653,15 @@ TEST_CASE("mata::nfta::delta") {
         auto rev = delta.get_reversed(&allowed);
 
         // symbol 1: only {1,2} survives
-        auto sym1_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{1});
-        REQUIRE(sym1_it != rev.symbol_transitions.end());
-        CHECK(sym1_it->sources_transitions.size() == 1);
-        CHECK(sym1_it->sources_transitions.at(0).sources == std::vector<State>{1, 2});
+        auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
+        REQUIRE(sym1_it != rev.symbol_posts.end());
+        CHECK(sym1_it->state_tuple_posts.size() == 1);
+        CHECK(sym1_it->state_tuple_posts.at(0).sources == std::vector<State>{1, 2});
 
         // symbol 2: only {1,2} survives
-        auto sym2_it = rev.symbol_transitions.find(ReversedDelta::SymbolTransitions{2});
-        REQUIRE(sym2_it != rev.symbol_transitions.end());
-        CHECK(sym2_it->sources_transitions.size() == 1);
-        CHECK(sym2_it->sources_transitions.at(0).sources == std::vector<State>{1, 2});
+        auto sym2_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{2});
+        REQUIRE(sym2_it != rev.symbol_posts.end());
+        CHECK(sym2_it->state_tuple_posts.size() == 1);
+        CHECK(sym2_it->state_tuple_posts.at(0).sources == std::vector<State>{1, 2});
     }
 }

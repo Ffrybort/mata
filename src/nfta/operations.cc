@@ -1070,8 +1070,6 @@ struct MacrostateContext {
     }
 };
 
-
-
 Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) {
     MacrostateContext ctx(aut, state_mapping);
     const ReversedDelta rev_delta = aut.delta.get_reversed();
@@ -1137,7 +1135,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
     return ctx.result;
 }
 
-Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
+Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) { // todo this is still broken
     struct SymbolCache {
         // [det_state][position] -> vector of targets sets
         std::vector< // state

@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     symbols.insert(rhs.delta.get_used_symbols_arities());
     lhs.make_bottom_up_complete(&symbols);
     rhs.make_bottom_up_complete(&symbols);
-    res = union_det_impl_naive(lhs, rhs);
+    res = union_det_on_complete_naive(lhs, rhs);
     TIME_END(union_product);
 
     return EXIT_SUCCESS;

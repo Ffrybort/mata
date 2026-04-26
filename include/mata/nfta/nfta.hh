@@ -379,6 +379,10 @@ namespace mata::nfta {
     /**
      * @brief Determinize an automaton.
      *
+     * @param aut input automaton
+     * @param state_mapping [out, optional] mapping macrostates -> result states
+     * @param make_complete [in] if true, the result is complete over the set of used symbols (NOT its alphabet)
+     *
      * Only optimization is that only (bottom-up) reachable states are constructed.
      */
     Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, const bool make_complete = false);
