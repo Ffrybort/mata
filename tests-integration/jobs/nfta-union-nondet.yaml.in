@@ -1,0 +1,2 @@
+tree-union:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-union-nondet $1 $2

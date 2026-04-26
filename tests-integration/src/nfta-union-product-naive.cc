@@ -21,11 +21,11 @@ int main(int argc, char *argv[]) {
     std::ifstream file_1(argv[1]);
     std::ifstream file_2(argv[2]);
     if (!file_1.is_open()) {
-        std::cerr << "err \n";
+        std::cout << "could not open file \n";
         return EXIT_FAILURE;
     }
     if (!file_2.is_open()) {
-        std::cerr << "err \n";
+        std::cout << "could not open file \n";
         return EXIT_FAILURE;
     }
 
@@ -37,11 +37,14 @@ int main(int argc, char *argv[]) {
 
     // Setting precision of the times to fixed points and 4 decimal places
     std::cout << std::fixed << std::setprecision(4);
-
-    Nfta intersect_aut;
-    TIME_BEGIN(intersection);
-    intersect_aut = intersection(lhs, rhs);
-    TIME_END(intersection);
+    Nfta res;
+    TIME_BEGIN(union_product);
+    auto symbols = lhs.delta.get_used_symbols_arities();
+    symbols.insert(rhs.delta.get_used_symbols_arities());
+    lhs.make_bottom_up_complete(&symbols);
+    rhs.make_bottom_up_complete(&symbols);
+    res = union_det_impl_naive(lhs, rhs);
+    TIME_END(union_product);
 
     return EXIT_SUCCESS;
 }

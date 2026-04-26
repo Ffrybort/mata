@@ -1,0 +1,2 @@
+tree-inter:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-intersection $1 $2

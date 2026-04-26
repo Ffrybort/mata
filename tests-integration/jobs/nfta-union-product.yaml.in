@@ -1,0 +1,2 @@
+tree-union-prod:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-union-product $1 $2

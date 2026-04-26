@@ -1,0 +1,2 @@
+vata-inter:
+  cmd: @VATA_CLI_DIR@/vata -r expl isect $1 $2 -n

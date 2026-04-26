@@ -3,6 +3,8 @@ if (NOT NO_PROFILING)
 	set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fprofile-arcs")
 endif ()
 
+set(VATA_CLI_DIR "${CMAKE_SOURCE_DIR}/../vata/libvata/build/cli")
+
 file (GLOB JOBS "${CMAKE_CURRENT_SOURCE_DIR}/jobs/*.yaml.in")
 file (GLOB INPUTS "${CMAKE_CURRENT_SOURCE_DIR}/inputs/*.input.in")
 foreach (JOB ${JOBS})

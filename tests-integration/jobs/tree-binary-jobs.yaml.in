@@ -1,2 +1,0 @@
-tree-binary:
-  cmd: @CMAKE_CURRENT_BINARY_DIR@/tree-binary-operations $1 $2

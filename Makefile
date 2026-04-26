@@ -68,11 +68,35 @@ test-performance:
 	./tests-integration/pycobench -c ./tests-integration/jobs/corr-double-param-jobs.yaml < ./tests-integration/inputs/double-automata.input -o ./tests-integration/results/corr-double-param-jobs.out
 	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/corr-double-param-jobs.out > ./tests-integration/results/corr-double-param-jobs.csv
 
-test-tree:
-	./tests-integration/pycobench -c ./tests-integration/jobs/tree-binary-jobs.yaml -t 210 -j 1 < ./tests-integration/inputs/double-tree-input-short.input -o ./tests-integration/results/tree-binary.out
-	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/tree-binary.out > ./tests-integration/results/tree-binary.csv
+test-tree-performance:
+	# union nondet
+	#./tests-integration/pycobench -c ./tests-integration/jobs/nfta-union-nondet.yaml -t 60 -j 5 < ./tests-integration/inputs/double-tree.input -o ./tests-integration/results/nfta-union-nondet.out
+	#./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/nfta-union-nondet.out > ./tests-integration/results/nfta-union-nondet.csv
+	#intersection
+	#./tests-integration/pycobench -c ./tests-integration/jobs/nfta-intersection.yaml -t 120 -j 1 < ./tests-integration/inputs/double-tree.input -o ./tests-integration/results/nfta-intersection.out
+	#./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/nfta-intersection.out > ./tests-integration/results/nfta-intersection.csv
+	#union product
+	./tests-integration/pycobench -c ./tests-integration/jobs/nfta-union-product.yaml -t 300 -j 1 < ./tests-integration/inputs/double-tree-short.input -o ./tests-integration/results/nfta-union-product.out
+	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/nfta-union-product.out > ./tests-integration/results/nfta-union-product.csv
+	# naive product
+	./tests-integration/pycobench -c ./tests-integration/jobs/nfta-union-product-naive.yaml -t 300 -j 1 < ./tests-integration/inputs/double-tree-short.input -o ./tests-integration/results/nfta-union-product-naive.out
+	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/nfta-union-product-naive.out > ./tests-integration/results/nfta-union-product-naive.csv
 #	./tests-integration/pycobench -c ./tests-integration/jobs/tree-unary-jobs.yaml -t 210 -j 1 < ./tests-integration/inputs/single-tree.input -o ./tests-integration/results/tree-unary.out
 #	./tests-integration/pyco_proc --csv ./tests-integration/results/tree-unary.out > ./tests-integration/results/tree-unary.csv
+
+vata-comp:
+	#intersection
+	#./tests-integration/pycobench -c ./tests-integration/jobs/vata.yaml -t 120 -j 1 < ./tests-integration/inputs/vata-double-tree.input -o ./tests-integration/results/vata-intersection.out
+	#./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/vata-intersection.out > ./tests-integration/results/vata-intersection.out.csv
+	#./tests-integration/pycobench -c ./tests-integration/jobs/nfta-intersection.yaml -t 120 -j 1 < ./tests-integration/inputs/double-tree.input -o ./tests-integration/results/nfta-intersection.out
+	#./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/nfta-intersection.out > ./tests-integration/results/nfta-intersection.csv
+	#union
+	./tests-integration/pycobench -c ./tests-integration/jobs/nfta-union-nondet.yaml -t 60 -j 1 < ./tests-integration/inputs/double-tree.input -o ./tests-integration/results/nfta-union-nondet.out
+	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/nfta-union-nondet.out > ./tests-integration/results/nfta-union-nondet.csv
+	./tests-integration/pycobench -c ./tests-integration/jobs/vata-union.yaml -t 60 -j 1 < ./tests-integration/inputs/vata-double-tree.input -o ./tests-integration/results/vata-union.out
+	./tests-integration/pyco_proc --csv --param-no 2 ./tests-integration/results/vata-union.out > ./tests-integration/results/vata-union.csv
+
+
 
 check:
 	cd $(BUILD_DIR) && cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON .. && cppcheck --project=compile_commands.json --quiet --error-exitcode=1
