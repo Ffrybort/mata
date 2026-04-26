@@ -412,10 +412,10 @@ void  Delta::defragment(const BoolVector& is_staying, const std::vector<State>& 
 
 void ReversedDelta::print(std::ostream& os) const {
     os << "ReversedDelta {\n";
-    for (const auto& sym_trans : symbol_transitions) {
+    for (const auto& sym_trans : symbol_posts) {
         os << "  Symbol: " << sym_trans.symbol << "\n";
-        os << "  SourceTransitions:\n";
-        for (const auto& src_trans : sym_trans.sources_transitions) {
+        os << "  RevStateTuplePost:\n";
+        for (const auto& src_trans : sym_trans.state_tuple_posts) {
             os << "    Sources: [";
             for (size_t i = 0; i < src_trans.sources.size(); ++i) {
                 os << src_trans.sources[i];
@@ -434,9 +434,9 @@ void ReversedDelta::print(std::ostream& os) const {
 
 OrdVector<State> ReversedDelta::get_initial_states() const {
     std::vector<State> result;
-    for (const auto& sym_trans : symbol_transitions) {
+    for (const auto& sym_trans : symbol_posts) {
         if (sym_trans.is_constant()) {
-            const auto& targets = sym_trans.sources_transitions.front().targets;
+            const auto& targets = sym_trans.state_tuple_posts.front().targets;
             result.insert(result.end(), targets.begin(), targets.end());
         }
     }
@@ -445,9 +445,9 @@ OrdVector<State> ReversedDelta::get_initial_states() const {
 
 std::vector<std::pair<Symbol, OrdVector<State>>> ReversedDelta::get_initial_states_by_symbol() const {
     std::vector<std::pair<Symbol, OrdVector<State>>> result;
-    for (const auto& sym_trans : symbol_transitions) {
+    for (const auto& sym_trans : symbol_posts) {
         if (sym_trans.is_constant()) {
-            const auto& targets = sym_trans.sources_transitions.front().targets;
+            const auto& targets = sym_trans.state_tuple_posts.front().targets;
             result.emplace_back(sym_trans.symbol, OrdVector<State>(targets));
         }
     }
@@ -460,20 +460,20 @@ ReversedDelta Delta::get_reversed(const BoolVector *allowed) const {
     for (State q = 0; q < state_posts_.size(); ++q) {
         if (allowed && !(*allowed)[q]) { continue; }
         for (const auto& symbol_post : state_posts_[q]) {
-            ReversedDelta::SymbolTransitions sym { symbol_post.symbol };
-            auto sym_it = result.symbol_transitions.find(sym);
-            if (sym_it == result.symbol_transitions.end()) {
-                sym_it = result.symbol_transitions.insert(sym).first;
+            ReversedDelta::RevSymbolPost sym { symbol_post.symbol };
+            auto sym_it = result.symbol_posts.find(sym);
+            if (sym_it == result.symbol_posts.end()) {
+                sym_it = result.symbol_posts.insert(sym).first;
             }
 
             for (const auto& tuple : symbol_post.target_tuples) {
                 if (allowed && std::ranges::any_of(tuple, [&](const State s) {
                     return !(*allowed)[s]; })) { continue; }
 
-                ReversedDelta::SourceTransitions src{tuple};
-                auto src_it = sym_it->sources_transitions.find(src);
-                if (src_it == sym_it->sources_transitions.end()) {
-                    src_it = sym_it->sources_transitions.insert(src).first;
+                ReversedDelta::RevStateTuplePost src{tuple};
+                auto src_it = sym_it->state_tuple_posts.find(src);
+                if (src_it == sym_it->state_tuple_posts.end()) {
+                    src_it = sym_it->state_tuple_posts.insert(src).first;
                 }
                 src_it->targets.insert(q);
             }

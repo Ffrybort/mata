@@ -373,12 +373,15 @@ namespace mata::nfta {
      */
     Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
 
+    Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete);
+
+
     /**
      * @brief Determinize an automaton.
      *
      * Only optimization is that only (bottom-up) reachable states are constructed.
      */
-    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, const bool make_complete = false);
 
     /**
      * @brief Determinize an automaton.

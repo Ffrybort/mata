@@ -77,43 +77,43 @@ public:
  */
 class ReversedDelta {
 public:
-    struct SourceTransitions {
+    struct RevStateTuplePost {
         std::vector<State> sources;
         utils::OrdVector<State> targets;
 
-        SourceTransitions() : sources{}, targets{} {}
+        RevStateTuplePost() : sources{}, targets{} {}
 
-        explicit SourceTransitions(std::vector<State> s) : sources(std::move(s)), targets{} {}
+        explicit RevStateTuplePost(std::vector<State> s) : sources(std::move(s)), targets{} {}
 
-        std::weak_ordering operator<=>(const SourceTransitions& other) const {
+        std::weak_ordering operator<=>(const RevStateTuplePost& other) const {
             return sources <=> other.sources;
         }
 
-        bool operator==(const SourceTransitions& other) const {
+        bool operator==(const RevStateTuplePost& other) const {
             return sources == other.sources;
         }
        };
 
-       struct SymbolTransitions {
+       struct RevSymbolPost {
            Symbol symbol{};
-           utils::OrdVector<SourceTransitions> sources_transitions;
+           utils::OrdVector<RevStateTuplePost> state_tuple_posts;
 
-           SymbolTransitions() : symbol{}, sources_transitions{} {}
+           RevSymbolPost() : symbol{}, state_tuple_posts{} {}
 
-           explicit SymbolTransitions(const Symbol s)
-               : symbol(s), sources_transitions{} {}
+           explicit RevSymbolPost(const Symbol s)
+               : symbol(s), state_tuple_posts{} {}
 
-           std::weak_ordering operator<=>(const SymbolTransitions& other) const {
+           std::weak_ordering operator<=>(const RevSymbolPost& other) const {
                return symbol <=> other.symbol;
            }
 
-           bool operator==(const SymbolTransitions& other) const {
+           bool operator==(const RevSymbolPost& other) const {
                return symbol == other.symbol;
            }
 
            unsigned get_arity() const {
-               assert(!sources_transitions.empty() && "Empty source transitions");
-               return static_cast<unsigned>(sources_transitions.at(0).sources.size());
+               assert(!state_tuple_posts.empty() && "Empty source transitions");
+               return static_cast<unsigned>(state_tuple_posts.at(0).sources.size());
            }
 
            bool is_constant() const {
@@ -121,12 +121,12 @@ public:
            }
      };
 
-    utils::OrdVector<SymbolTransitions> symbol_transitions{};
-    ReversedDelta() : symbol_transitions{} {}
+    utils::OrdVector<RevSymbolPost> symbol_posts{};
+    ReversedDelta() : symbol_posts{} {}
 
     Symbol max_symbol() const {
         Symbol max = 0;
-        for (const auto& transition : symbol_transitions) {
+        for (const auto& transition : symbol_posts) {
             max = std::max(max, transition.symbol);
         }
         return max;
@@ -148,24 +148,24 @@ public:
      */
     std::vector<std::pair<Symbol, utils::OrdVector<State>>>get_initial_states_by_symbol() const;
 
-    static bool equal(const SymbolTransitions& a, const SymbolTransitions& b) {
-        return a.symbol == b.symbol && a.sources_transitions == b.sources_transitions;
+    static bool equal(const RevSymbolPost& a, const RevSymbolPost& b) {
+        return a.symbol == b.symbol && a.state_tuple_posts == b.state_tuple_posts;
     }
 
-    static bool equal(const SourceTransitions& a, const SourceTransitions& b) {
+    static bool equal(const RevStateTuplePost& a, const RevStateTuplePost& b) {
         return a.sources == b.sources && a.targets == b.targets;
     }
 
     bool is_identical(const ReversedDelta& other) const {
-        if (symbol_transitions.size() != other.symbol_transitions.size()) return false;
-        for (size_t i = 0; i < symbol_transitions.size(); ++i) {
-            const auto& a = symbol_transitions.at(i);
-            const auto& b = other.symbol_transitions.at(i);
+        if (symbol_posts.size() != other.symbol_posts.size()) return false;
+        for (size_t i = 0; i < symbol_posts.size(); ++i) {
+            const auto& a = symbol_posts.at(i);
+            const auto& b = other.symbol_posts.at(i);
             if (a.symbol != b.symbol) return false;
-            if (a.sources_transitions.size() != b.sources_transitions.size()) return false;
-            for (size_t j = 0; j < a.sources_transitions.size(); ++j) {
-                const auto& sa = a.sources_transitions.at(j);
-                const auto& sb = b.sources_transitions.at(j);
+            if (a.state_tuple_posts.size() != b.state_tuple_posts.size()) return false;
+            for (size_t j = 0; j < a.state_tuple_posts.size(); ++j) {
+                const auto& sa = a.state_tuple_posts.at(j);
+                const auto& sb = b.state_tuple_posts.at(j);
                 if (sa.sources != sb.sources) return false;
                 if (sa.targets != sb.targets) return false;
             }
