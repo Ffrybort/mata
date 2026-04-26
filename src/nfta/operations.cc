@@ -314,68 +314,68 @@ void print_vec(const std::vector<T>& v) {
     std::cout << "]";
 }
 
-// Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
-//     if (A.root_states.empty() && B.root_states.empty()) { return create_empty(); }
-//
-//     const ReversedDelta rev_delta_A = A.delta.get_reversed();
-//     const ReversedDelta rev_delta_B = B.delta.get_reversed();
-//     assert(rev_delta_A.symbol_transitions.size() == rev_delta_B.symbol_transitions.size() &&
-//         "union_det: automata must have the same number of symbols");
-//
-//     ProductContext ctx(A.delta.num_of_states(), B.delta.num_of_states(), state_mapping_out);
-//     ctx.initialize_bottom_up(rev_delta_A, rev_delta_B, A, B);
-//
-//     // returns false if any child pair is unknown, otherwise fills source_tuple
-//     auto try_build_source_tuple = [&](const ReversedDelta::SourceTransitions& src_tr_A,
-//         const ReversedDelta::SourceTransitions& src_tr_B, std::vector<State>& source_tuple) -> bool {
-//         const size_t arity = src_tr_A.sources.size();
-//         assert(src_tr_B.sources.size() == arity);
-//         for (size_t i = 0; i < arity; ++i) {
-//             const State ps = ctx.state_mapping->get(src_tr_A.sources[i], src_tr_B.sources[i]);
-//             if (ps == Limits::max_state) return false;
-//             source_tuple[i] = ps;
-//         }
-//         return true;
-//     };
-//
-//     auto process_target_pair = [&](const Symbol symbol, const std::vector<State>& source_tuple,
-//         const State target_A, const State target_B) {
-//         const State product_target = ctx.get_product_state_fixpoint(target_A, target_B);
-//         if (A.root_states.contains(target_A) || B.root_states.contains(target_B)) {
-//             ctx.result.add_root(product_target);
-//         }
-//         ctx.result.delta.add(product_target, symbol, source_tuple);
-//     };
-//
-//     do {
-//         ctx.changed = false;
-//         auto sym_it_B = rev_delta_B.symbol_transitions.begin();
-//
-//         for (const auto& sym_tr_A : rev_delta_A.symbol_transitions) {
-//             const auto& sym_tr_B = *sym_it_B++;
-//             if (sym_tr_A.is_constant()) continue;
-//
-//             const Symbol symbol = sym_tr_A.symbol;
-//             const unsigned arity = sym_tr_A.get_arity();
-//             std::vector<State> source_tuple(arity);
-//
-//             for (const auto& src_tr_A : sym_tr_A.sources_transitions) {
-//                 for (const auto& src_tr_B : sym_tr_B.sources_transitions) {
-//                     if (!try_build_source_tuple(src_tr_A, src_tr_B, source_tuple)) { continue; }
-//                     for (const State target_A : src_tr_A.targets) {
-//                         for (const State target_B : src_tr_B.targets) {
-//                             process_target_pair(symbol, source_tuple, target_A, target_B);
-//                         }
-//                     }
-//                 }
-//             }
-//         }
-//     } while (ctx.changed);
-//     assert(ctx.worklist.empty() && "mata::nfta::union_det worklist used when it ought not to be used");
-//
-//     ctx.result.alphabet = A.alphabet;
-//     return ctx.result;
-// }
+Nfta union_det_on_complete_naive(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
+    if (A.root_states.empty() && B.root_states.empty()) { return create_empty(); }
+
+    const ReversedDelta rev_delta_A = A.delta.get_reversed();
+    const ReversedDelta rev_delta_B = B.delta.get_reversed();
+    assert(rev_delta_A.symbol_transitions.size() == rev_delta_B.symbol_transitions.size() &&
+        "union_det: automata must have the same number of symbols");
+
+    ProductContext ctx(A.delta.num_of_states(), B.delta.num_of_states(), state_mapping_out);
+    ctx.initialize_bottom_up(rev_delta_A, rev_delta_B, A, B);
+
+    // returns false if any child pair is unknown, otherwise fills source_tuple
+    auto try_build_source_tuple = [&](const ReversedDelta::SourceTransitions& src_tr_A,
+        const ReversedDelta::SourceTransitions& src_tr_B, std::vector<State>& source_tuple) -> bool {
+        const size_t arity = src_tr_A.sources.size();
+        assert(src_tr_B.sources.size() == arity);
+        for (size_t i = 0; i < arity; ++i) {
+            const State ps = ctx.state_mapping->get(src_tr_A.sources[i], src_tr_B.sources[i]);
+            if (ps == Limits::max_state) return false;
+            source_tuple[i] = ps;
+        }
+        return true;
+    };
+
+    auto process_target_pair = [&](const Symbol symbol, const std::vector<State>& source_tuple,
+        const State target_A, const State target_B) {
+        const State product_target = ctx.get_product_state_fixpoint(target_A, target_B);
+        if (A.root_states.contains(target_A) || B.root_states.contains(target_B)) {
+            ctx.result.add_root(product_target);
+        }
+        ctx.result.delta.add(product_target, symbol, source_tuple);
+    };
+
+    do {
+        ctx.changed = false;
+        auto sym_it_B = rev_delta_B.symbol_transitions.begin();
+
+        for (const auto& sym_tr_A : rev_delta_A.symbol_transitions) {
+            const auto& sym_tr_B = *sym_it_B++;
+            if (sym_tr_A.is_constant()) continue;
+
+            const Symbol symbol = sym_tr_A.symbol;
+            const unsigned arity = sym_tr_A.get_arity();
+            std::vector<State> source_tuple(arity);
+
+            for (const auto& src_tr_A : sym_tr_A.sources_transitions) {
+                for (const auto& src_tr_B : sym_tr_B.sources_transitions) {
+                    if (!try_build_source_tuple(src_tr_A, src_tr_B, source_tuple)) { continue; }
+                    for (const State target_A : src_tr_A.targets) {
+                        for (const State target_B : src_tr_B.targets) {
+                            process_target_pair(symbol, source_tuple, target_A, target_B);
+                        }
+                    }
+                }
+            }
+        }
+    } while (ctx.changed);
+    assert(ctx.worklist.empty() && "mata::nfta::union_det worklist used when it ought not to be used");
+
+    ctx.result.alphabet = A.alphabet;
+    return ctx.result;
+}
 
 Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
     struct SymbolCache {
