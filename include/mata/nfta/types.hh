@@ -12,6 +12,7 @@
 namespace mata::nfta
 {
     using State = unsigned;
+    using Symbol = unsigned;
     using StateVectorSet = utils::OrdVector<std::vector<State>>;
     using StateSet = utils::OrdVector<State>;
 
