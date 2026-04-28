@@ -213,7 +213,7 @@ TEST_CASE("mata::nfta::union_det_on_complete") {
         // L(C) = {a, b}
 
         Nfta C = union_det(A, B);
-        // CHECK(C.root_states.size() == 2);
-        // CHECK(C.delta.num_of_transitions() == 2);
+        CHECK(C.root_states.size() == 2);
+        CHECK(C.delta.num_of_transitions() == 2);
     }
 }
