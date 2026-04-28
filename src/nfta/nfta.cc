@@ -9,15 +9,15 @@ namespace mata::nfta {
 
 void print_transitions(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
     for (const auto& transition : transitions) {
-        os <<  transition.source << " -> ";
+        os <<  transition.single << " -> ";
         if (alphabet) { os << alphabet->reverse_translate_symbol(transition.symbol); }
         else { os << transition.symbol; }
-        if (!transition.targets.empty()) {
+        if (!transition.tuple.empty()) {
 
             os <<"(";
-            for (std::size_t i = 0; i < transition.targets.size(); ++i) {
-                os << transition.targets[i];
-                if (i + 1 < transition.targets.size()) os << ",";
+            for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
+                os << transition.tuple[i];
+                if (i + 1 < transition.tuple.size()) os << ",";
             }
             os << ")";
         }
@@ -28,16 +28,16 @@ void print_transitions(std::ostream& os, const std::vector<Transition>& transiti
 void print_transitions_bottom_up(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
     for (const auto& transition : transitions) {
         os <<"(";
-        for (std::size_t i = 0; i < transition.targets.size(); ++i) {
-            os << transition.targets[i];
-            if (i + 1 < transition.targets.size()) os << ",";
+        for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
+            os << transition.tuple[i];
+            if (i + 1 < transition.tuple.size()) os << ",";
         }
         os << ")";
 
         os << " -> ";
         if (alphabet) { os << alphabet->reverse_translate_symbol(transition.symbol); }
         else { os << transition.symbol; }
-        os << " " <<  transition.source;
+        os << " " <<  transition.single;
         os << std::endl;
     }
 } // print_transitions
@@ -52,7 +52,7 @@ void Nfta::print_mata(std::ostream& os) const {
 
     for (const auto& transition : delta.get_transitions())
     {
-        os << "q" << transition.source << " ";
+        os << "q" << transition.single << " ";
 
         // symbol
         if (alphabet != nullptr) {
@@ -64,7 +64,7 @@ void Nfta::print_mata(std::ostream& os) const {
 
         // targets
         os << "(";
-        for (const auto& target : transition.targets)
+        for (const auto& target : transition.tuple)
         {
             os << "q" << target << " ";
         }
@@ -221,17 +221,17 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
         else { sym_str = std::to_string(t.symbol); }
         sanitize_symbol(sym_str);
 
-        if (t.targets.empty()) {
+        if (t.tuple.empty()) {
             // constant
-            os << "  " << sym_str << " -> q" << t.source << std::endl;
+            os << "  " << sym_str << " -> q" << t.single << std::endl;
         } else {
             // function symbol
             os << "  " << sym_str << "(";
-            for (size_t i = 0; i < t.targets.size(); ++i) {
-                os << "q" << t.targets[i];
-                if (i + 1 < t.targets.size()) os << ",";
+            for (size_t i = 0; i < t.tuple.size(); ++i) {
+                os << "q" << t.tuple[i];
+                if (i + 1 < t.tuple.size()) os << ",";
             }
-            os << ") -> q" << t.source << std::endl;
+            os << ") -> q" << t.single << std::endl;
         }
     }
 }

@@ -215,9 +215,9 @@ Delta::Transitions::const_iterator::const_iterator(const Delta& delta): delta_{ 
             current_state_ = i;
             state_post_it_ = (*delta_)[static_cast<State>(i)].begin();
             symbol_post_it_ = state_post_it_->target_tuples.begin();
-            transition_.source = static_cast<State>(current_state_);
+            transition_.single = static_cast<State>(current_state_);
             transition_.symbol = state_post_it_->symbol;
-            transition_.targets = *symbol_post_it_;
+            transition_.tuple = *symbol_post_it_;
             return;
         }
     }
@@ -234,9 +234,9 @@ Delta::Transitions::const_iterator::const_iterator(const Delta& delta, const Sta
             current_state_ = s;
             state_post_it_ = state_post.begin();
             symbol_post_it_ = state_post_it_->target_tuples.begin();
-            transition_.source = static_cast<State>(current_state_);
+            transition_.single = static_cast<State>(current_state_);
             transition_.symbol = state_post_it_->symbol;
-            transition_.targets = *symbol_post_it_;
+            transition_.tuple = *symbol_post_it_;
             return;
         }
     }
@@ -250,7 +250,7 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
 
     ++symbol_post_it_;
     if (symbol_post_it_ != state_post_it_->target_tuples.end()) {
-        transition_.targets = *symbol_post_it_;
+        transition_.tuple = *symbol_post_it_;
         return *this;
     }
 
@@ -258,7 +258,7 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
     if (state_post_it_ != (*delta_)[static_cast<State>(current_state_)].cend()) {
         symbol_post_it_ = state_post_it_->target_tuples.begin();
         transition_.symbol = state_post_it_->symbol;
-        transition_.targets = *symbol_post_it_;
+        transition_.tuple = *symbol_post_it_;
         return *this;
     }
 
@@ -275,9 +275,9 @@ Delta::Transitions::const_iterator& Delta::Transitions::const_iterator::operator
     state_post_it_ = state_post.begin();
     symbol_post_it_ = state_post_it_->target_tuples.begin();
 
-    transition_.source = static_cast<State>(current_state_);
+    transition_.single = static_cast<State>(current_state_);
     transition_.symbol = state_post_it_->symbol;
-    transition_.targets = *symbol_post_it_;
+    transition_.tuple = *symbol_post_it_;
 
     return *this;
 } // const_iterator::operator++

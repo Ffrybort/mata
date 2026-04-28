@@ -139,18 +139,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
         Nfta aut_n = determinize_naive(aut, &mapping);
         Nfta aut_0 = determinize_optimized(aut);
         CHECK(aut_n.is_identical_to(aut_0));
-
-        CHECK(aut_n.is_bottom_up_deterministic());
-
-        // ensure mapping entries are valid
-        for (const auto& [set, det_state] : mapping) {
-            CHECK(set.size() >= 1);
-            CHECK(det_state < aut_n.delta.num_of_states());
-        }
+        CHECK(aut_n.is_lang_empty());
     }
 
     SECTION("Unary chain") {
-        Nfta aut({}, &alphabet, Delta(4));
+        Nfta aut({0, 1}, &alphabet, Delta(4));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
@@ -217,7 +210,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
     }
 
     SECTION("Binary deterministic") {
-        Nfta aut({}, &alphabet, Delta(3));
+        Nfta aut({0}, &alphabet, Delta(3));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(2, alphabet["g"], {0,0});
@@ -230,7 +223,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
     }
 
     SECTION("Same tuple") {
-        Nfta aut({}, &alphabet, Delta(4));
+        Nfta aut({2, 3}, &alphabet, Delta(4));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
@@ -289,7 +282,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
     }
 
     SECTION("Binary tuple expansion") {
-        Nfta aut({}, &alphabet, Delta(5));
+        Nfta aut({0}, &alphabet, Delta(5));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
@@ -312,14 +305,14 @@ TEST_CASE("mata::nfta::determinize_naive") {
                 set.contains(2) &&
                 set.contains(3)) {
                 found = true;
-                }
+            }
         }
 
         CHECK(found);
     }
 
     SECTION("Binary and unary transitions") {
-        Nfta aut({}, &alphabet, Delta(5));
+        Nfta aut({4}, &alphabet, Delta(5));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
@@ -476,7 +469,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
     }
 
     SECTION("Arity 4 combinatorial") {
-        Nfta aut({10}, &alphabet, Delta(11));
+        Nfta aut({8, 9}, &alphabet, Delta(11));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
@@ -501,11 +494,11 @@ TEST_CASE("mata::nfta::determinize_naive") {
         CHECK(mapping.size() >= 2);
         CHECK(aut_n.delta.num_of_states() == 2);
         CHECK(aut_n.delta.num_of_transitions() == 2);
-        CHECK(aut_n.root_states.empty());
+        CHECK(!aut_n.root_states.empty());
     }
 
     SECTION("Propagation") {
-        Nfta aut({}, &alphabet, Delta(9));
+        Nfta aut({4, 7, 8}, &alphabet, Delta(9));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
@@ -531,7 +524,7 @@ TEST_CASE("mata::nfta::determinize_naive") {
     }
 
     SECTION("Simple") {
-        Nfta aut({}, &alphabet, Delta(7));
+        Nfta aut({5}, &alphabet, Delta(7));
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});

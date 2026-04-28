@@ -57,17 +57,17 @@ TEST_CASE("mata::nfta::delta") {
 
         CHECK(std::any_of(transitions.begin(), transitions.end(),
             [](const Transition& t){
-                return t.source == 0 && t.symbol == 1 && t.targets == std::vector<State>{2};
+                return t.single == 0 && t.symbol == 1 && t.tuple == std::vector<State>{2};
             }));
 
         CHECK(std::any_of(transitions.begin(), transitions.end(),
             [](const Transition& t){
-                return t.source == 0 && t.symbol == 2 && t.targets == std::vector<State>{3};
+                return t.single == 0 && t.symbol == 2 && t.tuple == std::vector<State>{3};
             }));
 
         CHECK(std::any_of(transitions.begin(), transitions.end(),
             [](const Transition& t){
-                return t.source == 1 && t.symbol == 1 && t.targets == std::vector<State>{0};
+                return t.single == 1 && t.symbol == 1 && t.tuple == std::vector<State>{0};
             }));
 
     }
@@ -192,13 +192,13 @@ TEST_CASE("mata::nfta::delta") {
 
     CHECK(collected.size() == 2);
 
-    CHECK(collected[0].source == 0);
+    CHECK(collected[0].single == 0);
     CHECK(collected[0].symbol == 1);
-    CHECK(collected[0].targets == std::vector<State>{2});
+    CHECK(collected[0].tuple == std::vector<State>{2});
 
-    CHECK(collected[1].source == 1);
+    CHECK(collected[1].single == 1);
     CHECK(collected[1].symbol == 2);
-    CHECK(collected[1].targets == std::vector<State>{3});
+    CHECK(collected[1].tuple == std::vector<State>{3});
 
     delta.clear();
 
@@ -275,9 +275,9 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(delta.num_of_transitions() > 0);
 
         for (const auto& t : delta.get_transitions()) {
-            CHECK(t.source < delta.num_of_states());
+            CHECK(t.single < delta.num_of_states());
 
-            for (State target : t.targets) {
+            for (State target : t.tuple) {
                 CHECK(target < delta.num_of_states());
             }
         }
@@ -300,9 +300,9 @@ TEST_CASE("mata::nfta::delta") {
         auto delta_transitions = delta.get_transitions();
 
         for (const auto& t : delta_transitions) {
-            CHECK(t.targets.size() > 0);
+            CHECK(t.tuple.size() > 0);
 
-            for (State s : t.targets) {
+            for (State s : t.tuple) {
                 CHECK(s < delta.num_of_states());
             }
         }
@@ -323,9 +323,9 @@ TEST_CASE("mata::nfta::delta") {
         CHECK(delta.contains(1, 2, {0}));
 
         for (const auto& t : delta.get_transitions()) {
-            CHECK(t.source < delta.num_of_states());
+            CHECK(t.single < delta.num_of_states());
 
-            for (State target : t.targets) {
+            for (State target : t.tuple) {
                 CHECK(target < delta.num_of_states());
             }
         }

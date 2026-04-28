@@ -194,7 +194,7 @@ TEST_CASE("mata::nfta::builder") {
         std::vector<Transition> t = aut.delta.get_transitions();
         CHECK(std::count_if(
             t.begin(), t.end(),
-            [alphabet](const auto& t){ return t.source == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0"; }
+            [alphabet](const auto& t){ return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0"; }
         ) == 2);
     }
 

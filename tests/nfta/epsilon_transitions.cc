@@ -160,7 +160,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             }));
     }
@@ -188,7 +188,7 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         auto count = std::ranges::count_if(transitions,
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             });
 
@@ -216,13 +216,13 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a1";
             }));
 
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             }));
     }
@@ -256,7 +256,7 @@ TEST_CASE("mata::nfta::remove_epsilon_in_place") {
 
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             }));
     }
@@ -284,7 +284,7 @@ TEST_CASE("mata::nfta::remove_epsilon_in_place") {
 
         auto count = std::ranges::count_if(transitions,
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             });
 
@@ -314,7 +314,7 @@ TEST_CASE("mata::nfta::remove_epsilon_in_place") {
         // transition from q1 must also appear on q0
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             }));
     }
@@ -361,19 +361,19 @@ TEST_CASE("mata::nfta::remove_epsilon_in_place") {
         // original non-epsilon transition must stay
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a1";
             }));
 
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a0";
             }));
 
         REQUIRE(std::any_of(transitions.begin(), transitions.end(),
             [&](const auto& t){
-                return t.source == 0 &&
+                return t.single == 0 &&
                        alphabet.reverse_translate_symbol(t.symbol) == "a2";
             }));
     }

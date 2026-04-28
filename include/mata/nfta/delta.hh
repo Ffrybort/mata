@@ -26,24 +26,26 @@ namespace mata::nfta
  */
 struct Transition
 {
-    State source;
+    State single;
     Symbol symbol;
-    std::vector<State> targets;
+    std::vector<State> tuple;
 
-    explicit Transition(const State source = {}, const Symbol symbol = {}, const std::vector<State>& targets = {})
-        : source(source), symbol(symbol), targets(targets) {}
+    explicit Transition(const State single = {}, const Symbol symbol = {}, const std::vector<State>& tuple = {})
+        : single(single), symbol(symbol), tuple(tuple) {}
+
+    auto operator<=>(const Transition&) const = default;
 
     bool operator<(const Transition& other) const {
-        if (source != other.source) return source < other.source;
+        if (single != other.single) return single < other.single;
         if (symbol != other.symbol) return symbol < other.symbol;
-        if (targets.size() != other.targets.size()) return targets.size() < other.targets.size();
-        return targets < other.targets;
+        if (tuple.size() != other.tuple.size()) return tuple.size() < other.tuple.size();
+        return tuple < other.tuple;
     }
 
     bool operator==(const Transition& other) const {
-        return source == other.source
+        return single == other.single
         && symbol == other.symbol
-        && targets == other.targets;
+        && tuple == other.tuple;
     }
 };
 
@@ -541,7 +543,7 @@ public:
     /**
      * @brief Add a transition represented as a @c Transition instance.
      */
-    void add(const Transition& trans) { add(trans.source, trans.symbol, trans.targets); }
+    void add(const Transition& trans) { add(trans.single, trans.symbol, trans.tuple); }
 
     /**
      * @brief Add an entire @c SymbolPost.
@@ -562,7 +564,7 @@ public:
      *
      * @throw std::runtime_error if the transition does not exist.
      */
-    void remove(const Transition& transition) { remove(transition.source, transition.symbol, transition.targets); }
+    void remove(const Transition& transition) { remove(transition.single, transition.symbol, transition.tuple); }
 
     /**
      * @brief Remove an entire SymbolPost.
@@ -580,7 +582,7 @@ public:
      * Check whether @c Delta contains a transition given by a @Transition instance.
      */
     bool contains(const Transition& transition) const {
-        return contains(transition.source, transition.symbol, transition.targets);
+        return contains(transition.single, transition.symbol, transition.tuple);
     }
 
     /**
@@ -793,5 +795,17 @@ public:
 }; // class Delta::Transitions::const_iterator.
 
 } // namespace nfta
+
+namespace std {
+template<> struct hash<mata::nfta::Transition> {
+  size_t operator()(const mata::nfta::Transition& t) const noexcept {
+    size_t seed = 0;
+    seed = mata::utils::hash_combine(seed, t.single);
+    seed = mata::utils::hash_combine(seed, t.symbol);
+    seed = mata::utils::hash_combine(seed, t.tuple);
+    return seed;
+  }
+};
+}
 #endif //NFTA_DELTA_HH
 // end of file delta.hh
