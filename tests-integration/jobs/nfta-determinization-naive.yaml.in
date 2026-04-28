@@ -1,0 +1,2 @@
+nfta-det:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-determinize $1

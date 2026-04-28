@@ -385,14 +385,14 @@ namespace mata::nfta {
      *
      * Only optimization is that only (bottom-up) reachable states are constructed.
      */
-    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, const bool make_complete = false);
+    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, bool make_complete = false);
 
     /**
      * @brief Determinize an automaton.
      *
      * Only (bottom-up) reachable states are constructed. todo describe
      */
-    Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+    Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, bool make_complete = false);
 
     /**
      * @brief Construct a complement automaton without determinizing, directly top down.
