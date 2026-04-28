@@ -1090,7 +1090,7 @@ Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* stat
             if (symbol_post.is_constant()) { continue; }
             const unsigned arity = symbol_post.get_arity();
 
-            on_new_state(new_s, new_macro, symbol_post, ctx);
+            if (!on_new_state(new_s, new_macro, symbol_post, ctx)) { continue; }
 
             const size_t base = ctx.processed.size();
             const unsigned small_size = arity - 1;
@@ -1125,7 +1125,7 @@ Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* stat
 Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) {
     return determinize_impl(
         aut, state_mapping, make_complete, true, // use_reversed_map
-        [](State, const StateSet&, const ReversedDelta::RevSymbolPost&, const MacrostateContext&) {},
+        [](State, const StateSet&, const ReversedDelta::RevSymbolPost&, const MacrostateContext&) { return true; },
         [](const ReversedDelta::RevSymbolPost& symbol_post, const std::vector<State>& big_tuple_s,
             const MacrostateContext& ctx) -> StateSet {
             const unsigned arity = symbol_post.get_arity();
@@ -1145,14 +1145,12 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
     );
 }
 
-Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) { // todo this is still broken
-    using StateTuple = std::vector<State>;
+Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) {
     struct SymbolCache {
-        // [det_state][position] -> vector of targets sets
-        std::vector< // state
-            std::vector< // position
-                utils::OrdVector< // set of targets
-                    const State* // pointers to rev delta
+        std::vector<   // state
+            std::vector<   // position
+                utils::OrdVector<  // set of targets
+                    const State*   // pointers to rev delta
                 >
             >
         > by_state;
@@ -1160,109 +1158,71 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         SymbolCache() : by_state() {}
     };
 
-    // struct  StateTupleDedupl {
-    //     std::unordered_map<StateTuple, unsigned> set_to_id;
-    //     std::vector<const StateTuple*>           id_to_set;
-    //
-    //     // todo rehash bug
-    //     unsigned save(const StateTuple& s) {
-    //         auto [it, inserted] = set_to_id.emplace(s, static_cast<unsigned>(id_to_set.size()));
-    //         if (inserted) id_to_set.push_back(&it->first);
-    //         return it->second;
-    //     }
-    //     const StateTuple& lookup(const unsigned id) const { return *id_to_set[id]; }
-    // };
-
-    // StateTupleDedupl dedupl;
-
     const ReversedDelta rev_delta = aut.delta.get_reversed();
-    MacrostateContext ctx(aut, state_mapping);
-
     std::unordered_map<Symbol, SymbolCache> cache;
     cache.reserve(rev_delta.symbol_posts.size());
 
-    // initialize with constant transitions
-    ctx.initialize_bottom_up(rev_delta);
+    auto on_new_state = [&](State new_s, const StateSet& new_macro,
+                            const ReversedDelta::RevSymbolPost& symbol_post,
+                            const MacrostateContext&) {
+        const Symbol symbol = symbol_post.symbol;
+        const unsigned arity = symbol_post.get_arity();
 
-    while (!ctx.worklist.empty()) {
-         auto [new_s, new_macro] = ctx.pop();
+        auto& symbol_cache = cache[symbol];
+        if (new_s >= symbol_cache.by_state.size()) { symbol_cache.by_state.resize(new_s + 1); }
+        auto& new_s_cache = symbol_cache.by_state[new_s];
+        new_s_cache.resize(arity);
 
-         for (const auto& symbol_post : rev_delta.symbol_posts) {
-             if (symbol_post.is_constant()) { continue; }
-             const Symbol symbol = symbol_post.symbol;
-             const unsigned arity = symbol_post.get_arity();
+        std::vector<std::vector<const State*>> collector(arity);
 
-             // fill cache for new_s and symbol
-             auto& symbol_cache = cache[symbol];
-             if (new_s >= symbol_cache.by_state.size()) { symbol_cache.by_state.resize(new_s + 1); }
-             auto& new_s_cache = symbol_cache.by_state[new_s];
-             new_s_cache.resize(arity);
+        for (const auto& tuple_post : symbol_post.state_tuple_posts) {
+            for (unsigned i = 0; i < arity; i++) {
+                if (new_macro.contains(tuple_post.sources[i])) {
+                    collector[i].reserve(collector[i].size() + tuple_post.targets.size());
+                    for (const State& t : tuple_post.targets) {
+                        collector[i].push_back(const_cast<std::vector<unsigned*>::value_type>(&t));
+                    }
+                }
+            }
+        }
 
-             std::vector<std::vector<const State*>> collector(arity);
+        for (unsigned i = 0; i < arity; i++) {
+            if (collector[i].empty()) { continue; }
+            new_s_cache[i] = utils::OrdVector(std::move(collector[i]));
+        }
+        return true;
+    };
 
-             for (const auto& tuple_post : symbol_post.state_tuple_posts) {
+    auto compute_targets = [&](const ReversedDelta::RevSymbolPost& symbol_post,
+                               const std::vector<State>& big_tuple_s,
+                               const MacrostateContext&) -> StateSet {
+        const Symbol symbol = symbol_post.symbol;
+        const unsigned arity = symbol_post.get_arity();
+        auto& symbol_cache = cache[symbol];
 
-                 // collect targets for every position
-                 for (unsigned i = 0; i < arity; i++) {
-                     if (new_macro.contains(tuple_post.sources[i])) {
-                         collector[i].reserve(collector[i].size() + tuple_post.targets.size());
-                         for (const State &t :tuple_post.targets) {
-                             collector[i].push_back(const_cast<std::vector<unsigned*>::value_type>(&t));
-                         }
-                     }
-                 }
-             }
-             // save collected values
-             for (unsigned i = 0; i < arity; i++) {
-                 if (collector[i].empty()) { continue; }
-                 new_s_cache[i] = utils::OrdVector(std::move(collector[i]));
-             }
+        std::vector<unsigned> order(arity);
+        for (unsigned i = 0; i < arity; i++) { order[i] = i; }
 
-             // generate all tuples on arity - 1 size out of processed states
-             const size_t base = ctx.processed.size();
-             const unsigned small_size = arity - 1;
-             std::vector<unsigned> selector(small_size, 0);
-             std::vector<State> small_tuple_s(small_size); // tuple of size arity - 1 of processed states
-             std::vector<State> big_tuple_s(arity); // small tuple with new state inserted
-             std::vector<StateSet*> big_tuple_macro(arity); // big tuple converted to macrostates
-             do {
-                 for (unsigned i = 0; i < small_size; i++) {
-                     small_tuple_s[i] = ctx.processed[selector[i]];
-                 }
+        std::ranges::sort(order, [&](unsigned a, unsigned b) {
+            return symbol_cache.by_state[big_tuple_s[a]][a].size() <
+                   symbol_cache.by_state[big_tuple_s[b]][b].size();
+        });
 
-                 // insert the new state to every position
-                 for (unsigned pos = 0; pos < arity; pos++) {
-                     std::copy_n(small_tuple_s.begin(), pos, big_tuple_s.begin());
-                     big_tuple_s[pos] = new_s;
-                     std::copy(small_tuple_s.begin() + pos, small_tuple_s.end(), big_tuple_s.begin() + pos + 1);
-                     for (unsigned i = 0; i < arity; i++) {
-                         big_tuple_macro[i] = &ctx.s_to_macro[big_tuple_s[i]];
-                     }
+        auto surviving = symbol_cache.by_state[big_tuple_s[order[0]]][order[0]];
+        for (unsigned i : order) {
+            surviving = surviving.intersection(symbol_cache.by_state[big_tuple_s[i]][i]);
+        }
 
-                     // start with position 0
-                     auto surviving = symbol_cache.by_state[big_tuple_s[0]][0];
-                     for (unsigned i = 1; i < arity; i++) {
-                         surviving = surviving.intersection(symbol_cache.by_state[big_tuple_s[i]][i]);
-                     }
+        std::vector<State> target_collector(surviving.size());
+        for (unsigned i = 0; i < surviving.size(); i++) {
+            target_collector[i] = *(surviving.at(i));
+        }
 
-                     // collect all targets across surviving tuples
-                     std::vector<State> target_collector(surviving.size());
-                     for (unsigned i = 0; i < surviving.size(); i++) {
-                         target_collector[i] = *(surviving.at(i));
-                     }
+        return utils::OrdVector(target_collector);
+    };
 
-                     StateSet targets = utils::OrdVector(target_collector);
-                     if (!make_complete && targets.empty()) { continue; }
-
-                     State target_s = ctx.get_or_create_macrostate(targets, true, true);
-                     ctx.result.delta.add(target_s, symbol, big_tuple_s);
-                 }
-             } while(next_tuple(selector, base));
-         }
-     }
-
-     if (ctx.result.root_states.empty() || ctx.result.delta.empty()) { return create_empty(ctx.result.alphabet); }
-     return std::move(ctx.result);
+    return determinize_impl(aut, state_mapping, make_complete, true,
+        on_new_state, compute_targets);
 }
 
 Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,
