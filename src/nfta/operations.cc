@@ -61,7 +61,7 @@ bool next_tuple_except(std::vector<State>& tuple, const size_t base, const unsig
     return false;
 }
 
-std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon) const { // todo **
+std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon) const {
     const size_t num_states = num_of_states();
     std::vector<StateSet> result { num_states };
     std::vector<StateSet> epsilon_successors { num_states };
@@ -709,39 +709,80 @@ BoolVector Nfta::get_top_down_reachable(const BoolVector *allowed) const {
 
 template<typename OnMarked>
 BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const BoolVector *allowed) const {
+    using SymbolCache =
+    std::vector<
+        std::vector<
+            utils::OrdVector<const ReversedDelta::RevStateTuplePost*>
+        >
+
+    >;
+
     const ReversedDelta rev_delta = delta.get_reversed(allowed);
     const size_t num_of_states = delta.num_of_states();
     BoolVector marked(num_of_states, false);
+    std::unordered_map<Symbol, SymbolCache> cache;
 
-    bool changed = false;
+    cache.reserve(rev_delta.symbol_posts.size());
+    std::vector<std::vector<utils::OrdVector<const ReversedDelta::RevStateTuplePost*>>> collector;
+    collector.resize(num_of_states);
+
+    for (const auto& sym_tr : rev_delta.symbol_posts) {
+        const Symbol symbol = sym_tr.symbol;
+        const unsigned arity = sym_tr.get_arity();
+        for (auto& r : collector) { r.resize(arity); }
+
+        auto& symbol_cache = cache[symbol];
+        symbol_cache.resize(num_of_states);
+        for (unsigned i = 0; i < num_of_states; ++i) { symbol_cache[i].resize(arity); }
+
+        for (const auto& src_tr : sym_tr.state_tuple_posts) {
+            for (unsigned i = 0; i < arity; ++i) {
+                collector[src_tr.sources[i]][i].push_back(&src_tr);
+            }
+        }
+
+        for (unsigned i = 0; i < num_of_states; ++i) {
+            for (unsigned j = 0; j < arity; ++j) {
+                symbol_cache[i][j] = utils::OrdVector(std::move(collector[i][j]));
+                collector[i][j].clear();
+            }
+        }
+    }
+
+    std::deque<State> worklist;
+
     auto mark = [&](const State state) {
         marked[state] = true;
-        changed = true;
+        worklist.push_back(state);
     };
 
-    for (const auto bottom_up_initial = rev_delta.get_initial_states();
-        const State state : bottom_up_initial) {
+    for (const State state : rev_delta.get_initial_states()) {
         mark(state);
     }
 
-    do {
-        changed = false;
-        for (const auto& sym_trans : rev_delta.symbol_posts) {
-            if (sym_trans.is_constant()) continue;
-            for (const auto& src_tr : sym_trans.state_tuple_posts) {
-                bool all_marked = true;
-                for (const State s : src_tr.sources) { if (!marked[s]) { all_marked = false; break; } }
-                if (!all_marked) { continue; }
-                for (State target : src_tr.targets) {
-                    if (!marked[target]) {
-                        mark(target);
-                        if (early_exit_fn(target, marked)) { return marked; }
+    while (!worklist.empty()) {
+        const State current = worklist.front();
+        worklist.pop_front();
+
+        for (auto& symbol_cache : cache | std::views::values) {
+            if (current >= symbol_cache.size()) { continue; }
+            for (unsigned pos = 0; pos < symbol_cache[current].size(); ++pos) {
+                for (const auto* src_tr : symbol_cache[current][pos]) {
+                    bool all_marked = true;
+                    for (const State s : src_tr->sources) {
+                        if (!marked[s]) { all_marked = false; break; }
+                    }
+                    if (!all_marked) { continue; }
+                    for (const State target : src_tr->targets) {
+                        if (!marked[target]) {
+                            mark(target);
+                            if (early_exit_fn(target, marked)) { return marked; }
+                        }
                     }
                 }
             }
         }
-    } while (changed);
-
+    }
     return marked;
 }
 
