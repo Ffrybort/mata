@@ -186,8 +186,6 @@ TEST_CASE("mata::nfta::complement_classical") {
         Nfta comp = complement_classical(aut);
 
         CHECK(comp.is_bottom_up_deterministic());
-        aut.make_top_down_complete();
-        comp.make_top_down_complete();
         CHECK(intersection(aut, comp).is_lang_empty());
 
         // union should be universal

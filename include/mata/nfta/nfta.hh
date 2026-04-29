@@ -233,25 +233,9 @@ namespace mata::nfta {
          * before it, and all possible transitions from those states. An existing state may be used as sink, in that
          * case existing from it are NOT deleted.
          */
-        void make_bottom_up_complete(
+        void make_complete(
           const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr, State sink = Limits::max_state);
 
-        /**
-         * @brief Complete the automaton top-down with given symbols, add missing transitions leading to a sink state.
-         *
-         * @param sink [in, optional] Sink state may be custom defined or default value will use the next available state.
-         * @param symbols_arities_in [in, optional] Symbols and arities to consider instead of alphabet/used symbols.
-         * @return Complement automaton.
-         *
-         * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
-         * or to used symbols in delta.
-         *
-         * Using default sink value or an existing state is recommended, as using a higher sink value will lead to
-         * adding all states before it, and all possible transitions from those states. If an existing state is used,
-         * existing transitions from it are deleted.
-         */
-        void make_top_down_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr,
-          State sink = Limits::max_state);
 
         /**
          * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.

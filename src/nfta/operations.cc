@@ -61,7 +61,7 @@ bool next_tuple_except(std::vector<State>& tuple, const size_t base, const unsig
     return false;
 }
 
-std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon) const {
+std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon) const { // todo **
     const size_t num_states = num_of_states();
     std::vector<StateSet> result { num_states };
     std::vector<StateSet> epsilon_successors { num_states };
@@ -88,7 +88,7 @@ std::vector<StateSet> Delta::get_epsilon_closures(const Symbol epsilon) const {
     return result;
 } // get_epsilon_closures
 
-Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) { // todo
+Nfta remove_epsilon(const Nfta& aut, const Symbol epsilon) {
     const auto num_of_states = static_cast<State>(aut.delta.num_of_states());
     std::vector<StateSet> epsilon_closures = aut.delta.get_epsilon_closures(epsilon);
 
@@ -130,19 +130,22 @@ void Nfta::remove_epsilon_in_place(const Symbol epsilon) {
 void Nfta::complement_as_deterministic(const utils::OrdVector<SymbolArity>* symbols_arities_in) {
     assert(is_bottom_up_deterministic() &&
         "mata::nft::complement_as_deterministic automaton is not bottom-up deterministic");
-    make_bottom_up_complete(symbols_arities_in);
-    swap_root_non_root();
-    if (root_states.empty()) { *this = create_empty(alphabet); }
+    if (root_states.empty() || delta.empty()) {
+        std::cout << "here\n";
+        utils::OrdVector<SymbolArity> tmp;
+        const utils::OrdVector<SymbolArity> &symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
+        *this = create_universal(&symbols_arities, alphabet);
+    } else {
+        make_complete(symbols_arities_in);
+        swap_root_non_root();
+        if (root_states.empty()) { *this = create_empty(alphabet); }
+    }
 }
 
 Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in)  {
     utils::OrdVector<SymbolArity> tmp;
-    const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
-    if (aut.root_states.empty() || aut.delta.empty()) {
-        return create_universal(&symbols_arities, aut.alphabet);
-    }
     Nfta result = determinize_optimized(aut);
-    result.complement_as_deterministic(&symbols_arities);
+    result.complement_as_deterministic(symbols_arities_in);
     return result;
 }
 
@@ -175,41 +178,6 @@ Nfta union_nondet(const Nfta& A, const Nfta& B) {
     return result;
 } // union_nondet
 
-// For each newly processed state, generate all tuples of processed states
-// containing it, match against rev_delta, and call on_tuple.
-// on_tuple(symbol, det_tuple, src_tr) -> void
-// processed is expected to already contain new state
-template<typename OnMatch>
-void expand_bottom_up(
-    const ReversedDelta& rev_delta, const State new_s, const std::vector<State>& processed, OnMatch&& on_tuple) {
-
-    for (const auto& symbol_tr : rev_delta.symbol_posts) {
-        const unsigned arity = symbol_tr.get_arity();
-        if (arity == 0) { continue; }
-
-        const unsigned small_size = arity - 1;
-        std::vector<State> index_tuple(small_size, 0);
-        const size_t base = processed.size();  // new_s is already in processed
-
-        std::vector<State> small_tuple(small_size);
-        std::vector<State> big_tuple(arity);
-
-        do {
-            for (unsigned i = 0; i < small_size; ++i) {
-                small_tuple[i] = processed[index_tuple[i]];
-            }
-
-            // insert new_s into every position
-            for (unsigned pos = 0; pos < arity; ++pos) {
-                for (unsigned i = 0, k = 0; i < arity; ++i) {
-                    big_tuple[i] = (i == pos) ? new_s : small_tuple[k++];
-                }
-
-                on_tuple(symbol_tr, arity, big_tuple);
-            }
-        } while (next_tuple(index_tuple, base));
-    }
-}
 struct ProductContext {
     Nfta result;
     std::deque<State> worklist{}; // Set of product states to process.
@@ -375,16 +343,13 @@ Nfta union_det_on_complete_naive(const Nfta& A, const Nfta& B, utils::TwoDimensi
 }
 
 Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
-    struct SymbolCache {
+    using SymbolCache  =
         // [det_state][position] -> vector of targets sets
         std::vector< // state
             std::vector< // position
                 utils::OrdVector<const ReversedDelta::RevStateTuplePost*> // data
             >
-        > by_state;
-
-        SymbolCache() : by_state() {}
-    };
+        >;
 
     if (A.root_states.empty() && B.root_states.empty()) { return create_empty(); }
 
@@ -414,8 +379,8 @@ Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMa
             for (auto& r : collector) { r.resize(arity); }
 
             auto& symbol_cache = cache[symbol];
-            symbol_cache.by_state.resize(num_of_states);
-            for (unsigned i = 0; i < num_of_states; ++i) { symbol_cache.by_state[i].resize(arity); }
+            symbol_cache.resize(num_of_states);
+            for (unsigned i = 0; i < num_of_states; ++i) { symbol_cache[i].resize(arity); }
 
             for (auto& src_tr : sym_tr.state_tuple_posts) {
                 for (unsigned i = 0; i < arity; ++i) {
@@ -425,7 +390,7 @@ Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMa
 
             for (unsigned i = 0; i < num_of_states; ++i) {
                 for (unsigned j = 0; j < arity; ++j) {
-                    symbol_cache.by_state[i][j] = utils::OrdVector(std::move(collector[i][j]));
+                    symbol_cache[i][j] = utils::OrdVector(std::move(collector[i][j]));
                     collector[i][j].clear();
                 }
             }
@@ -434,29 +399,6 @@ Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMa
 
     fill_cache(cache_A, rev_delta_A, A.delta.num_of_states());
     fill_cache(cache_B, rev_delta_B, B.delta.num_of_states());
-
-    // std::cout << "=== cache_A ===\n";
-    // for (const auto& [sym, sc] : cache_A) {
-    //     std::cout << "Symbol: " << sym << "\n";
-    //     for (size_t s = 0; s < sc.by_state.size(); ++s) {
-    //         for (size_t p = 0; p < sc.by_state[s].size(); ++p) {
-    //             std::cout << "  [" << s << "][" << p << "]: ";
-    //             auto id = sc.by_state[s][p];
-    //             const auto& set = dedupl.lookup(id);
-    //             std::cout << "{ ";
-    //             for (const auto& vec : set) {
-    //                 std::cout << "[ ";
-    //                 for (auto state : vec) {
-    //                     std::cout << state << " ";
-    //                 }
-    //                 std::cout << "] ";
-    //             }
-    //             std::cout << "} ";
-    //
-    //             std::cout << "\n";
-    //         }
-    //     }
-    // }
 
     // returns false if any child pair is unknown, otherwise fills source_tuple
     auto try_build_source_tuple = [&](const ReversedDelta::RevStateTuplePost& src_tr_A,
@@ -503,8 +445,8 @@ Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMa
             assert(sym_it_B->get_arity() == arity);
             assert(sym_it_B->symbol == symbol);
 
-            auto& state_A_cache = cache_A[symbol].by_state[state_A];
-            auto& state_B_cache = cache_B[symbol].by_state[state_B];
+            auto& state_A_cache = cache_A[symbol][state_A];
+            auto& state_B_cache = cache_B[symbol][state_B];
 
             std::vector<State> source_tuple(arity);
 
@@ -531,27 +473,20 @@ Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMa
 
 Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
     if (A.alphabet == B.alphabet && dynamic_cast<RankedAlphabet*>(A.alphabet)) {
-        A.make_bottom_up_complete();
-        B.make_bottom_up_complete();
+        A.make_complete();
+        B.make_complete();
     }
     else {
         auto symbols = A.delta.get_used_symbols_arities();
         symbols.insert(B.delta.get_used_symbols_arities());
-        A.make_bottom_up_complete(&symbols);
-        B.make_bottom_up_complete(&symbols);
+        A.make_complete(&symbols);
+        B.make_complete(&symbols);
     }
     return union_det_on_complete(A, B, state_mapping_out);
 }
 
 Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out) {
     if (A.root_states.empty() || B.root_states.empty()) { return create_empty(); }
-
-    #ifndef NDEBUG
-    auto symbols = A.delta.get_used_symbols(true);
-    symbols.insert(B.delta.get_used_symbols(true));
-    assert(A.is_top_down_complete(symbols) && B.is_top_down_complete(symbols) &&
-        "Automata must be top-down complete for product");
-    #endif
 
     ProductContext ctx(A.delta.num_of_states(), B.delta.num_of_states(), state_mapping_out);
     ctx.initialize_top_down(A, B);
@@ -726,24 +661,19 @@ bool Nfta::is_top_down_complete() const {
     return true;
 } // is_top_down_complete
 
-State get_sink(State sink, Delta& delta) {
-    if (sink == Limits::max_state) { sink = delta.add_state(); }
-    delta.resize_for_states(sink);
-    return sink;
-} // get_sink
-
-void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in, State sink) {
+void Nfta::make_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in, State sink) {
     utils::OrdVector<SymbolArity> tmp;
-    const utils::OrdVector<SymbolArity> symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
+    const utils::OrdVector<SymbolArity> &symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
 
+    std::cout << std::endl;
     auto rev_delta = delta.get_reversed();
 
-    // if the sink is default and delta is complete, it is left alone
-    // todo it could have the correct number of symbols but wrong ones
-    if (sink == Limits::max_state && rev_delta.symbol_posts.size() == symbols_arities.size() &&
+    // if delta contains the correct number of symbols, it is checked for completeness first
+    if (rev_delta.symbol_posts.size() == symbols_arities.size() &&
         is_bottom_up_complete(rev_delta)) { return; }
 
-    sink = get_sink(sink, delta);
+    if (sink == Limits::max_state) { sink = delta.add_state(); }
+    delta.resize_for_states(sink);
     const size_t num_of_states = delta.num_of_states();
 
     StatePost& sink_state_post = delta.mutable_state_post(sink);
@@ -793,9 +723,16 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity> *symbols_
             if (old_rev_delta_it->state_tuple_posts.size() == expected_num_of_transitions) { continue; }
         } // else
         // adding transitions
-        if (arity == 0) {
-            sink_state_post.push_back(SymbolPost{ symbol, std::vector<State>{} });
-        } else {
+        // if (arity == 0) {
+        //     std::cout << "HERE" << std::endl;
+        //     std::cout << alphabet->try_reverse_translate_symbol(symbol) << std::endl;
+        //     // SymbolPost sp(symbol);
+        //     // std::vector<State> tuple = {};
+        //     // sp.insert(tuple);
+        //     // sink_state_post.push_back(sp);
+        //     delta.add(sink, symbol, {});
+        // }
+        // else {
             std::vector<State> tuple(arity, 0);
             SymbolPost new_symbol_post {symbol};
             do {
@@ -808,87 +745,17 @@ void Nfta::make_bottom_up_complete(const utils::OrdVector<SymbolArity> *symbols_
             } while (next_tuple(tuple, num_of_states));
             if (sink_sp_empty) { sink_state_post.push_back(std::move(new_symbol_post)); }
             else { delta.add(sink, new_symbol_post); }
-        } // else
+        // } // else
     } // while rev_delta_it != end OR input_symbols_it != end
 
+
+    std::cout << "sink: " << sink << std::endl;
     #ifndef NDEBUG
     assert(delta.is_sorted());
     const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities);
     // assert(is_bottom_up_complete(symbols));
     #endif
-} // make_bottom_up_complete
-
-// todo delete
-void Nfta::make_top_down_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in, State sink) {
-    // if the sink is default, automaton only adds a sink state if it is needed
-
-    utils::OrdVector<SymbolArity> tmp;
-    const utils::OrdVector<SymbolArity> symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
-    if (sink == Limits::max_state && is_top_down_complete(symbols_arities)) { return; } // todo
-    sink = get_sink(sink, delta);
-    const auto num_of_states = static_cast<State>(delta.num_of_states());
-
-    for (State state = 0; state < num_of_states; state++) {
-        BoolVector symbols_found(symbols_arities.size(), false);
-
-        // iterating through symbols_arities and delta symbol posts at the same time
-        size_t input_index = 0;
-        auto delta_symbols_it = delta[state].cbegin();
-
-        while (delta_symbols_it != delta[state].cend()) {
-            if (input_index >= symbols_arities.size()) { // still some symbols in delta
-                unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(delta_symbols_it->symbol));
-                break;
-            }
-            const auto &[input_symbol, input_arity] = symbols_arities.at(input_index);
-            assert(!delta_symbols_it->target_tuples.empty());
-
-            // ignore constants
-            if (delta_symbols_it->is_constant()) { ++delta_symbols_it; continue; }
-            if (input_arity == 0)  { ++input_index; continue; }
-
-            if (const Symbol delta_symbol = delta_symbols_it->symbol; input_symbol == delta_symbol) {
-                // symbols match
-                symbols_found[input_index] = true;
-                ++delta_symbols_it;
-                ++input_index;
-            } else if (delta_symbol < input_symbol) {
-                unknown_symbol_in_delta(alphabet->try_reverse_translate_symbol(delta_symbol));
-                ++delta_symbols_it; // ignore it
-            } else {
-                // input symbol is not in this state post -> move to the next
-                ++input_index;
-            }
-        } // while delta_symbols_it != end
-
-        // add all non-constant symbols that were not found
-        for (size_t j = 0; j < symbols_arities.size(); j++) {
-            const Symbol symbol = symbols_arities.at(j).first;
-            const unsigned arity = symbols_arities.at(j).second;
-            if (arity == 0) { continue; }
-            std::vector targets(arity, sink);
-            if (!symbols_found[j]) {
-                delta.add(state, symbol, targets);
-            }
-        }
-    } // for states in delta
-
-    // add sink loops
-    StatePost sink_state_post = delta.mutable_state_post(sink);
-    sink_state_post.clear();
-    for (const auto &[symbol, arity] : symbols_arities) {
-        if (arity > 0) {
-            std::vector targets(arity, sink);
-            sink_state_post.push_back(SymbolPost{ symbol, targets });
-        }
-    }
-
-    #ifndef NDEBUG
-    assert(delta.is_sorted());
-    const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities, true);
-    assert(is_top_down_complete(symbols));
-    #endif
-} // make_top_down_complete
+} // make_complete
 
 BoolVector Nfta::get_top_down_reachable(const BoolVector *allowed) const {
     const size_t num_of_states = delta.num_of_states();
@@ -924,11 +791,9 @@ BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const Bo
     BoolVector marked(num_of_states, false);
 
     bool changed = false;
-    auto mark = [&marked, allowed, &changed](const State state) {
-        if (!allowed || (*allowed)[state]) {
-            marked[state] = true;
-            changed = true;
-        }
+    auto mark = [&](const State state) {
+        marked[state] = true;
+        changed = true;
     };
 
     for (const auto bottom_up_initial = rev_delta.get_initial_states();
@@ -1146,17 +1011,14 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
 }
 
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) {
-    struct SymbolCache {
+    using SymbolCache =
         std::vector<   // state
             std::vector<   // position
                 utils::OrdVector<  // set of targets
                     const State*   // pointers to rev delta
                 >
             >
-        > by_state;
-
-        SymbolCache() : by_state() {}
-    };
+        >;
 
     const ReversedDelta rev_delta = aut.delta.get_reversed();
     std::unordered_map<Symbol, SymbolCache> cache;
@@ -1169,8 +1031,8 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         const unsigned arity = symbol_post.get_arity();
 
         auto& symbol_cache = cache[symbol];
-        if (new_s >= symbol_cache.by_state.size()) { symbol_cache.by_state.resize(new_s + 1); }
-        auto& new_s_cache = symbol_cache.by_state[new_s];
+        if (new_s >= symbol_cache.size()) { symbol_cache.resize(new_s + 1); }
+        auto& new_s_cache = symbol_cache[new_s];
         new_s_cache.resize(arity);
 
         std::vector<std::vector<const State*>> collector(arity);
@@ -1201,16 +1063,21 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         auto& symbol_cache = cache[symbol];
 
         std::vector<unsigned> order(arity);
-        for (unsigned i = 0; i < arity; i++) { order[i] = i; }
+        bool skip = false;
+        for (unsigned i = 0; i < arity; i++) {
+            if (symbol_cache[big_tuple_s[i]][i].empty()) { skip = true; continue; }
+            order[i] = i;
+        }
+        if (skip) { return utils::OrdVector<State>{}; }
 
         std::ranges::sort(order, [&](unsigned a, unsigned b) {
-            return symbol_cache.by_state[big_tuple_s[a]][a].size() <
-                   symbol_cache.by_state[big_tuple_s[b]][b].size();
+            return symbol_cache[big_tuple_s[a]][a].size() <
+                   symbol_cache[big_tuple_s[b]][b].size();
         });
 
-        auto surviving = symbol_cache.by_state[big_tuple_s[order[0]]][order[0]];
+        auto surviving = symbol_cache[big_tuple_s[order[0]]][order[0]];
         for (unsigned i : order) {
-            surviving = surviving.intersection(symbol_cache.by_state[big_tuple_s[i]][i]);
+            surviving = surviving.intersection(symbol_cache[big_tuple_s[i]][i]);
         }
 
         std::vector<State> target_collector(surviving.size());
