@@ -200,7 +200,7 @@ struct ProductContext {
     }
 
     // get or create product state, push a new state into worklist
-    State get_product_state_worklist (const State state_A, const State state_B) {
+    State get_product_state (const State state_A, const State state_B) {
         State product_state = state_mapping->get(state_A, state_B );
         if (product_state == Limits::max_state) {
             // create new product state
@@ -212,27 +212,13 @@ struct ProductContext {
         return product_state;
     }
 
-    // get or create product state, set changed to true if a new state was created
-    State get_product_state_fixpoint (const State state_A, const State state_B) { // todo delete
-        State product_state = state_mapping->get(state_A, state_B );
-
-        if (product_state == Limits::max_state) {
-            // create new product state
-            product_state = result.delta.add_state();
-            state_mapping->insert(state_A, state_B, product_state);
-            changed = true;
-        }
-        assert(product_state < Limits::max_state);
-        return product_state;
-    }
-
     // initialize with pairs of initial states
     void initialize_top_down(const Nfta& A, const Nfta& B) {
         // Initialize worklist with initial state pairs
         for (const State initial_A : A.root_states) {
             for (const State initial_B : B.root_states) {
                 // Update product with initial state pairs.
-                const State product_initial_state = get_product_state_worklist(initial_A, initial_B);
+                const State product_initial_state = get_product_state(initial_A, initial_B);
                 result.root_states.insert(product_initial_state);
             }
         }
@@ -255,7 +241,7 @@ struct ProductContext {
 
             for (const State state_A : const_it_A->second) {
                 for (const State state_B : const_it_B->second) {
-                    const State product_state = get_product_state_worklist(state_A, state_B);
+                    const State product_state = get_product_state(state_A, state_B);
                     if (A.root_states.contains(state_A) || B.root_states.contains(state_B)) {
                         result.add_root(product_state);
                     }
@@ -277,69 +263,6 @@ void print_vec(const std::vector<T>& v) {
     std::cout << "[ ";
     for (const auto& x : v) std::cout << x << " ";
     std::cout << "]";
-}
-
-Nfta union_det_on_complete_naive(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
-    if (A.root_states.empty() && B.root_states.empty()) { return create_empty(); }
-
-    const ReversedDelta rev_delta_A = A.delta.get_reversed();
-    const ReversedDelta rev_delta_B = B.delta.get_reversed();
-    assert(rev_delta_A.symbol_posts.size() == rev_delta_B.symbol_posts.size() &&
-        "union_det: automata must have the same number of symbols");
-
-    ProductContext ctx(A.delta.num_of_states(), B.delta.num_of_states(), state_mapping_out);
-    ctx.initialize_bottom_up(rev_delta_A, rev_delta_B, A, B);
-
-    // returns false if any child pair is unknown, otherwise fills source_tuple
-    auto try_build_source_tuple = [&](const ReversedDelta::RevStateTuplePost& src_tr_A,
-        const ReversedDelta::RevStateTuplePost& src_tr_B, std::vector<State>& source_tuple) -> bool {
-        const size_t arity = src_tr_A.sources.size();
-        assert(src_tr_B.sources.size() == arity);
-        for (size_t i = 0; i < arity; ++i) {
-            const State ps = ctx.state_mapping->get(src_tr_A.sources[i], src_tr_B.sources[i]);
-            if (ps == Limits::max_state) return false;
-            source_tuple[i] = ps;
-        }
-        return true;
-    };
-
-    auto process_target_pair = [&](const Symbol symbol, const std::vector<State>& source_tuple,
-        const State target_A, const State target_B) {
-        const State product_target = ctx.get_product_state_fixpoint(target_A, target_B);
-        if (A.root_states.contains(target_A) || B.root_states.contains(target_B)) {
-            ctx.result.add_root(product_target);
-        }
-        ctx.result.delta.add(product_target, symbol, source_tuple);
-    };
-
-    do {
-        ctx.changed = false;
-        auto sym_it_B = rev_delta_B.symbol_posts.begin();
-
-        for (const auto& sym_tr_A : rev_delta_A.symbol_posts) {
-            const auto& sym_tr_B = *sym_it_B++;
-            if (sym_tr_A.is_constant()) continue;
-
-            const Symbol symbol = sym_tr_A.symbol;
-            const unsigned arity = sym_tr_A.get_arity();
-            std::vector<State> source_tuple(arity);
-
-            for (const auto& src_tr_A : sym_tr_A.state_tuple_posts) {
-                for (const auto& src_tr_B : sym_tr_B.state_tuple_posts) {
-                    if (!try_build_source_tuple(src_tr_A, src_tr_B, source_tuple)) { continue; }
-                    for (const State target_A : src_tr_A.targets) {
-                        for (const State target_B : src_tr_B.targets) {
-                            process_target_pair(symbol, source_tuple, target_A, target_B);
-                        }
-                    }
-                }
-            }
-        }
-    } while (ctx.changed);
-    assert(ctx.worklist.empty() && "mata::nfta::union_det worklist used when it ought not to be used");
-
-    ctx.result.alphabet = A.alphabet;
-    return std::move(ctx.result);
 }
 
 Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out) {
@@ -414,7 +337,7 @@ Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMa
 
     auto process_target_pair = [&](const Symbol symbol, const std::vector<State>& source_tuple,
         const State target_A, const State target_B) {
-        const State product_target = ctx.get_product_state_worklist(target_A, target_B);
+        const State product_target = ctx.get_product_state(target_A, target_B);
         if (A.root_states.contains(target_A) || B.root_states.contains(target_B)) {
             ctx.result.add_root(product_target);
         }
@@ -522,7 +445,7 @@ Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> 
                     std::vector<State> result_targets{};
                     result_targets.reserve(targets_A.size());
                     for (size_t i = 0; i < targets_A.size(); i++) {
-                        State product_target = ctx.get_product_state_worklist(targets_A[i], targets_B[i]);
+                        State product_target = ctx.get_product_state(targets_A[i], targets_B[i]);
                         result_targets.push_back(product_target);
                     }
                     product_symbol_post_tmp.push_back(std::move(result_targets));
