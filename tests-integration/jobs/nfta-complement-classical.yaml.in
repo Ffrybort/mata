@@ -1,0 +1,2 @@
+tree-unary:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-complement-classical $1
