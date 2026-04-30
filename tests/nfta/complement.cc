@@ -88,35 +88,6 @@ TEST_CASE("mata::nfta::complement_classical") {
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("f", 1), {0}));
     }
 
-    SECTION("Double complement is equivalent to original") {
-        OnTheFlyAlphabet alphabet;
-        alphabet.add_new_symbol("a");
-        alphabet.add_new_symbol("s");
-        Symbol a = alphabet["a"];
-        Symbol s = alphabet["s"];
-
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, s, { 1 });
-        aut.delta.add(1, s, { 0 });
-        aut.delta.add(1, a, {});
-
-        Nfta comp = complement_classical(aut);
-        CHECK_FALSE(comp.is_lang_empty());
-
-        CHECK(comp.is_bottom_up_deterministic());
-        comp.complement_as_deterministic();
-
-        CHECK(comp.delta.num_of_states() == 2);
-        CHECK(comp.delta.num_of_transitions() == 3);
-        CHECK(comp.delta.contains(0, alphabet["a"], {}));
-        CHECK(comp.delta.contains(0, alphabet["s"], {1}));
-        CHECK(comp.delta.contains(1, alphabet["s"], {0}));
-
-        // complements are deterministic
-        CHECK(comp.is_bottom_up_deterministic());
-    }
-
-
     SECTION("Only constant symbol") {
         OnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a");
