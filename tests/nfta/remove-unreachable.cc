@@ -355,7 +355,7 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
     }
 }
 
-TEST_CASE("mata::nfta::reduce_top_down") {
+TEST_CASE("mata::nfta::remove_top_down_unreachable") {
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("a"); // arity 0
     alphabet.add_new_symbol("f"); // arity 1
@@ -363,14 +363,14 @@ TEST_CASE("mata::nfta::reduce_top_down") {
     SECTION("Empty") {
         Nfta aut({}, &alphabet, Delta(10));
 
-        aut.reduce_top_down();
+        aut.remove_top_down_unreachable();
         CHECK(aut.delta.num_of_states() == 0);
     }
 
     SECTION("Final state only") {
         Nfta aut({0}, &alphabet, Delta(42));
 
-        aut.reduce_top_down();
+        aut.remove_top_down_unreachable();
         CHECK(aut.delta.num_of_states() == 1);
     }
 
@@ -382,7 +382,7 @@ TEST_CASE("mata::nfta::reduce_top_down") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(2, alphabet["a"], {});
 
-        aut.reduce_top_down();
+        aut.remove_top_down_unreachable();
         CHECK(aut.delta.num_of_states() == 2);
         CHECK(aut.delta.contains(0, alphabet["f"], {1}));
         CHECK(aut.delta.contains(1, alphabet["a"], {}));
@@ -397,7 +397,7 @@ TEST_CASE("mata::nfta::reduce_top_down") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(3, alphabet["f"], {3});
 
-        aut.reduce_top_down();
+        aut.remove_top_down_unreachable();
         CHECK(aut.delta.num_of_states() == 4);
     }
 
@@ -410,7 +410,7 @@ TEST_CASE("mata::nfta::reduce_top_down") {
         aut.delta.add(2, alphabet["a"], {});
         aut.delta.add(3, alphabet["a"], {});
 
-        aut.reduce_top_down();
+        aut.remove_top_down_unreachable();
 
         CHECK(aut.delta.num_of_states() == 2);
         CHECK(aut.delta.contains(0, alphabet["a"], {}));
@@ -418,7 +418,7 @@ TEST_CASE("mata::nfta::reduce_top_down") {
     }
 }
 
-TEST_CASE("mata::nfta::reduce_bottom_up") {
+TEST_CASE("mata::nfta::remove_bottom_up_unreachable") {
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("a"); // 0
     alphabet.add_new_symbol("f"); // 1
@@ -427,7 +427,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
     SECTION("Empty") {
         Nfta aut({}, &alphabet, Delta(10));
 
-        aut.reduce_bottom_up();
+        aut.remove_bottom_up_unreachable();
         CHECK(aut.delta.num_of_states() == 0);
     }
 
@@ -438,7 +438,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(3, alphabet["f"], {2});
 
-        aut.reduce_bottom_up();
+        aut.remove_bottom_up_unreachable();
 
         CHECK(aut.delta.num_of_states() == 2);
         CHECK(aut.delta.contains(1, alphabet["a"], {}));
@@ -452,7 +452,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(1, alphabet["f"], {2});
         aut.delta.add(0, alphabet["f"], {1});
 
-        aut.reduce_bottom_up();
+        aut.remove_bottom_up_unreachable();
 
         CHECK(aut.delta.num_of_states() == 3);
     }
@@ -463,7 +463,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(1, alphabet["f"], {0});
 
-        aut.reduce_bottom_up();
+        aut.remove_bottom_up_unreachable();
 
         CHECK(aut.delta.num_of_states() == 0);
     }
@@ -476,7 +476,7 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(0, alphabet["g"], {1, 2});
         aut.delta.add(0, alphabet["g"], {3, 2});
 
-        aut.reduce_bottom_up();
+        aut.remove_bottom_up_unreachable();
 
         CHECK(aut.delta.num_of_states() == 3);
     }
@@ -494,13 +494,13 @@ TEST_CASE("mata::nfta::reduce_bottom_up") {
         aut.delta.add(5, alphabet["f"], {6});
         aut.delta.add(4, alphabet["f"], {5});
 
-        aut.reduce_bottom_up();
+        aut.remove_bottom_up_unreachable();
 
         CHECK(aut.delta.num_of_states() == 4);
     }
 }
 
-TEST_CASE("mata::nfta::reduce_top_bottom_top and reduce_bottom_top") { // todo check with equality
+TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_bottom_top") { // todo check with equality
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("a"); // arity 0
     alphabet.add_new_symbol("f"); // arity 1
@@ -508,8 +508,8 @@ TEST_CASE("mata::nfta::reduce_top_bottom_top and reduce_bottom_top") { // todo c
 
     // helper — run both reductions on separate copies and check they agree
     auto check_both = [](Nfta aut_tbt, Nfta aut_bt, auto check_fn) {
-        aut_tbt.reduce_top_bottom_top();
-        aut_bt.reduce_bottom_top();
+        aut_tbt.remove_unreachable_top_bottom_top();
+        aut_bt.remove_unreachable_bottom_top();
         check_fn(aut_tbt);
         check_fn(aut_bt);
     };
