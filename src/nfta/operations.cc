@@ -131,7 +131,6 @@ void Nfta::complement_as_deterministic(const utils::OrdVector<SymbolArity>* symb
     assert(is_bottom_up_deterministic() &&
         "mata::nft::complement_as_deterministic automaton is not bottom-up deterministic");
     if (root_states.empty() || delta.empty()) {
-        std::cout << "here\n";
         utils::OrdVector<SymbolArity> tmp;
         const utils::OrdVector<SymbolArity> &symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
         *this = create_universal(&symbols_arities, alphabet);
@@ -143,8 +142,8 @@ void Nfta::complement_as_deterministic(const utils::OrdVector<SymbolArity>* symb
 }
 
 Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in)  {
-    utils::OrdVector<SymbolArity> tmp;
     Nfta result = determinize_optimized(aut);
+
     result.complement_as_deterministic(symbols_arities_in);
     return result;
 }
@@ -588,12 +587,7 @@ void Nfta::make_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in
     utils::OrdVector<SymbolArity> tmp;
     const utils::OrdVector<SymbolArity> &symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
 
-    std::cout << std::endl;
     auto rev_delta = delta.get_reversed();
-
-    // if delta contains the correct number of symbols, it is checked for completeness first
-    if (rev_delta.symbol_posts.size() == symbols_arities.size() &&
-        is_bottom_up_complete(rev_delta)) { return; }
 
     if (sink == Limits::max_state) { sink = delta.add_state(); }
     delta.resize_for_states(sink);
@@ -609,6 +603,8 @@ void Nfta::make_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in
 
     auto input_symbols_it = symbols_arities.begin();
     const auto input_symbols_end = symbols_arities.end();
+
+    size_t transition_count = 0;
 
     // iterating over symbols - both in delta and in input
     while (rev_delta_it != rev_delta_end || input_symbols_it != input_symbols_end) {
@@ -645,34 +641,25 @@ void Nfta::make_complete(const utils::OrdVector<SymbolArity> *symbols_arities_in
             assert(old_rev_delta_it->state_tuple_posts.size() <= expected_num_of_transitions);
             if (old_rev_delta_it->state_tuple_posts.size() == expected_num_of_transitions) { continue; }
         } // else
-        // adding transitions
-        // if (arity == 0) {
-        //     std::cout << "HERE" << std::endl;
-        //     std::cout << alphabet->try_reverse_translate_symbol(symbol) << std::endl;
-        //     // SymbolPost sp(symbol);
-        //     // std::vector<State> tuple = {};
-        //     // sp.insert(tuple);
-        //     // sink_state_post.push_back(sp);
-        //     delta.add(sink, symbol, {});
-        // }
-        // else {
-            std::vector<State> tuple(arity, 0);
-            SymbolPost new_symbol_post {symbol};
-            do {
-                if (!delta_empty && source_tr_it != source_tr_end && source_tr_it->sources == tuple) {
-                    ++source_tr_it; // tuple is already present
-                } else {
-                    // we are working with symbols in order, so push back is fine
-                    new_symbol_post.push_back(tuple);
+        std::vector<State> tuple(arity, 0);
+        SymbolPost new_symbol_post {symbol};
+        do {
+            if (!delta_empty && source_tr_it != source_tr_end && source_tr_it->sources == tuple) {
+                ++source_tr_it; // tuple is already present
+            } else {
+                // we are working with symbols in order, so push back is fine
+                new_symbol_post.push_back(tuple);
+                ++transition_count;
+                if (transition_count % 10000 == 0) {
+                    std::cerr << "Transitions so far: " << transition_count << "\n";
                 }
-            } while (next_tuple(tuple, num_of_states));
-            if (sink_sp_empty) { sink_state_post.push_back(std::move(new_symbol_post)); }
-            else { delta.add(sink, new_symbol_post); }
-        // } // else
+            }
+        } while (next_tuple(tuple, num_of_states));
+        if (sink_sp_empty) { sink_state_post.push_back(std::move(new_symbol_post)); }
+        else { delta.add(sink, new_symbol_post); }
     } // while rev_delta_it != end OR input_symbols_it != end
 
 
-    std::cout << "sink: " << sink << std::endl;
     #ifndef NDEBUG
     assert(delta.is_sorted());
     const utils::OrdVector<Symbol> symbols = collect_symbols(symbols_arities);
@@ -714,7 +701,6 @@ BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const Bo
         std::vector<
             utils::OrdVector<const ReversedDelta::RevStateTuplePost*>
         >
-
     >;
 
     const ReversedDelta rev_delta = delta.get_reversed(allowed);
@@ -752,8 +738,8 @@ BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const Bo
     std::deque<State> worklist;
 
     auto mark = [&](const State state) {
+        if (!marked[state]) { worklist.push_back(state); }
         marked[state] = true;
-        worklist.push_back(state);
     };
 
     for (const State state : rev_delta.get_initial_states()) {
@@ -766,7 +752,7 @@ BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const Bo
 
         for (auto& symbol_cache : cache | std::views::values) {
             if (current >= symbol_cache.size()) { continue; }
-            for (unsigned pos = 0; pos < symbol_cache[current].size(); ++pos) {
+            for (unsigned pos = 0; pos < symbol_cache[current].size(); ++pos) { // todo cach by pos has no benefit
                 for (const auto* src_tr : symbol_cache[current][pos]) {
                     bool all_marked = true;
                     for (const State s : src_tr->sources) {
@@ -803,24 +789,24 @@ bool Nfta::is_lang_empty() const {
     return true;
 }
 
-void Nfta::reduce_top_down() {
+void Nfta::remove_top_down_unreachable() {
     const BoolVector marked = get_top_down_reachable();
     defragment(marked);
 }
 
-void Nfta::reduce_bottom_up() {
+void Nfta::remove_bottom_up_unreachable() {
     const BoolVector marked = get_bottom_up_reachable();
     defragment(marked);
 }
 
-void Nfta::reduce_top_bottom_top() {
+void Nfta::remove_unreachable_top_bottom_top() {
     BoolVector marked = get_top_down_reachable();
     marked = get_bottom_up_reachable(&marked);
     marked = get_top_down_reachable(&marked);
     defragment(marked);
 }
 
-void Nfta::reduce_bottom_top() {
+void Nfta::remove_unreachable_bottom_top() {
     BoolVector marked = get_bottom_up_reachable();
     marked = get_top_down_reachable(&marked);
     defragment(marked);
@@ -905,8 +891,8 @@ struct MacrostateContext {
 };
 
 template<typename OnNewState, typename ComputeTargets>
-Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete,
-    const bool save_mapping, OnNewState on_new_state, ComputeTargets compute_targets) {
+Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool use_reverse_mapping,
+    OnNewState on_new_state, ComputeTargets compute_targets) {
 
     MacrostateContext ctx(aut, state_mapping);
     const ReversedDelta rev_delta = aut.delta.get_reversed();
@@ -938,9 +924,9 @@ Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* stat
 
                     StateSet targets = compute_targets(symbol_post, big_tuple_s, ctx);
 
-                    if (!make_complete && targets.empty()) { continue; }
+                    if (targets.empty()) { continue; }
 
-                    State target_s = ctx.get_or_create_macrostate(targets, true, save_mapping);
+                    State target_s = ctx.get_or_create_macrostate(targets, true, use_reverse_mapping);
                     ctx.result.delta.add(target_s, symbol_post.symbol, big_tuple_s);
                 }
             } while (next_tuple(selector, base));
@@ -951,10 +937,9 @@ Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* stat
     return std::move(ctx.result);
 }
 
-Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) {
+Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
     return determinize_impl(
-        aut, state_mapping, make_complete, true, // use_reversed_map
-        [](State, const StateSet&, const ReversedDelta::RevSymbolPost&, const MacrostateContext&) { return true; },
+        aut, state_mapping, true, [](State, const StateSet&, const ReversedDelta::RevSymbolPost&, const MacrostateContext&) { return true; }, // use_reversed_map
         [](const ReversedDelta::RevSymbolPost& symbol_post, const std::vector<State>& big_tuple_s,
             const MacrostateContext& ctx) -> StateSet {
             const unsigned arity = symbol_post.get_arity();
@@ -974,7 +959,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
     );
 }
 
-Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete) {
+Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
     using SymbolCache =
         std::vector<   // state
             std::vector<   // position
@@ -988,7 +973,7 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
     std::unordered_map<Symbol, SymbolCache> cache;
     cache.reserve(rev_delta.symbol_posts.size());
 
-    auto on_new_state = [&](State new_s, const StateSet& new_macro,
+    auto on_new_state = [&](const State new_s, const StateSet& new_macro,
                             const ReversedDelta::RevSymbolPost& symbol_post,
                             const MacrostateContext&) {
         const Symbol symbol = symbol_post.symbol;
@@ -1006,7 +991,7 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
                 if (new_macro.contains(tuple_post.sources[i])) {
                     collector[i].reserve(collector[i].size() + tuple_post.targets.size());
                     for (const State& t : tuple_post.targets) {
-                        collector[i].push_back(const_cast<std::vector<unsigned*>::value_type>(&t));
+                        collector[i].push_back(&t);
                     }
                 }
             }
@@ -1052,8 +1037,8 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         return utils::OrdVector(target_collector);
     };
 
-    return determinize_impl(aut, state_mapping, make_complete, true,
-        on_new_state, compute_targets);
+    return determinize_impl(aut, state_mapping, true, on_new_state,
+        compute_targets);
 }
 
 Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,

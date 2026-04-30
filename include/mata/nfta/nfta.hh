@@ -30,8 +30,8 @@
  * such operations.
  *
  * Operation outputs are not by default reduced or otherwise optimized. Apply
- * operations such as @c mata::nfta::reduce_bottom_up() or
- * @c mata::nfta::reduce_top_down() to get a reduced automaton.
+ * operations such as @c mata::nfta::remove_bottom_up_unreachable() or
+ * @c mata::nfta::remove_top_down_unreachable() to get a reduced automaton.
  *
  * Users can create NFTAs manually by adding states and transitions using the methods provided in the @c mata::nfta::Nfta
  * and @c mata::nfta::Delta classes, or they can load an automaton from a string using the methods in the @c mata::nfta::Builder
@@ -172,7 +172,8 @@ namespace mata::nfta {
         /**
          * @brief Complement a and deterministic automaton. Automaton gets completed.
          */
-        void complement_as_deterministic(const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
+        void complement_as_deterministic(
+            const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
 
         /**
          * @brief Check if the automaton is bottom-up deterministic.
@@ -265,21 +266,21 @@ namespace mata::nfta {
         /**
          * @brief Remove top-down unreachable states
          */
-        void reduce_top_down();
+        void remove_top_down_unreachable();
 
         /**
          * @brief Remove bottom-up unreachable states
          */
-        void reduce_bottom_up();
+        void remove_bottom_up_unreachable();
 
         /**
          * @brief Reduce top-down, then bottom-up, then top-down again.
          */
-        void reduce_top_bottom_top();
+        void remove_unreachable_top_bottom_top();
         /**
          * @brief Reduce bottom-up, then top-down.
          */
-        void reduce_bottom_top();
+        void remove_unreachable_bottom_top();
 
     }; // class Nfta
 
@@ -349,24 +350,41 @@ namespace mata::nfta {
 
     Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete);
 
+    /**
+     * @brief Determinization implementation.
+     *
+     * @param aut input automaton
+     * @param state_mapping [out, optional] mapping macrostates -> result states
+     * @param use_reverse_mapping if true, a mapping det state -> macrostate is used
+     * @param on_new_state function to do something at the beginning of processing a new state
+     * @param compute_targets function to match a tuple of det states to orig transitions and computate targets
+     * @param sink [in, optional] if true, the result is complete over the set of used symbols and the sink value is saved
+     *
+     * Only (bottom-up) reachable states are constructed.
+     */
+    template<typename OnNewState, typename ComputeTargets>
+    Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, bool use_reverse_mapping,
+        OnNewState on_new_state, ComputeTargets compute_targets);
 
     /**
      * @brief Determinize an automaton.
      *
      * @param aut input automaton
      * @param state_mapping [out, optional] mapping macrostates -> result states
-     * @param make_complete [in] if true, the result is complete over the set of used symbols (NOT its alphabet)
      *
      * Only optimization is that only (bottom-up) reachable states are constructed.
      */
-    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, bool make_complete = false);
+    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
     /**
      * @brief Determinize an automaton.
      *
+     * @param aut input automaton
+     * @param state_mapping [out, optional] mapping macrostates -> result states
+     *
      * Only (bottom-up) reachable states are constructed. todo describe
      */
-    Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr, bool make_complete = false);
+    Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
     /**
      * @brief Construct a complement automaton without determinizing, directly top down.
