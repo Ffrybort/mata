@@ -17,7 +17,7 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
 
-    mata::OnTheFlyAlphabet alphabet;
+    mata::nfta::RankedOnTheFlyAlphabet alphabet;
     std::ifstream file_1(argv[1]);
     std::ifstream file_2(argv[2]);
     if (!file_1.is_open()) {
