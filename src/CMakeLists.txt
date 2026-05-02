@@ -14,6 +14,7 @@ add_library (libmata STATIC
 	$<TARGET_OBJECTS:re2>
         nfta/operations.cc
         nfta/ranked-alphabet.cc
+        nfta/complementation.cc
 )
 
 # libmata needs at least c++20

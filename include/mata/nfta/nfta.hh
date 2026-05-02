@@ -421,5 +421,61 @@ namespace mata::nfta {
      */
     bool is_lang_equal(const Nfta& A, const Nfta& B, ComplementMethod method = ComplementMethod::Classical);
 
+    // helper to resolve symbols and arities - use given or default
+    const utils::OrdVector<SymbolArity>& resolve_symbols_arities (
+        const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in, utils::OrdVector<SymbolArity>& tmp
+        );
+
+// increment by 1 as a number with the given base, overflow => return false todo move this somewhere
+bool inline next_tuple(std::vector<State>& tuple, const size_t base) {
+  size_t pos = tuple.size();
+  while (pos > 0) {
+    --pos;
+    if (++tuple[pos] < base) { return true; }
+    tuple[pos] = 0;
+  }
+  return false;
+} // next_tuple
+
+
+struct MacrostateContext { // todo move this
+  Nfta result{};
+  std::unordered_map<StateSet, State>* mapping;
+  std::vector<StateSet> s_to_macro;
+
+  std::unordered_map<StateSet, State> local_mapping;
+
+  explicit MacrostateContext(const Nfta& aut,
+      std::unordered_map<StateSet, State>* state_mapping = nullptr)
+      : result(),
+        mapping(state_mapping ? state_mapping : &local_mapping),
+        s_to_macro(),
+        local_mapping()
+  {
+    result.alphabet = aut.alphabet;
+    s_to_macro.reserve(aut.delta.num_of_states());
+  }
+
+  MacrostateContext(const MacrostateContext&) = delete;
+  MacrostateContext& operator=(const MacrostateContext&) = delete;
+
+  State get_or_create_macrostate(const StateSet& orig_states, const bool use_reversed_map = false) {
+    assert(mapping);
+    if (const auto it = mapping->find(orig_states); it != mapping->end()) {
+      return it->second;
+    }
+
+    State new_s = result.delta.add_state();
+    (*mapping)[orig_states] = new_s;
+
+    if (use_reversed_map) {
+      s_to_macro.resize(new_s + 1);
+      s_to_macro[new_s] = orig_states;
+    }
+
+    return new_s;
+  }
+};
+
 } // namespace mata::nfta
 #endif // MATA_NFTA_H
