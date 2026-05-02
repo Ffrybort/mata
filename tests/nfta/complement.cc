@@ -20,7 +20,10 @@ static size_t count_tuples(const Nfta& aut, State src, Symbol sym) {
     return it->target_tuples.size();
 }
 
-TEST_CASE("mata::nfta::complement_classical") {
+TEST_CASE("mata::nfta::complement (classical)") {
+    const ParameterMap classical_naive     = { { "algorithm", "classical"  }, { "determinization", "naive"      } };
+    const ParameterMap classical_optimized = { { "algorithm", "classical"  }, { "determinization", "optimized"  } };
+
     SECTION("Empty automaton") {
         RankedOnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a", 2);
@@ -28,7 +31,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         Nfta aut{};
         aut.alphabet = &alphabet;
         Nfta comp;
-        CHECK_NOTHROW(comp = complement_classical(aut));
+        CHECK_NOTHROW(comp = complement(aut, classical_optimized));
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
@@ -40,7 +43,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         alphabet.add_new_symbol("a", 0);
         Nfta aut = create_empty(&alphabet);
         Nfta comp;
-        CHECK_NOTHROW(comp = complement_classical(aut));
+        CHECK_NOTHROW(comp = complement(aut, classical_optimized));
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
@@ -56,7 +59,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         aut.delta.add(0, alphabet.translate_symbol("a", 2), {0, 2});
         aut.delta.add(2, alphabet.translate_symbol("a", 0), {});
         Nfta comp;
-        CHECK_NOTHROW(comp = complement_classical(aut));
+        CHECK_NOTHROW(comp = complement(aut, classical_optimized));
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
@@ -67,7 +70,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         aut.delta.add(0, 0, {});
         aut.delta.add(0, 1, {0});
 
-        Nfta comp = complement_classical(aut);
+        Nfta comp = complement(aut, classical_optimized);
         CHECK(comp.is_lang_empty());
     }
 
@@ -80,7 +83,8 @@ TEST_CASE("mata::nfta::complement_classical") {
         aut.delta.add(0, alphabet.translate_symbol("f", 1), {1});
         aut.delta.add(1, alphabet.translate_symbol("f", 1), {0});
 
-        Nfta comp = complement_classical(aut);
+        Nfta comp = complement(aut, classical_optimized);
+
         CHECK_FALSE(comp.is_lang_empty());
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.num_of_transitions() == 2);
@@ -97,7 +101,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         Nfta aut({ 0 }, &alphabet, Delta(1));
         aut.delta.add(0, a, {});
 
-        Nfta comp = complement_classical(aut);
+        Nfta comp = complement(aut, classical_optimized);
         // complement should accept nothing (alphabet has only 'a' and aut accepts it)
         CHECK(comp.is_lang_empty());
     }
@@ -115,7 +119,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         aut.delta.add(1, f, { 0 });
         aut.delta.add(1, a, {});
 
-        Nfta comp = complement_classical(aut);
+        Nfta comp = complement(aut, classical_optimized);
 
         // intersection should be empty
         Nfta inter = intersection(aut, comp);
@@ -135,7 +139,7 @@ TEST_CASE("mata::nfta::complement_classical") {
         aut.delta.add(0, a, {});
         aut.delta.add(1, a, {});
 
-        Nfta comp = complement_classical(aut);
+        Nfta comp = complement(aut, classical_naive);
 
         CHECK(comp.root_states.size() == 1);
         CHECK(comp.is_lang_empty());
@@ -154,18 +158,24 @@ TEST_CASE("mata::nfta::complement_classical") {
         aut.delta.add(1, p, { 0, 0 });
         aut.delta.add(1, a, {});
 
-        Nfta comp = complement_classical(aut);
+        Nfta comp = complement(aut, classical_optimized);
 
         CHECK(comp.is_bottom_up_deterministic());
         CHECK(intersection(aut, comp).is_lang_empty());
 
         // union should be universal
-        const Nfta uni_comp = complement_classical(union_nondet(aut, comp));
+        const Nfta uni_comp = complement(union_nondet(aut, comp), classical_optimized);
         CHECK(uni_comp.is_lang_empty());
+    }
+    SECTION("Unknown algorithm throws") {
+        OnTheFlyAlphabet alphabet;
+        Nfta aut({}, &alphabet, {});
+        CHECK_THROWS(complement(aut, { { "algorithm", "classical" }, { "determinization", "unknown" } }));
     }
 }
 
 TEST_CASE("mata::nfta::complement_top_down") {
+    const ParameterMap top_down_params     = { { "algorithm", "top_down"   } };
     SECTION("Empty automaton") {
         RankedOnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a", 2);
@@ -173,7 +183,7 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Nfta aut{};
         aut.alphabet = &alphabet;
         Nfta comp;
-        CHECK_NOTHROW(comp = complement_top_down(aut));
+        CHECK_NOTHROW(comp = complement(aut, top_down_params));
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
@@ -185,7 +195,7 @@ TEST_CASE("mata::nfta::complement_top_down") {
         alphabet.add_new_symbol("a", 0);
         Nfta aut = create_empty(&alphabet);
         Nfta comp;
-        CHECK_NOTHROW(comp = complement_top_down(aut));
+        CHECK_NOTHROW(comp = complement(aut, top_down_params));
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
@@ -201,7 +211,7 @@ TEST_CASE("mata::nfta::complement_top_down") {
         aut.delta.add(0, alphabet.translate_symbol("a", 2), {0, 2});
         aut.delta.add(2, alphabet.translate_symbol("a", 0), {});
         Nfta comp;
-        CHECK_NOTHROW(comp = complement_top_down(aut));
+        CHECK_NOTHROW(comp = complement(aut, top_down_params));
         CHECK(comp.delta.num_of_states() == 1);
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
@@ -498,7 +508,7 @@ TEST_CASE("mata::nfta::complement_top_down") {
         aut.delta.add(0, 0, {});
         aut.delta.add(0, 1, {0});
 
-        Nfta comp = complement_top_down(aut);
+        Nfta comp = complement(aut, top_down_params);
         CHECK(comp.is_lang_empty());
     }
     SECTION("Complement of empty-language automaton is non-empty") {
@@ -510,7 +520,13 @@ TEST_CASE("mata::nfta::complement_top_down") {
         aut.delta.add(0, alphabet.translate_symbol("f", 1), {1});
         aut.delta.add(1, alphabet.translate_symbol("f", 1), {0});
 
-        Nfta comp = complement_top_down(aut);
+        Nfta comp = complement(aut, top_down_params);
         CHECK_FALSE(comp.is_lang_empty());
+    }
+
+    SECTION("Missing algorithm key throws") {
+        OnTheFlyAlphabet alphabet;
+        Nfta aut({}, &alphabet, {});
+        CHECK_THROWS(complement(aut, {}));
     }
 }

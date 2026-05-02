@@ -23,12 +23,6 @@
  *
  * @section nfta_usage Working with NFTAs
  *
- * Some operations (product constructions, deterministic union) require the
- * automaton to be complete — every state must have a transition for every
- * non-constant symbol. Use @c make_bottom_up_complete or
- * @c make_top_down_complete to complete an automaton before passing it to
- * such operations.
- *
  * Operation outputs are not by default reduced or otherwise optimized. Apply
  * operations such as @c mata::nfta::remove_bottom_up_unreachable() or
  * @c mata::nfta::remove_top_down_unreachable() to get a reduced automaton.
@@ -53,6 +47,7 @@
 #include <mata/utils/sparse-set.hh>
 #include <mata/nfta/delta.hh>
 #include <mata/utils/two-dimensional-map.hh>
+#include <mata/utils/utils.hh>
 
 namespace mata::nfta {
 
@@ -146,15 +141,6 @@ namespace mata::nfta {
         bool is_identical_to(const Nfta& other) const;
 
         /**
-         * @brief Remove epsilon transitions from an automaton.
-         *
-         * The automaton is modified in-place.
-         *
-         * @param epsilon Default or user defined epsilon symbol, it has to be unary.
-         */
-        void remove_epsilon_in_place(Symbol epsilon = EPSILON);
-
-        /**
          * @brief In-place union that does not preserve determinism.
          *
          * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet
@@ -192,37 +178,16 @@ namespace mata::nfta {
         /**
          * @brief Check if the automaton is complete.
          */
-        bool is_bottom_up_complete(const utils::OrdVector<Symbol> &symbols) const;
+        bool is_complete(const utils::OrdVector<Symbol> &symbols) const;
         /**
          * @brief Check if the automaton is complete using alphabet symbols or delta symbols (if alphabet is null).
          */
-        bool is_bottom_up_complete() const;
+        bool is_complete() const;
 
         /**
          * @brief Check bottom-up completeness directly on a reversed delta.
          */
-        bool is_bottom_up_complete(const ReversedDelta& rev_delta) const;
-
-        /**
-         * @brief Check top-down completeness.
-         *
-         * @param [in] symbols need to exclude constants
-         */
-        bool is_top_down_complete(const utils::OrdVector<Symbol>&symbols) const;
-
-        /**
-         * @brief Check top-down completeness using its alphabet (if a ranked alphabet is used) or symbols in delta.
-         */
-        bool is_top_down_complete() const;
-
-        /**
-         * @brief Check top-down completeness.
-         *
-         * @param [in] symbols_arities constant (arity 0) symbols are automatically ignored
-         */
-        bool is_top_down_complete(const utils::OrdVector<SymbolArity>& symbols_arities) const { //{{{
-            return is_top_down_complete(collect_symbols(symbols_arities, true));
-        } //}}}
+        bool is_complete(const ReversedDelta& rev_delta) const;
 
         /**
          * @brief Complete the automaton bottom-up with given symbols, add missing transitions leading to a sink state.
@@ -385,6 +350,41 @@ namespace mata::nfta {
      * Only (bottom-up) reachable states are constructed. todo describe
      */
     Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+
+    /**
+     * @brief Complement the automaton.
+     *
+     * @param aut Input automaton to complement.
+     * @param symbols_arities_in [in, optional] Vector of (symbol, arity) pairs to complement over.
+     *        If not provided, defaults to alphabet symbols (if a ranked alphabet is used) or symbols used in delta.
+     * @param params [in, optional] Parameters:
+     * - "algorithm":
+     *      - "classical": Determinize, complete, and swap root and non-root states (default).
+     *      - "top_down": Constructs the complement directly top-down without determinization.
+     * - "determinization": (classical algorithm only)
+     *      - "naive": Scan the full reversed delta on each step.
+     *      - "optimized": Use a per-symbol cache to avoid redundant work (default).
+     *
+     * Result of "classical" is bottom-up deterministic, complete, and bottom-up reduced.
+     * Result of "top_down" is top-down reduced.
+     */
+    Nfta complement(const Nfta& aut, const ParameterMap& params = { { "algorithm", "classical" } },
+          const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
+
+    /**
+     * @brief Determinize an automaton.
+     *
+     * @param aut Input automaton.
+     * @param state_mapping [out, optional] Mapping macrostates -> result states.
+     * @param params [in, optional] Parameters:
+     * - "algorithm":
+     *      - "naive": Scan the full reversed delta on each step.
+     *      - "optimized": Use a per-symbol cache to avoid redundant work (default).
+     *
+     * Only bottom-up reachable states are constructed.
+     */
+    Nfta determinize(const Nfta& aut, const ParameterMap& params = { { "algorithm", "optimized" } },
+        std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
     /**
      * @brief Construct a complement automaton without determinizing, directly top down.

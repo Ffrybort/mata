@@ -36,10 +36,18 @@ namespace mata::nfta
 
     constexpr Symbol EPSILON{ Limits::max_symbol };
 
-    enum class Condition {
-        And,
-        Or,
-    };
+    /**
+    * @brief Map of additional parameter name and value pairs.
+    *
+    * Used by certain functions for specifying some additional parameters in the following format:
+    * ```cpp
+    * ParameterMap {
+    *     { "algorithm", "classical" },
+    *     { "minimize", "true" }
+    * }
+    * ```
+    */
+    using ParameterMap = std::unordered_map<std::string, std::string>;
 } // namespace mata::nfta
 
 #endif //NFTA_TYPES_HH

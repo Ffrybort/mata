@@ -10,7 +10,7 @@ using namespace mata::nfta;
 using namespace mata::utils;
 using namespace mata;
 
-TEST_CASE("mata::nfta::determinize_naive") {
+TEST_CASE("mata::nfta::determinize") {
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("f"); // unary
     alphabet.add_new_symbol("a"); // constant
@@ -18,11 +18,14 @@ TEST_CASE("mata::nfta::determinize_naive") {
     alphabet.add_new_symbol("h"); // 3
     alphabet.add_new_symbol("k"); // 4
 
+    const ParameterMap naive_params    = { { "algorithm", "naive"     } };
+    const ParameterMap optimized_params = { { "algorithm", "optimized" } };
+
     SECTION("Empty") {
         Nfta aut({}, &alphabet, {});
 
-        Nfta aut_n = determinize_naive(aut);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params);
+        Nfta aut_0 = determinize(aut, optimized_params);
 
         CHECK(aut_n.is_bottom_up_deterministic());
         CHECK(aut_n.delta.empty());
@@ -34,14 +37,12 @@ TEST_CASE("mata::nfta::determinize_naive") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["f"], {0});
 
-        size_t before_states = aut.delta.num_of_states();
-
-        Nfta aut_n = determinize_naive(aut);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params);
+        Nfta aut_0 = determinize(aut, optimized_params);
 
         CHECK(aut_n.is_bottom_up_deterministic());
         CHECK(aut_n.delta.num_of_transitions() == 2);
-        CHECK(aut_n.delta.num_of_states() == before_states);
+        CHECK(aut_n.delta.num_of_states() == aut.delta.num_of_states());
     }
 
     SECTION("Constant nondeterminism") {
@@ -52,8 +53,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -81,8 +82,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -106,8 +107,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -136,8 +137,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
         CHECK(aut_n.is_lang_empty());
     }
@@ -154,8 +155,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -179,8 +180,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -215,8 +216,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(2, alphabet["g"], {0,0});
 
-        Nfta aut_n = determinize_naive(aut);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params);
+        Nfta aut_o = determinize(aut, optimized_params);
 
         CHECK(aut_n.is_bottom_up_deterministic());
         CHECK(aut_n.delta.num_of_transitions() == 2);
@@ -233,8 +234,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -262,8 +263,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -292,8 +293,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -325,8 +326,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -363,8 +364,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -396,8 +397,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -427,8 +428,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
         aut.delta.add(4, alphabet["h"], {1,1,1});
 
         std::unordered_map<StateSet, State> mapping;
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -455,8 +456,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -485,8 +486,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -515,8 +516,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
         CHECK(aut_n.is_identical_to(aut_0));
 
         CHECK(aut_n.is_bottom_up_deterministic());
@@ -537,8 +538,8 @@ TEST_CASE("mata::nfta::determinize_naive") {
 
         std::unordered_map<StateSet, State> mapping;
 
-        Nfta aut_n = determinize_naive(aut, &mapping);
-        Nfta aut_0 = determinize_optimized(aut);
+        Nfta aut_n = determinize(aut, naive_params, &mapping);
+        Nfta aut_0 = determinize(aut, optimized_params);
 
         CHECK(aut_n.is_identical_to(aut_0));
 
@@ -550,6 +551,16 @@ TEST_CASE("mata::nfta::determinize_naive") {
         CHECK(aut_n.delta.num_of_transitions() == 2);
         CHECK(aut_n.delta.contains(0, alphabet["a"], {}));
         CHECK(aut_n.delta.contains(1, alphabet["h"], {0,0,0}));
+    }
+
+    SECTION("Unknown algorithm throws") {
+        Nfta aut({}, &alphabet, {});
+        CHECK_THROWS(determinize(aut, { { "algorithm", "special" } }));
+    }
+
+    SECTION("Missing algorithm key throws") {
+        Nfta aut({}, &alphabet, {});
+        CHECK_THROWS(determinize(aut, {}));
     }
 }
 

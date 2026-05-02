@@ -30,7 +30,7 @@ TEST_CASE("mata::nfta::make_complete") {
 
         OrdVector<SymbolArity> symbols = {{alphabet["a"],0}, {alphabet["f"],1}, {alphabet["g"],2}};
         aut.make_complete(&symbols);
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
         CHECK(aut.delta.num_of_transitions() == 14);
     }
 
@@ -43,7 +43,7 @@ TEST_CASE("mata::nfta::make_complete") {
 
         OrdVector<SymbolArity> symbols = {{alphabet["a"], 0}, {alphabet["f"], 1}, {alphabet["g"], 2}};
         aut.make_complete(&symbols, sink);
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
 
         // all states before sink should be added
         CHECK(aut.delta.num_of_states() == 5);
@@ -56,7 +56,7 @@ TEST_CASE("mata::nfta::make_complete") {
         aut.make_complete(&symbols);
 
         // Check that bottom-up complete
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
         CHECK(aut.delta.num_of_transitions() == 21);
     }
 
@@ -75,7 +75,7 @@ TEST_CASE("mata::nfta::make_complete") {
 
         OrdVector<SymbolArity> symbols = {{alphabet["a"],0}, {alphabet["f"],1}, {alphabet["g"],2}};
         aut.make_complete();
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
         CHECK(aut.delta.num_of_transitions() == 13 + 3);
     }
 
@@ -88,7 +88,7 @@ TEST_CASE("mata::nfta::make_complete") {
 
         OrdVector<SymbolArity> symbols = {{alphabet["a"],0}, {alphabet["f"],1}, {alphabet["g"],2}};
         aut.make_complete(&symbols, sink);
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["a"], alphabet["f"], alphabet["g"]}));
         CHECK(aut.delta.num_of_transitions() == 13 );
     }
 
@@ -99,7 +99,7 @@ TEST_CASE("mata::nfta::make_complete") {
         OrdVector<SymbolArity> symbols = {{alphabet["a"],0}};
         aut.make_complete(&symbols);
 
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["a"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["a"]}));
         // nothing is added
         CHECK(aut.delta.num_of_transitions() == 1);
     }
@@ -110,7 +110,7 @@ TEST_CASE("mata::nfta::make_complete") {
         OrdVector<SymbolArity> symbols = {{alphabet["h"],3}};
         aut.make_complete(&symbols);
 
-        CHECK(aut.is_bottom_up_complete(OrdVector<Symbol>{alphabet["h"]}));
+        CHECK(aut.is_complete(OrdVector<Symbol>{alphabet["h"]}));
         CHECK(aut.delta.num_of_states() == 5);
         CHECK(aut.delta.num_of_transitions() == 125);
     }
