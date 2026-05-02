@@ -15,6 +15,7 @@ add_library (libmata STATIC
         nfta/operations.cc
         nfta/ranked-alphabet.cc
         nfta/complementation.cc
+        nfta/determinization.cc
 )
 
 # libmata needs at least c++20
