@@ -74,22 +74,23 @@ bool inline next_tuple(std::vector<State>& tuple, const size_t base) {
     return false;
 } // next_tuple
 
-
-struct MacrostateContext { // TODO: move this
-    Nfta result{};
+template<typename NewStateFn>
+struct MacrostateMapping {
     std::unordered_map<StateSet, State>* mapping;
     std::vector<StateSet> s_to_macro;
 
     std::unordered_map<StateSet, State> local_mapping;
+    NewStateFn new_state_fn;
 
-    explicit MacrostateContext(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr)
-        : result(), mapping(state_mapping ? state_mapping : &local_mapping), s_to_macro(), local_mapping() {
-        result.alphabet = aut.alphabet;
-        s_to_macro.reserve(aut.delta.num_of_states());
+    explicit MacrostateMapping(
+        const Nfta& aut, NewStateFn new_state_fn, std::unordered_map<StateSet, State>* state_mapping = nullptr)
+
+        : mapping(state_mapping ? state_mapping : &local_mapping), s_to_macro(), local_mapping(), new_state_fn(new_state_fn) {
+        s_to_macro.reserve(aut.delta.num_of_states()); // TODO: this should be optional
     }
 
-    MacrostateContext(const MacrostateContext&) = delete;
-    MacrostateContext& operator=(const MacrostateContext&) = delete;
+    MacrostateMapping(const MacrostateMapping&) = delete;
+    MacrostateMapping& operator=(const MacrostateMapping&) = delete;
 
     State get_or_create_macrostate(const StateSet& orig_states, const bool use_reversed_map = false) {
         assert(mapping);
@@ -97,7 +98,7 @@ struct MacrostateContext { // TODO: move this
             return it->second;
         }
 
-        State new_s = result.delta.add_state();
+        State new_s = new_state_fn();
         (*mapping)[orig_states] = new_s;
 
         if (use_reversed_map) {
@@ -108,5 +109,13 @@ struct MacrostateContext { // TODO: move this
         return new_s;
     }
 };
+
+template<typename NewStateFn>
+MacrostateMapping<NewStateFn> make_mapping(
+        const Nfta& aut, NewStateFn fn,
+        std::unordered_map<StateSet, State>* state_mapping = nullptr) {
+    return MacrostateMapping<NewStateFn>(aut, std::move(fn), state_mapping);
+}
+
 }
 #endif //MATA_NFTA_UTILS_HH

@@ -77,7 +77,11 @@ Nfta complement_top_down(
 
     utils::OrdVector<SymbolArity> tmp;
     const auto& symbols_arities = resolve_symbols_arities(aut, symbols_arities_in, tmp);
-    MacrostateContext ctx(aut, state_mapping);
+
+    Nfta result;
+    result.alphabet = aut.alphabet;
+
+    auto macrostate_mapping = make_mapping(aut, [&result]{ return result.delta.add_state(); }, state_mapping);
 
     if (aut.delta.empty() || aut.root_states.empty()) {
         return create_universal(&symbols_arities);
@@ -92,8 +96,8 @@ Nfta complement_top_down(
     std::priority_queue<Item, std::vector<Item>, Compare> worklist;
 
     auto get_or_create = [&](const StateSet& states) -> State {
-        bool is_new = !ctx.mapping->contains(states);
-        State s = ctx.get_or_create_macrostate(states);
+        bool is_new = !macrostate_mapping.mapping->contains(states);
+        State s = macrostate_mapping.get_or_create_macrostate(states);
         if (is_new)
             worklist.push({s, states});
         return s;
@@ -101,7 +105,7 @@ Nfta complement_top_down(
 
     // initialize with the root macrostate
     const State q_det = get_or_create(StateSet(aut.root_states.begin(), aut.root_states.end()));
-    ctx.result.add_root(q_det);
+    result.add_root(q_det);
 
     // // component-wise subset
     // // returns 1 if a <= b (a subset eq of b), -1 if b < a (b subset of a), 0 if neither
@@ -150,7 +154,7 @@ Nfta complement_top_down(
                     }
                 }
                 if (leaf_accepts) {
-                    ctx.result.delta.add(new_s, symbol, {});
+                    result.delta.add(new_s, symbol, {});
                 }
                 continue;
             }
@@ -215,15 +219,15 @@ Nfta complement_top_down(
             }
 
             if (!res_symbol_post_tmp.empty()) {
-                ctx.result.delta.mutable_state_post(new_s).push_back(
+                result.delta.mutable_state_post(new_s).push_back(
                         SymbolPost{symbol, utils::OrdVector(std::move(res_symbol_post_tmp))});
             }
         }
     }
-    if (ctx.result.root_states.empty() || ctx.result.delta.empty()) {
+    if (result.root_states.empty() || result.delta.empty()) {
         return create_empty(aut.alphabet);
     }
-    return std::move(ctx.result);
+    return std::move(result);
 } // complement_top_down
 
 } // namespace mata::nfta

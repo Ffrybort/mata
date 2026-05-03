@@ -1,11 +1,12 @@
 /**
  * @file operations.cc
  *
- * @brief Implementation of NFTA operations.
+ * @brief Implementation of NFTA operations. Other operations are implemented in ``determinization.cc'' and
+ * ``complementation.cc.''
  */
 
 #include <mata/nfta/builder.hh>
-#include "mata/nfta/nfta.hh" // todo resolve headers
+#include "mata/nfta/nfta.hh"
 #include <mata/nfta/utils.hh>
 #include "mata/nfta/ranked-alphabet.hh"
 #include "mata/utils/two-dimensional-map.hh"

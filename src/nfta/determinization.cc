@@ -1,3 +1,10 @@
+/**
+ * @file determinization.cc
+ *
+ * @brief Implementation of NFTA determinization.
+ */
+
+
 #include <mata/nfta/builder.hh>
 #include <mata/nfta/nfta.hh>
 #include <mata/nfta/utils.hh>
@@ -18,7 +25,6 @@ Nfta determinize(const Nfta& aut, const ParameterMap& params, std::unordered_map
         return determinize_optimized(aut, state_mapping);
     }
     if (str_algo == "naive") {
-        std::cout << "here\n";
         return determinize_naive(aut, state_mapping);
     }
     throw std::runtime_error(
@@ -27,49 +33,43 @@ Nfta determinize(const Nfta& aut, const ParameterMap& params, std::unordered_map
 
 Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
     return determinize_impl(
-            aut, state_mapping, true,
-            [](State, const StateSet&, const ReversedDelta::RevSymbolPost&, const MacrostateContext&) {
-                return true;
-            }, // use_reversed_map
-            [](const ReversedDelta::RevSymbolPost& symbol_post, const std::vector<State>& big_tuple_s,
-               const MacrostateContext& ctx) -> StateSet {
-                const unsigned arity = symbol_post.get_arity();
-                StateSet targets;
-                for (const auto& tuple_post : symbol_post.state_tuple_posts) {
-                    const std::vector<State>& tuple = tuple_post.sources;
-                    assert(tuple.size() == arity && "mata::nfta::determinize_naive arity mismatch");
-                    bool match = true;
-                    for (unsigned i = 0; i < arity; i++) {
-                        if (!ctx.s_to_macro[big_tuple_s[i]].contains(tuple[i])) {
-                            match = false;
-                            break;
-                        }
+        aut, state_mapping, true,
+        [](State, const StateSet&, const ReversedDelta::RevSymbolPost&, auto&) {
+            return true;
+        },
+        [](const ReversedDelta::RevSymbolPost& symbol_post, const std::vector<State>& big_tuple_s,
+           auto& ctx) -> StateSet {
+            const unsigned arity = symbol_post.get_arity();
+            StateSet targets;
+            for (const auto& tuple_post : symbol_post.state_tuple_posts) {
+                const std::vector<State>& tuple = tuple_post.sources;
+                assert(tuple.size() == arity && "mata::nfta::determinize_naive arity mismatch");
+                bool match = true;
+                for (unsigned i = 0; i < arity; i++) {
+                    if (!ctx.s_to_macro[big_tuple_s[i]].contains(tuple[i])) {
+                        match = false;
+                        break;
                     }
-                    if (!match) {
-                        continue;
-                    }
-                    targets.insert(tuple_post.targets);
                 }
-                return targets;
-            });
+                if (!match) continue;
+                targets.insert(tuple_post.targets);
+            }
+            return targets;
+        });
 }
 
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
-
     DeterminizeCache cache{};
     const ReversedDelta rev_delta = aut.delta.get_reversed();
     cache.symbol_caches.reserve(rev_delta.symbol_posts.size());
 
     auto on_new_state = [&](const State new_s, const StateSet& new_macro,
-                            const ReversedDelta::RevSymbolPost& symbol_post, const MacrostateContext&) {
-        const Symbol symbol = symbol_post.symbol;
-        const unsigned arity = symbol_post.get_arity();
-
-        return cache.fill(symbol, new_s, arity, symbol_post, new_macro);
+                            const ReversedDelta::RevSymbolPost& symbol_post, auto&) {
+        return cache.fill(symbol_post.symbol, new_s, symbol_post.get_arity(), symbol_post, new_macro);
     };
 
-    auto compute_targets = [&](const ReversedDelta::RevSymbolPost& symbol_post, const std::vector<State>& big_tuple_s,
-                               const MacrostateContext&) -> StateSet {
+    auto compute_targets = [&](const ReversedDelta::RevSymbolPost& symbol_post,
+                               const std::vector<State>& big_tuple_s, auto&) -> StateSet {
         const Symbol symbol = symbol_post.symbol;
         const unsigned arity = symbol_post.get_arity();
         auto& symbol_cache = cache.symbol_caches[symbol];
@@ -83,9 +83,7 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
             }
             order[i] = i;
         }
-        if (skip) {
-            return utils::OrdVector<State>{};
-        }
+        if (skip) return utils::OrdVector<State>{};
 
         std::ranges::sort(order, [&](unsigned a, unsigned b) {
             return symbol_cache[big_tuple_s[a]][a].size() < symbol_cache[big_tuple_s[b]][b].size();
@@ -100,7 +98,6 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         for (unsigned i = 0; i < surviving.size(); i++) {
             target_collector[i] = *surviving.at(i);
         }
-
         return utils::OrdVector(target_collector);
     };
 
@@ -112,7 +109,11 @@ Nfta determinize_impl(
         const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool use_reverse_mapping,
         OnNewState on_new_state, ComputeTargets compute_targets) {
 
-    MacrostateContext ctx(aut, state_mapping);
+    Nfta result{};
+    result.alphabet = aut.alphabet;
+
+    auto ctx = make_mapping(aut, [&result]{ return result.delta.add_state(); }, state_mapping);
+
     const ReversedDelta rev_delta = aut.delta.get_reversed();
 
     using Item = std::pair<State, StateSet>;
@@ -125,16 +126,15 @@ Nfta determinize_impl(
         if (is_new) {
             worklist.push_back({s, states});
             if (aut.root_states.intersects_with(states)) {
-                ctx.result.add_root(s);
+                result.add_root(s);
             }
         }
         return s;
     };
 
-    // initialize with constant transitions
     for (auto [symbol, initial_states] : rev_delta.get_initial_states_by_symbol()) {
         const State new_s = get_or_create(initial_states);
-        ctx.result.delta.add(new_s, symbol, {});
+        result.delta.add(new_s, symbol, {});
     }
 
     while (!worklist.empty()) {
@@ -143,14 +143,10 @@ Nfta determinize_impl(
         processed.push_back(new_s);
 
         for (const auto& symbol_post : rev_delta.symbol_posts) {
-            if (symbol_post.is_constant()) {
-                continue;
-            }
+            if (symbol_post.is_constant()) continue;
             const unsigned arity = symbol_post.get_arity();
 
-            if (!on_new_state(new_s, new_macro, symbol_post, ctx)) {
-                continue;
-            }
+            if (!on_new_state(new_s, new_macro, symbol_post, ctx)) continue;
 
             const size_t base = processed.size();
             const unsigned small_size = arity - 1;
@@ -161,29 +157,25 @@ Nfta determinize_impl(
                 for (unsigned i = 0; i < small_size; i++) {
                     small_tuple_s[i] = processed[selector[i]];
                 }
-
                 for (unsigned pos = 0; pos < arity; pos++) {
                     std::copy_n(small_tuple_s.begin(), pos, big_tuple_s.begin());
                     big_tuple_s[pos] = new_s;
                     std::copy(small_tuple_s.begin() + pos, small_tuple_s.end(), big_tuple_s.begin() + pos + 1);
 
                     StateSet targets = compute_targets(symbol_post, big_tuple_s, ctx);
-
-                    if (targets.empty()) {
-                        continue;
-                    }
+                    if (targets.empty()) continue;
 
                     State target_s = get_or_create(targets);
-                    ctx.result.delta.add(target_s, symbol_post.symbol, big_tuple_s);
+                    result.delta.add(target_s, symbol_post.symbol, big_tuple_s);
                 }
             } while (next_tuple(selector, base));
         }
     }
 
-    if (ctx.result.root_states.empty() || ctx.result.delta.empty()) {
-        return create_empty(ctx.result.alphabet);
+    if (result.root_states.empty() || result.delta.empty()) {
+        return create_empty(result.alphabet);
     }
-    return std::move(ctx.result);
+    return result;
 }
 
 } // namespace mata::nfta
