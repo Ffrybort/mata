@@ -53,31 +53,29 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
             });
 }
 
-Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
-    using SymbolCache = std::vector< // state
-            std::vector< // position
-                    utils::OrdVector< // set of targets
-                            const State* // pointers to rev delta
-                            >>>;
+struct DeterminizeCache {
+    using SymbolCache = std::vector<           // state
+                    std::vector<               // position
+                        utils::OrdVector<      // set of targets
+                            const State*>>>;   // pointers into rev delta
 
-    const ReversedDelta rev_delta = aut.delta.get_reversed();
-    std::unordered_map<Symbol, SymbolCache> cache;
-    cache.reserve(rev_delta.symbol_posts.size());
+    std::unordered_map<Symbol, SymbolCache> symbol_caches;
 
-    auto on_new_state = [&](const State new_s, const StateSet& new_macro,
-                            const ReversedDelta::RevSymbolPost& symbol_post, const MacrostateContext&) {
-        const Symbol symbol = symbol_post.symbol;
-        const unsigned arity = symbol_post.get_arity();
+    void resize_for_state(Symbol symbol, State new_s, unsigned arity) {
+        auto& sc = symbol_caches[symbol];
+        if (new_s >= sc.size()) sc.resize(new_s + 1);
+        sc[new_s].resize(arity);
+    }
 
-        auto& symbol_cache = cache[symbol];
-        if (new_s >= symbol_cache.size()) {
-            symbol_cache.resize(new_s + 1);
-        }
-        auto& new_s_cache = symbol_cache[new_s];
-        new_s_cache.resize(arity);
+    bool fill(const Symbol symbol, const State new_s, const unsigned arity,
+              const ReversedDelta::RevSymbolPost& symbol_post,
+              const StateSet& new_macro)
+    {
+        resize_for_state(symbol, new_s, arity);
+        auto& new_s_cache = symbol_caches[symbol][new_s];
+        bool is_nonempty = false;
 
         std::vector<std::vector<const State*>> collector(arity);
-
         for (const auto& tuple_post : symbol_post.state_tuple_posts) {
             for (unsigned i = 0; i < arity; i++) {
                 if (new_macro.contains(tuple_post.sources[i])) {
@@ -90,19 +88,38 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
         }
 
         for (unsigned i = 0; i < arity; i++) {
-            if (collector[i].empty()) {
-                continue;
+            if (!collector[i].empty()) {
+                is_nonempty = true;
+                new_s_cache[i] = utils::OrdVector(std::move(collector[i]));
             }
-            new_s_cache[i] = utils::OrdVector(std::move(collector[i]));
         }
-        return true;
+        return is_nonempty;
+    }
+
+    utils::OrdVector<const State*>& operator()(Symbol sym, State s, unsigned pos) {
+        return symbol_caches[sym][s][pos];
+    }
+};
+
+Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
+
+    DeterminizeCache cache{};
+    const ReversedDelta rev_delta = aut.delta.get_reversed();
+    cache.symbol_caches.reserve(rev_delta.symbol_posts.size());
+
+    auto on_new_state = [&](const State new_s, const StateSet& new_macro,
+                            const ReversedDelta::RevSymbolPost& symbol_post, const MacrostateContext&) {
+        const Symbol symbol = symbol_post.symbol;
+        const unsigned arity = symbol_post.get_arity();
+
+        return cache.fill(symbol, new_s, arity, symbol_post, new_macro);
     };
 
     auto compute_targets = [&](const ReversedDelta::RevSymbolPost& symbol_post, const std::vector<State>& big_tuple_s,
                                const MacrostateContext&) -> StateSet {
         const Symbol symbol = symbol_post.symbol;
         const unsigned arity = symbol_post.get_arity();
-        auto& symbol_cache = cache[symbol];
+        auto& symbol_cache = cache.symbol_caches[symbol];
 
         std::vector<unsigned> order(arity);
         bool skip = false;
