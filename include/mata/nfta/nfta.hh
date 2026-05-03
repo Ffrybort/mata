@@ -350,7 +350,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
  * @param aut input automaton
  * @param state_mapping [out, optional] mapping macrostates -> result states
  *
- * Only (bottom-up) reachable states are constructed. todo describe
+ * Only (bottom-up) reachable states are constructed. TODO: describe
  */
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
@@ -430,7 +430,7 @@ bool is_lang_equal(const Nfta& A, const Nfta& B, ComplementMethod method = Compl
 const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
         const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in, utils::OrdVector<SymbolArity>& tmp);
 
-// increment by 1 as a number with the given base, overflow => return false todo move this somewhere
+// increment by 1 as a number with the given base, overflow => return false TODO: move this somewhere
 bool inline next_tuple(std::vector<State>& tuple, const size_t base) {
     size_t pos = tuple.size();
     while (pos > 0) {
@@ -444,7 +444,7 @@ bool inline next_tuple(std::vector<State>& tuple, const size_t base) {
 } // next_tuple
 
 
-struct MacrostateContext { // todo move this
+struct MacrostateContext { // TODO: move this
     Nfta result{};
     std::unordered_map<StateSet, State>* mapping;
     std::vector<StateSet> s_to_macro;
