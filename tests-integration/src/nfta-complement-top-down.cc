@@ -1,14 +1,13 @@
 
 
-#include "utils/utils.hh"
-#include "mata/nfta/nfta.hh"
 #include "mata/nfta/builder.hh"
+#include "mata/nfta/nfta.hh"
+#include "utils/utils.hh"
 
 using namespace mata::nfta;
 
 
-
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
     if (argc != 2) {
         std::cerr << "Input files missing\n";
         return EXIT_FAILURE;

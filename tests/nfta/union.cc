@@ -1,11 +1,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 #include <mata/nfta/builder.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata;
@@ -126,19 +126,19 @@ TEST_CASE("mata::nfta::union_det_on_complete") {
         CHECK(C.is_identical_to(create_empty()));
     }
 
-     SECTION("Single-state, one side final") {
-         Nfta A({0}, &alphabet, Delta(1));
-         Nfta B({}, &alphabet, Delta(1));
+    SECTION("Single-state, one side final") {
+        Nfta A({0}, &alphabet, Delta(1));
+        Nfta B({}, &alphabet, Delta(1));
 
-         A.delta.add(0, alphabet["a"], {});
-         B.delta.add(0, alphabet["a"], {});
+        A.delta.add(0, alphabet["a"], {});
+        B.delta.add(0, alphabet["a"], {});
 
-         Nfta C = union_det(A, B);
+        Nfta C = union_det(A, B);
 
-         CHECK(C.delta.num_of_states() == 1);
-         CHECK(C.root_states.size() == 1);
-         CHECK(C.delta.contains(0, alphabet["a"], {}));
-     }
+        CHECK(C.delta.num_of_states() == 1);
+        CHECK(C.root_states.size() == 1);
+        CHECK(C.delta.contains(0, alphabet["a"], {}));
+    }
 
     SECTION("Identical automata") {
         Nfta A({0}, &alphabet, Delta(1));

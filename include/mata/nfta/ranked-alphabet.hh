@@ -11,10 +11,13 @@ class RankedAlphabet : public Alphabet {
 public:
     using Alphabet::add_new_symbol;
 
-    void try_add_new_symbol(const std::string& symbol) override { (void)symbol; throw std::runtime_error("Unimplemented"); }
+    void try_add_new_symbol(const std::string& symbol) override {
+        (void) symbol;
+        throw std::runtime_error("Unimplemented");
+    }
 
     /// translates a string into a symbol
-    virtual Symbol translate_symbol(const std::string &symbol, unsigned arity) = 0;
+    virtual Symbol translate_symbol(const std::string& symbol, unsigned arity) = 0;
 
     /// also translates strings to symbols
     Symbol operator[](const StringArity& sa) { return this->translate_symbol(sa.first, sa.second); }
@@ -24,7 +27,9 @@ public:
      *
      * The result does not have to equal the list of symbols in the automaton using this alphabet.
      */
-    virtual utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const { throw std::runtime_error("Unimplemented"); }
+    virtual utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const {
+        throw std::runtime_error("Unimplemented");
+    }
 
     virtual utils::OrdVector<Symbol> get_non_constant_symbols() const { throw std::runtime_error("Unimplemented"); }
 
@@ -49,28 +54,28 @@ public:
     using SymbolArityMap = std::unordered_map<StringArity, Symbol>;
     using Alphabet::try_add_new_symbol;
 
-    explicit RankedOnTheFlyAlphabet(const Symbol init_symbol = 0) : next_symbol_value_(init_symbol) {};
+    explicit RankedOnTheFlyAlphabet(const Symbol init_symbol = 0) : next_symbol_value_(init_symbol){};
     RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet& alphabet) = default;
     RankedOnTheFlyAlphabet(RankedOnTheFlyAlphabet&& alphabet) = default;
-    explicit RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet* const alphabet): RankedOnTheFlyAlphabet(*alphabet) {}
+    explicit RankedOnTheFlyAlphabet(const RankedOnTheFlyAlphabet* const alphabet) : RankedOnTheFlyAlphabet(*alphabet) {}
     explicit RankedOnTheFlyAlphabet(SymbolArityMap str_sym_map) : symbol_map_(std::move(str_sym_map)) {}
 
     /**
      * @brief Translate a symbol, add if missing.
      */
-    Symbol translate_or_add_symbol(const std::string &str, unsigned arity);
+    Symbol translate_or_add_symbol(const std::string& str, unsigned arity);
 
     /**
      * @brief Translate a symbol.
      * @throws std::runtime_error if symbol is missing.
      */
-    Symbol translate_symbol(const std::string &str, unsigned arity);
+    Symbol translate_symbol(const std::string& str, unsigned arity);
 
     /**
      * @brief Translate a symbol with implicit arity 0. todo delete this?
      * @throws std::runtime_error if symbol is missing.
      */
-    Symbol translate_symb(const std::string &symb) override { return translate_symbol(symb, 0); }
+    Symbol translate_symb(const std::string& symb) override { return translate_symbol(symb, 0); }
 
     /**
      * @brief Create alphabet from a list of StringArity instances.
@@ -78,7 +83,9 @@ public:
      * @param init_symbol Start of a sequence of values to use for new symbols.
      */
     explicit RankedOnTheFlyAlphabet(const std::vector<StringArity>& symbols, const Symbol init_symbol = 0)
-        :  next_symbol_value_(init_symbol) { add_symbols_from(symbols); }
+        : next_symbol_value_(init_symbol) {
+        add_symbols_from(symbols);
+    }
 
     /**
      * Create alphabet from a list of symbol names and arities.
@@ -87,16 +94,21 @@ public:
      * @param init_symbol Start of a sequence of values to use for new symbols.
      */
     explicit RankedOnTheFlyAlphabet(
-        const std::vector<std::string>& symbols, std::vector<unsigned> arities, const Symbol init_symbol = 0)
-        :  next_symbol_value_(init_symbol) {
-        if (symbols.size() != arities.size()) { throw std::invalid_argument("symbols and arities sizes differ"); }
-        for (size_t i = 0; i < symbols.size(); ++i) { add_new_symbol(StringArity{symbols[i], arities[i]}); }
+            const std::vector<std::string>& symbols, std::vector<unsigned> arities, const Symbol init_symbol = 0)
+        : next_symbol_value_(init_symbol) {
+        if (symbols.size() != arities.size()) {
+            throw std::invalid_argument("symbols and arities sizes differ");
+        }
+        for (size_t i = 0; i < symbols.size(); ++i) {
+            add_new_symbol(StringArity{symbols[i], arities[i]});
+        }
     }
 
     /**
      * @brief Add symbols from an iterable of StringArity instances.
      */
-    template <class InputIt> RankedOnTheFlyAlphabet(InputIt first, InputIt last) {
+    template<class InputIt>
+    RankedOnTheFlyAlphabet(InputIt first, InputIt last) {
         for (; first != last; ++first) {
             add_new_symbol(*first, next_symbol_value_);
         }
@@ -104,8 +116,8 @@ public:
     /**
      * @brief Add symbols from an iterable of StringArity (pair of std::string and unsigned).
      */
-    RankedOnTheFlyAlphabet(std::initializer_list<std::pair<StringArity, Symbol>> name_symbol_map)  {
-        for (auto&& [name, symbol]: name_symbol_map) {
+    RankedOnTheFlyAlphabet(std::initializer_list<std::pair<StringArity, Symbol>> name_symbol_map) {
+        for (auto&& [name, symbol] : name_symbol_map) {
             add_new_symbol(name, symbol);
         }
     }
@@ -152,7 +164,7 @@ public:
      * @throws std::runtime_error If the symbol already exists.
      */
     void add_new_symbol(const std::string& symbol) override {
-      add_new_symbol(StringArity{symbol, 0}, next_symbol_value_);
+        add_new_symbol(StringArity{symbol, 0}, next_symbol_value_);
     }
 
     /**
@@ -160,9 +172,9 @@ public:
      * @throws std::runtime_error if the symbol was already present.
      * @param[in] key std::string and artiy pair.
      */
-     void add_new_symbol(const StringArity& key) { add_new_symbol(key, next_symbol_value_); }
+    void add_new_symbol(const StringArity& key) { add_new_symbol(key, next_symbol_value_); }
 
-     void try_add_new_symbol(const std::string& symbol, unsigned arity) override;
+    void try_add_new_symbol(const std::string& symbol, unsigned arity) override;
 
     /**
      * @brief Add new symbol to the alphabet with the value of @c next_symbol_value.
@@ -171,8 +183,8 @@ public:
      * @param[in] str User-space representation of the symbol.
      * @param[in] arity of the symbol.
      */
-    void add_new_symbol(const std::string& str, unsigned arity)override {
-       add_new_symbol(StringArity{str, arity}, next_symbol_value_);
+    void add_new_symbol(const std::string& str, unsigned arity) override {
+        add_new_symbol(StringArity{str, arity}, next_symbol_value_);
     }
 
     /**
@@ -192,9 +204,9 @@ public:
      * @param[in] arity of the symbol.
      * @param[in] value Number of the symbol to be used on transitions.
      */
-     void add_new_symbol(const std::string& str, unsigned arity, Symbol value) {
-         add_new_symbol(StringArity{str, arity}, value);
-     }
+    void add_new_symbol(const std::string& str, unsigned arity, Symbol value) {
+        add_new_symbol(StringArity{str, arity}, value);
+    }
 
     /**
      * Get the next value for a potential new symbol. Value is NOT updated.
@@ -266,7 +278,10 @@ public:
         symbol_map_.erase(first, last);
     }
 
-    void clear() override { symbol_map_.clear(); next_symbol_value_ = 0; }
+    void clear() override {
+        symbol_map_.clear();
+        next_symbol_value_ = 0;
+    }
 }; // class RankedOnTheFlyAlphabet.
 
 //
@@ -385,5 +400,5 @@ public:
 //     Symbol translate_symbol(const std::string &str, unsigned arity) override;
 // }; //RankedEnumAlphabet
 
-}
-#endif //RANKED_ALPHABET_HH
+} // namespace mata::nfta
+#endif // RANKED_ALPHABET_HH

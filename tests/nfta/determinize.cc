@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -18,8 +18,8 @@ TEST_CASE("mata::nfta::determinize") {
     alphabet.add_new_symbol("h"); // 3
     alphabet.add_new_symbol("k"); // 4
 
-    const ParameterMap naive_params    = { { "algorithm", "naive"     } };
-    const ParameterMap optimized_params = { { "algorithm", "optimized" } };
+    const ParameterMap naive_params = {{"algorithm", "naive"}};
+    const ParameterMap optimized_params = {{"algorithm", "optimized"}};
 
     SECTION("Empty") {
         Nfta aut({}, &alphabet, {});
@@ -63,9 +63,7 @@ TEST_CASE("mata::nfta::determinize") {
         bool found = false;
 
         for (const auto& [set, det_state] : mapping) {
-            if (set.size() == 2 &&
-                set.at(0) == 0 &&
-                set.at(1) == 1) {
+            if (set.size() == 2 && set.at(0) == 0 && set.at(1) == 1) {
                 found = true;
             }
         }
@@ -116,9 +114,7 @@ TEST_CASE("mata::nfta::determinize") {
         bool found01 = false;
 
         for (const auto& [set, det_state] : mapping) {
-            if (set.size() == 2 &&
-                set.at(0) == 0 &&
-                set.at(1) == 1) {
+            if (set.size() == 2 && set.at(0) == 0 && set.at(1) == 1) {
                 found01 = true;
             }
         }
@@ -193,15 +189,16 @@ TEST_CASE("mata::nfta::determinize") {
         }
 
         // Expected macrostate sets (we know from the transitions)
-        std::vector<OrdVector<State>> expected {
-            OrdVector<State>{0, 1},
-            OrdVector<State>{2, 3, 4},
-            {4}
-        };
+        std::vector<OrdVector<State>> expected{OrdVector<State>{0, 1}, OrdVector<State>{2, 3, 4}, {4}};
 
         for (const auto& exp : expected) {
             bool found = false;
-            for (const auto& m : macrosets) { if (m == exp) { found = true; break; } }
+            for (const auto& m : macrosets) {
+                if (m == exp) {
+                    found = true;
+                    break;
+                }
+            }
             CHECK(found);
         }
 
@@ -214,7 +211,7 @@ TEST_CASE("mata::nfta::determinize") {
         Nfta aut({0}, &alphabet, Delta(3));
 
         aut.delta.add(0, alphabet["a"], {});
-        aut.delta.add(2, alphabet["g"], {0,0});
+        aut.delta.add(2, alphabet["g"], {0, 0});
 
         Nfta aut_n = determinize(aut, naive_params);
         Nfta aut_o = determinize(aut, optimized_params);
@@ -229,8 +226,8 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["g"], {0,1});
-        aut.delta.add(3, alphabet["g"], {0,1});
+        aut.delta.add(2, alphabet["g"], {0, 1});
+        aut.delta.add(3, alphabet["g"], {0, 1});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -243,11 +240,9 @@ TEST_CASE("mata::nfta::determinize") {
         bool found = false;
 
         for (const auto& set : mapping | std::views::keys) {
-            if (set.size() == 2 &&
-                set.at(0) == 2 &&
-                set.at(1) == 3) {
+            if (set.size() == 2 && set.at(0) == 2 && set.at(1) == 3) {
                 found = true;
-                }
+            }
         }
         CHECK(found);
     }
@@ -258,8 +253,8 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["g"], {0,0});
-        aut.delta.add(3, alphabet["g"], {1,1});
+        aut.delta.add(2, alphabet["g"], {0, 0});
+        aut.delta.add(3, alphabet["g"], {1, 1});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -272,11 +267,9 @@ TEST_CASE("mata::nfta::determinize") {
         bool found = false;
 
         for (const auto& set : mapping | std::views::keys) {
-            if (set.size() == 2 &&
-                set.contains(2) &&
-                set.contains(3)) {
+            if (set.size() == 2 && set.contains(2) && set.contains(3)) {
                 found = true;
-                }
+            }
         }
 
         CHECK(found);
@@ -288,8 +281,8 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["g"], {0,1});
-        aut.delta.add(3, alphabet["g"], {1,0});
+        aut.delta.add(2, alphabet["g"], {0, 1});
+        aut.delta.add(3, alphabet["g"], {1, 0});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -302,9 +295,7 @@ TEST_CASE("mata::nfta::determinize") {
         bool found = false;
 
         for (const auto& set : mapping | std::views::keys) {
-            if (set.size() == 2 &&
-                set.contains(2) &&
-                set.contains(3)) {
+            if (set.size() == 2 && set.contains(2) && set.contains(3)) {
                 found = true;
             }
         }
@@ -321,8 +312,8 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(2, alphabet["f"], {0});
         aut.delta.add(3, alphabet["f"], {1});
 
-        aut.delta.add(4, alphabet["g"], {2,3});
-        aut.delta.add(4, alphabet["g"], {3,2});
+        aut.delta.add(4, alphabet["g"], {2, 3});
+        aut.delta.add(4, alphabet["g"], {3, 2});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -336,12 +327,15 @@ TEST_CASE("mata::nfta::determinize") {
         CHECK(aut_n.delta.num_of_states() == 3);
         CHECK(aut_n.delta.num_of_transitions() == 3);
 
-        bool found01=false, found23=false, found4=false;
+        bool found01 = false, found23 = false, found4 = false;
 
         for (const auto& set : mapping | std::views::keys) {
-            if (set == OrdVector<State>{0,1}) found01=true;
-            if (set == OrdVector<State>{2,3}) found23=true;
-            if (set == OrdVector<State>{4}) found4=true;
+            if (set == OrdVector<State>{0, 1})
+                found01 = true;
+            if (set == OrdVector<State>{2, 3})
+                found23 = true;
+            if (set == OrdVector<State>{4})
+                found4 = true;
         }
 
         CHECK(found01);
@@ -359,8 +353,8 @@ TEST_CASE("mata::nfta::determinize") {
 
         aut.delta.add(0, alphabet["a"], {});
 
-        aut.delta.add(1, alphabet["g"], {0,0});
-        aut.delta.add(2, alphabet["g"], {0,0});
+        aut.delta.add(1, alphabet["g"], {0, 0});
+        aut.delta.add(2, alphabet["g"], {0, 0});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -378,7 +372,7 @@ TEST_CASE("mata::nfta::determinize") {
         bool found = false;
 
         for (const auto& set : mapping | std::views::keys) {
-            if (set == OrdVector<State>{1,2})
+            if (set == OrdVector<State>{1, 2})
                 found = true;
         }
         CHECK(found);
@@ -390,10 +384,10 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["h"], {0,0,1});
-        aut.delta.add(3, alphabet["h"], {1,0,0});
-        aut.delta.add(4, alphabet["h"], {0,1,0});
-        aut.delta.add(5, alphabet["h"], {1,1,1});
+        aut.delta.add(2, alphabet["h"], {0, 0, 1});
+        aut.delta.add(3, alphabet["h"], {1, 0, 0});
+        aut.delta.add(4, alphabet["h"], {0, 1, 0});
+        aut.delta.add(5, alphabet["h"], {1, 1, 1});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -410,8 +404,8 @@ TEST_CASE("mata::nfta::determinize") {
         bool found = false;
 
         for (const auto& set : mapping | std::views::keys) {
-            if (set == OrdVector<State>{2,3,4,5})
-                found=true;
+            if (set == OrdVector<State>{2, 3, 4, 5})
+                found = true;
         }
 
         CHECK(found);
@@ -423,9 +417,9 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["h"], {0,0,0});
-        aut.delta.add(3, alphabet["h"], {0,0,0});
-        aut.delta.add(4, alphabet["h"], {1,1,1});
+        aut.delta.add(2, alphabet["h"], {0, 0, 0});
+        aut.delta.add(3, alphabet["h"], {0, 0, 0});
+        aut.delta.add(4, alphabet["h"], {1, 1, 1});
 
         std::unordered_map<StateSet, State> mapping;
         Nfta aut_n = determinize(aut, naive_params, &mapping);
@@ -449,10 +443,10 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(2, alphabet["f"], {0});
         aut.delta.add(3, alphabet["f"], {1});
 
-        aut.delta.add(4, alphabet["h"], {2,3,2});
-        aut.delta.add(5, alphabet["h"], {3,2,3});
-        aut.delta.add(6, alphabet["h"], {2,2,3});
-        aut.delta.add(7, alphabet["h"], {3,3,2});
+        aut.delta.add(4, alphabet["h"], {2, 3, 2});
+        aut.delta.add(5, alphabet["h"], {3, 2, 3});
+        aut.delta.add(6, alphabet["h"], {2, 2, 3});
+        aut.delta.add(7, alphabet["h"], {3, 3, 2});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -475,14 +469,14 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["k"], {0,0,0,0});
-        aut.delta.add(3, alphabet["k"], {1,1,1,1});
-        aut.delta.add(4, alphabet["k"], {0,1,0,1});
-        aut.delta.add(5, alphabet["k"], {1,0,1,0});
-        aut.delta.add(6, alphabet["k"], {0,0,1,1});
-        aut.delta.add(7, alphabet["k"], {1,1,0,0});
-        aut.delta.add(8, alphabet["k"], {0,1,1,0});
-        aut.delta.add(9, alphabet["k"], {1,0,0,1});
+        aut.delta.add(2, alphabet["k"], {0, 0, 0, 0});
+        aut.delta.add(3, alphabet["k"], {1, 1, 1, 1});
+        aut.delta.add(4, alphabet["k"], {0, 1, 0, 1});
+        aut.delta.add(5, alphabet["k"], {1, 0, 1, 0});
+        aut.delta.add(6, alphabet["k"], {0, 0, 1, 1});
+        aut.delta.add(7, alphabet["k"], {1, 1, 0, 0});
+        aut.delta.add(8, alphabet["k"], {0, 1, 1, 0});
+        aut.delta.add(9, alphabet["k"], {1, 0, 0, 1});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -507,12 +501,12 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(2, alphabet["f"], {0});
         aut.delta.add(3, alphabet["f"], {1});
 
-        aut.delta.add(4, alphabet["h"], {2,2,3});
-        aut.delta.add(5, alphabet["h"], {2,3,3});
+        aut.delta.add(4, alphabet["h"], {2, 2, 3});
+        aut.delta.add(5, alphabet["h"], {2, 3, 3});
 
-        aut.delta.add(6, alphabet["k"], {4,5,4,5});
-        aut.delta.add(7, alphabet["k"], {5,4,5,4});
-        aut.delta.add(8, alphabet["k"], {4,4,5,5});
+        aut.delta.add(6, alphabet["k"], {4, 5, 4, 5});
+        aut.delta.add(7, alphabet["k"], {5, 4, 5, 4});
+        aut.delta.add(8, alphabet["k"], {4, 4, 5, 5});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -531,10 +525,10 @@ TEST_CASE("mata::nfta::determinize") {
         aut.delta.add(1, alphabet["a"], {});
         aut.delta.add(2, alphabet["a"], {});
 
-        aut.delta.add(3, alphabet["h"], {0,1,2});
-        aut.delta.add(4, alphabet["h"], {1,2,0});
-        aut.delta.add(5, alphabet["h"], {2,0,1});
-        aut.delta.add(6, alphabet["h"], {0,2,1});
+        aut.delta.add(3, alphabet["h"], {0, 1, 2});
+        aut.delta.add(4, alphabet["h"], {1, 2, 0});
+        aut.delta.add(5, alphabet["h"], {2, 0, 1});
+        aut.delta.add(6, alphabet["h"], {0, 2, 1});
 
         std::unordered_map<StateSet, State> mapping;
 
@@ -550,12 +544,12 @@ TEST_CASE("mata::nfta::determinize") {
 
         CHECK(aut_n.delta.num_of_transitions() == 2);
         CHECK(aut_n.delta.contains(0, alphabet["a"], {}));
-        CHECK(aut_n.delta.contains(1, alphabet["h"], {0,0,0}));
+        CHECK(aut_n.delta.contains(1, alphabet["h"], {0, 0, 0}));
     }
 
     SECTION("Unknown algorithm throws") {
         Nfta aut({}, &alphabet, {});
-        CHECK_THROWS(determinize(aut, { { "algorithm", "special" } }));
+        CHECK_THROWS(determinize(aut, {{"algorithm", "special"}}));
     }
 
     SECTION("Missing algorithm key throws") {
@@ -563,4 +557,3 @@ TEST_CASE("mata::nfta::determinize") {
         CHECK_THROWS(determinize(aut, {}));
     }
 }
-

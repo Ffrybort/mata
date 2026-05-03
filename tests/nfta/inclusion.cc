@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
-#include "mata/nfta/nfta.hh"
-#include "mata/nfta/builder.hh"
-#include "mata/alphabet.hh"
-#include "mata/nfta/ranked-alphabet.hh"
 #include <mata/nfta/delta.hh>
 #include <mata/nfta/types.hh>
+#include "mata/alphabet.hh"
+#include "mata/nfta/builder.hh"
+#include "mata/nfta/nfta.hh"
+#include "mata/nfta/ranked-alphabet.hh"
 
 using namespace mata;
 using namespace mata::nfta;

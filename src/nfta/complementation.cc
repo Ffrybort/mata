@@ -1,30 +1,33 @@
 /**
-* @file complementation.cc
+ * @file complementation.cc
  *
  * @brief Implementation of NFTA complementation operations.
  */
 
-#include "mata/nfta/nfta.hh"
-#include "mata/utils/two-dimensional-map.hh"
 #include <mata/nfta/builder.hh>
+#include "mata/nfta/nfta.hh"
 #include "mata/nfta/ranked-alphabet.hh"
+#include "mata/utils/two-dimensional-map.hh"
 
 namespace mata::nfta {
 
-Nfta complement(const Nfta& aut, const ParameterMap& params, // TODO use
-                const utils::OrdVector<SymbolArity>* symbols_arities_in) {
+Nfta complement(
+        const Nfta& aut, const ParameterMap& params, // TODO use
+        const utils::OrdVector<SymbolArity>* symbols_arities_in) {
     if (!utils::haskey(params, "algorithm")) {
-        throw std::runtime_error(std::to_string(__func__) +
-            " requires setting the \"algorithm\" key in the \"params\" argument; "
-            "received: " + std::to_string(params));
+        throw std::runtime_error(
+                std::to_string(__func__) +
+                " requires setting the \"algorithm\" key in the \"params\" argument; "
+                "received: " +
+                std::to_string(params));
     }
 
     const std::string& str_algo = params.at("algorithm");
     if (str_algo == "top_down") {
         return complement_top_down(aut, nullptr, symbols_arities_in);
     } else if (str_algo == "classical") {
-        const std::string str_det = utils::haskey(params, "determinization")
-            ? params.at("determinization") : "optimized";
+        const std::string str_det =
+                utils::haskey(params, "determinization") ? params.at("determinization") : "optimized";
 
         Nfta det{};
         if (str_det == "optimized") {
@@ -32,33 +35,35 @@ Nfta complement(const Nfta& aut, const ParameterMap& params, // TODO use
         } else if (str_det == "naive") {
             det = determinize_naive(aut);
         } else {
-            throw std::runtime_error(std::to_string(__func__) +
-                " received an unknown value of the \"determinization\" key: " + str_det);
+            throw std::runtime_error(
+                    std::to_string(__func__) + " received an unknown value of the \"determinization\" key: " + str_det);
         }
         det.complement_as_deterministic(symbols_arities_in);
         return det;
     } else {
-        throw std::runtime_error(std::to_string(__func__) +
-            " received an unknown value of the \"algorithm\" key: " + str_algo);
+        throw std::runtime_error(
+                std::to_string(__func__) + " received an unknown value of the \"algorithm\" key: " + str_algo);
     }
 }
 
 
 void Nfta::complement_as_deterministic(const utils::OrdVector<SymbolArity>* symbols_arities_in) {
     assert(is_bottom_up_deterministic() &&
-        "mata::nft::complement_as_deterministic automaton is not bottom-up deterministic");
+           "mata::nft::complement_as_deterministic automaton is not bottom-up deterministic");
     if (root_states.empty() || delta.empty()) {
         utils::OrdVector<SymbolArity> tmp;
-        const utils::OrdVector<SymbolArity> &symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
+        const utils::OrdVector<SymbolArity>& symbols_arities = resolve_symbols_arities(*this, symbols_arities_in, tmp);
         *this = create_universal(&symbols_arities, alphabet);
     } else {
         make_complete(symbols_arities_in);
         swap_root_non_root();
-        if (root_states.empty()) { *this = create_empty(alphabet); }
+        if (root_states.empty()) {
+            *this = create_empty(alphabet);
+        }
     }
 }
 
-Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in)  {
+Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in) {
     Nfta result = determinize_optimized(aut);
 
     result.complement_as_deterministic(symbols_arities_in);
@@ -66,7 +71,8 @@ Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* 
 }
 
 
-Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,
+Nfta complement_top_down(
+        const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping,
         const utils::OrdVector<SymbolArity>* symbols_arities_in) {
 
     utils::OrdVector<SymbolArity> tmp;
@@ -88,7 +94,8 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
     auto get_or_create = [&](const StateSet& states) -> State {
         bool is_new = !ctx.mapping->contains(states);
         State s = ctx.get_or_create_macrostate(states);
-        if (is_new) worklist.push({s, states});
+        if (is_new)
+            worklist.push({s, states});
         return s;
     };
 
@@ -106,14 +113,25 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
             auto it_a = a[i].begin(), end_a = a[i].end();
             auto it_b = b[i].begin(), end_b = b[i].end();
             while (it_a != end_a && it_b != end_b) {
-                if (*it_a < *it_b)      { a_sub_b = false; ++it_a; }
-                else if (*it_b < *it_a) { b_sub_a = false; ++it_b; }
-                else                    { ++it_a; ++it_b; }
-                if (!a_sub_b && !b_sub_a) return 0;
+                if (*it_a < *it_b) {
+                    a_sub_b = false;
+                    ++it_a;
+                } else if (*it_b < *it_a) {
+                    b_sub_a = false;
+                    ++it_b;
+                } else {
+                    ++it_a;
+                    ++it_b;
+                }
+                if (!a_sub_b && !b_sub_a)
+                    return 0;
             }
-            if (it_a != end_a) a_sub_b = false;
-            if (it_b != end_b) b_sub_a = false;
-            if (!a_sub_b && !b_sub_a) return 0;
+            if (it_a != end_a)
+                a_sub_b = false;
+            if (it_b != end_b)
+                b_sub_a = false;
+            if (!a_sub_b && !b_sub_a)
+                return 0;
         }
         return a_sub_b ? 1 : -1;
     };
@@ -168,15 +186,24 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
                 }
 
                 bool is_redundant = false;
-                for (auto it = minimal_macro_tuples.begin(); it != minimal_macro_tuples.end(); ) {
+                for (auto it = minimal_macro_tuples.begin(); it != minimal_macro_tuples.end();) {
                     switch (subset(*it, macro_tuple)) {
-                        case 1:  is_redundant = true; break;
-                        case -1: it = minimal_macro_tuples.erase(it); break;
-                        default: ++it; break;
+                        case 1:
+                            is_redundant = true;
+                            break;
+                        case -1:
+                            it = minimal_macro_tuples.erase(it);
+                            break;
+                        default:
+                            ++it;
+                            break;
                     }
-                    if (is_redundant) { break; }
+                    if (is_redundant) {
+                        break;
+                    }
                 }
-                if (!is_redundant) minimal_macro_tuples.push_back(std::move(macro_tuple));
+                if (!is_redundant)
+                    minimal_macro_tuples.push_back(std::move(macro_tuple));
             } while (next_tuple(selector, arity));
 
             for (const auto& macro_tuple : minimal_macro_tuples) {
@@ -188,13 +215,15 @@ Nfta complement_top_down(const Nfta& aut, std::unordered_map<StateSet, State>* s
             }
 
             if (!res_symbol_post_tmp.empty()) {
-                ctx.result.delta.mutable_state_post(new_s)
-                    .push_back(SymbolPost{ symbol, utils::OrdVector(std::move(res_symbol_post_tmp)) });
+                ctx.result.delta.mutable_state_post(new_s).push_back(
+                        SymbolPost{symbol, utils::OrdVector(std::move(res_symbol_post_tmp))});
             }
         }
     }
-    if (ctx.result.root_states.empty() || ctx.result.delta.empty()) { return create_empty(aut.alphabet); }
+    if (ctx.result.root_states.empty() || ctx.result.delta.empty()) {
+        return create_empty(aut.alphabet);
+    }
     return std::move(ctx.result);
 } // complement_top_down
 
-}
+} // namespace mata::nfta

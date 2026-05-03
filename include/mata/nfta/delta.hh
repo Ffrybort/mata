@@ -8,24 +8,22 @@
  */
 
 #ifndef NFTA_DELTA_HH
-#define NFTA_DELTA_HH
+    #define NFTA_DELTA_HH
 
-#include <mata/nfta/types.hh>
-#include <mata/alphabet.hh>
-#include <algorithm>
-#include <functional>
-#include <iterator>
-#include <queue>
-#include <utility>
+    #include <algorithm>
+    #include <functional>
+    #include <iterator>
+    #include <mata/alphabet.hh>
+    #include <mata/nfta/types.hh>
+    #include <queue>
+    #include <utility>
 
-namespace mata::nfta
-{
+namespace mata::nfta {
 
 /**
  * @brief Structure to hold a nfta transition, top-down format (single source and multiple targets).
  */
-struct Transition
-{
+struct Transition {
     State single;
     Symbol symbol;
     std::vector<State> tuple;
@@ -36,16 +34,17 @@ struct Transition
     auto operator<=>(const Transition&) const = default;
 
     bool operator<(const Transition& other) const {
-        if (single != other.single) return single < other.single;
-        if (symbol != other.symbol) return symbol < other.symbol;
-        if (tuple.size() != other.tuple.size()) return tuple.size() < other.tuple.size();
+        if (single != other.single)
+            return single < other.single;
+        if (symbol != other.symbol)
+            return symbol < other.symbol;
+        if (tuple.size() != other.tuple.size())
+            return tuple.size() < other.tuple.size();
         return tuple < other.tuple;
     }
 
     bool operator==(const Transition& other) const {
-        return single == other.single
-        && symbol == other.symbol
-        && tuple == other.tuple;
+        return single == other.single && symbol == other.symbol && tuple == other.tuple;
     }
 };
 
@@ -56,14 +55,17 @@ class Move {
 public:
     Symbol symbol;
     std::vector<State> targets;
-    explicit Move(const Symbol symbol = {}, std::vector<State> targets = {}) : symbol{symbol}, targets{std::move(targets)} {}
+    explicit Move(const Symbol symbol = {}, std::vector<State> targets = {})
+        : symbol{symbol}, targets{std::move(targets)} {}
 
     bool operator==(const Move&) const = default;
 
     /// sorted by targets first
-    bool operator < (const Move& other) const {
-      if (targets != other.targets) { return targets < other.targets; }
-      return symbol < other.symbol;
+    bool operator<(const Move& other) const {
+        if (targets != other.targets) {
+            return targets < other.targets;
+        }
+        return symbol < other.symbol;
     }
 }; // class Move.
 
@@ -87,41 +89,30 @@ public:
 
         explicit RevStateTuplePost(std::vector<State> s) : sources(std::move(s)), targets{} {}
 
-        std::weak_ordering operator<=>(const RevStateTuplePost& other) const {
-            return sources <=> other.sources;
+        std::weak_ordering operator<=>(const RevStateTuplePost& other) const { return sources <=> other.sources; }
+
+        bool operator==(const RevStateTuplePost& other) const { return sources == other.sources; }
+    };
+
+    struct RevSymbolPost {
+        Symbol symbol{};
+        utils::OrdVector<RevStateTuplePost> state_tuple_posts;
+
+        RevSymbolPost() : symbol{}, state_tuple_posts{} {}
+
+        explicit RevSymbolPost(const Symbol s) : symbol(s), state_tuple_posts{} {}
+
+        std::weak_ordering operator<=>(const RevSymbolPost& other) const { return symbol <=> other.symbol; }
+
+        bool operator==(const RevSymbolPost& other) const { return symbol == other.symbol; }
+
+        unsigned get_arity() const {
+            assert(!state_tuple_posts.empty() && "Empty source transitions");
+            return static_cast<unsigned>(state_tuple_posts.at(0).sources.size());
         }
 
-        bool operator==(const RevStateTuplePost& other) const {
-            return sources == other.sources;
-        }
-       };
-
-       struct RevSymbolPost {
-           Symbol symbol{};
-           utils::OrdVector<RevStateTuplePost> state_tuple_posts;
-
-           RevSymbolPost() : symbol{}, state_tuple_posts{} {}
-
-           explicit RevSymbolPost(const Symbol s)
-               : symbol(s), state_tuple_posts{} {}
-
-           std::weak_ordering operator<=>(const RevSymbolPost& other) const {
-               return symbol <=> other.symbol;
-           }
-
-           bool operator==(const RevSymbolPost& other) const {
-               return symbol == other.symbol;
-           }
-
-           unsigned get_arity() const {
-               assert(!state_tuple_posts.empty() && "Empty source transitions");
-               return static_cast<unsigned>(state_tuple_posts.at(0).sources.size());
-           }
-
-           bool is_constant() const {
-               return get_arity() == 0;
-           }
-     };
+        bool is_constant() const { return get_arity() == 0; }
+    };
 
     utils::OrdVector<RevSymbolPost> symbol_posts{};
     ReversedDelta() : symbol_posts{} {}
@@ -148,7 +139,7 @@ public:
     /**
      * @brief Get states that have a constant (arity 0) transition leading to them grouped by symbol.
      */
-    std::vector<std::pair<Symbol, utils::OrdVector<State>>>get_initial_states_by_symbol() const;
+    std::vector<std::pair<Symbol, utils::OrdVector<State>>> get_initial_states_by_symbol() const;
 
     static bool equal(const RevSymbolPost& a, const RevSymbolPost& b) {
         return a.symbol == b.symbol && a.state_tuple_posts == b.state_tuple_posts;
@@ -159,20 +150,25 @@ public:
     }
 
     bool is_identical(const ReversedDelta& other) const {
-        if (symbol_posts.size() != other.symbol_posts.size()) return false;
+        if (symbol_posts.size() != other.symbol_posts.size())
+            return false;
         for (size_t i = 0; i < symbol_posts.size(); ++i) {
             const auto& a = symbol_posts.at(i);
             const auto& b = other.symbol_posts.at(i);
-            if (a.symbol != b.symbol) return false;
-            if (a.state_tuple_posts.size() != b.state_tuple_posts.size()) return false;
+            if (a.symbol != b.symbol)
+                return false;
+            if (a.state_tuple_posts.size() != b.state_tuple_posts.size())
+                return false;
             for (size_t j = 0; j < a.state_tuple_posts.size(); ++j) {
                 const auto& sa = a.state_tuple_posts.at(j);
                 const auto& sb = b.state_tuple_posts.at(j);
-                if (sa.sources != sb.sources) return false;
-                if (sa.targets != sb.targets) return false;
+                if (sa.sources != sb.sources)
+                    return false;
+                if (sa.targets != sb.targets)
+                    return false;
             }
         }
-      return true;
+        return true;
     }
 };
 
@@ -185,11 +181,12 @@ public:
     StateVectorSet target_tuples{};
 
     SymbolPost() = default;
-    explicit SymbolPost(const Symbol symbol) : symbol{ symbol } {}
-    SymbolPost(const Symbol symbol, const std::vector<State>& one_tuple) : symbol{ symbol }, target_tuples{ one_tuple } {}
-    SymbolPost(const Symbol symbol, StateVectorSet  multiple_tuples) : symbol{ symbol }, target_tuples{std::move( multiple_tuples )} {}
+    explicit SymbolPost(const Symbol symbol) : symbol{symbol} {}
+    SymbolPost(const Symbol symbol, const std::vector<State>& one_tuple) : symbol{symbol}, target_tuples{one_tuple} {}
+    SymbolPost(const Symbol symbol, StateVectorSet multiple_tuples)
+        : symbol{symbol}, target_tuples{std::move(multiple_tuples)} {}
 
-    SymbolPost(SymbolPost&& rhs) noexcept : symbol{ rhs.symbol }, target_tuples{ std::move(rhs.target_tuples) } {}
+    SymbolPost(SymbolPost&& rhs) noexcept : symbol{rhs.symbol}, target_tuples{std::move(rhs.target_tuples)} {}
     SymbolPost(const SymbolPost& rhs) = default;
     SymbolPost& operator=(SymbolPost&& rhs) noexcept;
     SymbolPost& operator=(const SymbolPost& rhs) = default;
@@ -202,7 +199,9 @@ public:
      */
     bool is_constant() const { // {{{
         const bool result = get_arity() == 0;
-        if (result) { assert(target_tuples.size() == 1 && "Target tuples of a constant must have size one"); }
+        if (result) {
+            assert(target_tuples.size() == 1 && "Target tuples of a constant must have size one");
+        }
         return result;
     } // }}}
 
@@ -224,7 +223,7 @@ public:
     /**
      * @brief Insert one tuple of target states;
      */
-    void insert(const std::vector<State> &tuple);
+    void insert(const std::vector<State>& tuple);
 
     /**
      * @brief Insert multiple tuples of target states;
@@ -245,9 +244,9 @@ public:
     void erase(const std::vector<State>& tuple) { target_tuples.erase(tuple); }
 
     /// iterator to a given tuple
-    StateVectorSet::const_iterator find(const std::vector<State> &tuple) const { return target_tuples.find(tuple); }
+    StateVectorSet::const_iterator find(const std::vector<State>& tuple) const { return target_tuples.find(tuple); }
     /// const iterator to a given tuple
-    StateVectorSet::iterator find(const std::vector<State> &tuple) { return target_tuples.find(tuple); }
+    StateVectorSet::iterator find(const std::vector<State>& tuple) { return target_tuples.find(tuple); }
     /// iterator to the first tuple
     StateVectorSet::iterator begin() { return target_tuples.begin(); }
     /// iterator to the end
@@ -268,9 +267,10 @@ public:
  */
 class StatePost : utils::OrdVector<SymbolPost> {
     using super = OrdVector<SymbolPost>;
+
 public:
-    using super::iterator, super::const_iterator;
     using super::begin, super::end, super::cbegin, super::cend;
+    using super::iterator, super::const_iterator;
     using super::OrdVector;
     using super::operator=;
     using super::operator==;
@@ -279,23 +279,23 @@ public:
     StatePost& operator=(const StatePost&) = default;
     StatePost& operator=(StatePost&&) = default;
     bool operator==(const StatePost&) const = default;
-    using super::insert;
-    using super::reserve;
-    using super::empty, super::size;
-    using super::to_vector;
-    using super::push_back, super::emplace_back;
-    using super::front;
     using super::back;
-    using super::pop_back;
-    using super::filter;
     using super::clear;
+    using super::empty, super::size;
     using super::erase;
+    using super::filter;
     using super::find;
+    using super::front;
+    using super::insert;
+    using super::pop_back;
+    using super::push_back, super::emplace_back;
+    using super::reserve;
+    using super::to_vector;
 
 
     /// @brief iterator to a given symbol post
     iterator find(const Symbol symbol) {
-      static SymbolPost symbol_post{};
+        static SymbolPost symbol_post{};
         symbol_post.symbol = symbol;
         return super::find(symbol_post);
     }
@@ -329,11 +329,13 @@ public:
         Moves() = default;
 
         /**
-         * @brief construct moves iterating over a range @p symbol_post_it (including) to @p symbol_post_end (excluding).
+         * @brief construct moves iterating over a range @p symbol_post_it (including) to @p symbol_post_end
+         * (excluding).
          *
          * @param[in] state_post State post to iterate over.
          * @param[in] symbol_post_it First iterator over symbol posts to iterate over.
-         * @param[in] symbol_post_end End iterator over symbol posts (which functions as a sentinel; is not iterated over).
+         * @param[in] symbol_post_end End iterator over symbol posts (which functions as a sentinel; is not iterated
+         * over).
          */
         Moves(const StatePost& state_post, const_iterator symbol_post_it, const_iterator symbol_post_end);
         Moves(Moves&&) = default;
@@ -345,7 +347,7 @@ public:
         static const_iterator end();
 
     private:
-        const StatePost* state_post_{ nullptr };
+        const StatePost* state_post_{nullptr};
 
         /// Current symbol post iterator to iterate over.
         StatePost::const_iterator symbol_post_it_{};
@@ -356,7 +358,7 @@ public:
     /**
      * Iterator over all moves (over all labels) in @c StatePost represented as @c Move instances.
      */
-    Moves moves() const { return { *this, this->cbegin(), this->cend() }; }
+    Moves moves() const { return {*this, this->cbegin(), this->cend()}; }
 
     /**
      * Iterator over specified moves in @c StatePost represented as @c Move instances.
@@ -377,11 +379,11 @@ public:
  */
 class StatePost::Moves::const_iterator {
 private:
-    const StatePost* state_post_{ nullptr };
+    const StatePost* state_post_{nullptr};
     StatePost::const_iterator symbol_post_it_{};
     StateVectorSet::const_iterator targets_it_{};
     StatePost::const_iterator symbol_post_end_{};
-    bool is_end_{ false };
+    bool is_end_{false};
 
     /// Internal allocated instance of @c Move which is set for the move currently iterated over and returned as
     ///  a reference with @c operator*().
@@ -395,12 +397,13 @@ public:
     using reference = Move&;
 
     /// Construct end iterator.
-    const_iterator(): is_end_{ true } {}
+    const_iterator() : is_end_{true} {}
     /// Const all moves iterator.
     explicit const_iterator(const StatePost& state_post);
     /// Construct iterator from @p symbol_post_it (including) to @p symbol_post_it_end (excluding).
-    const_iterator(const StatePost& state_post, StatePost::const_iterator symbol_post_it,
-                   StatePost::const_iterator symbol_post_end);
+    const_iterator(
+            const StatePost& state_post, StatePost::const_iterator symbol_post_it,
+            StatePost::const_iterator symbol_post_end);
     const_iterator(const const_iterator& other) noexcept = default;
     const_iterator(const_iterator&&) = default;
 
@@ -422,11 +425,11 @@ public:
 /**
  * @brief @c  Delta is a data structure for representing transition relation.
  *
- * Transition is represented as a triple Transition(source state, symbol, target states vector). Move is the part (symbol, target
- *  states), specified for a single source state.
- * Its underlying data structure is vector of StatePost classes. Each index to the vector corresponds to one source
- *  state, that is, a number for a certain state is an index to the vector of state posts.
- * Transition relation (delta) in Mata stores a set of transitions in a four-level hierarchical structure:
+ * Transition is represented as a triple Transition(source state, symbol, target states vector). Move is the part
+ * (symbol, target states), specified for a single source state. Its underlying data structure is vector of StatePost
+ * classes. Each index to the vector corresponds to one source state, that is, a number for a certain state is an index
+ * to the vector of state posts. Transition relation (delta) in Mata stores a set of transitions in a four-level
+ * hierarchical structure:
  *  @c Delta, @c StatePost, @c SymbolPost, and a set of target tuples.
  * A vector of 'StatePost's indexed by a source states on top, where the StatePost for a state 'q' (whose number is
  *  'q' and it is the index to the vector of 'StatePost's) stores a set of 'Move's from the source state 'q'.
@@ -436,10 +439,10 @@ public:
  */
 class Delta {
 public:
-    Delta(): state_posts_{} {}
+    Delta() : state_posts_{} {}
     Delta(const Delta& other) = default;
     Delta(Delta&& other) = default;
-    explicit Delta(const size_t n): state_posts_{ n } {}
+    explicit Delta(const size_t n) : state_posts_{n} {}
 
     Delta& operator=(const Delta& other) = default;
     Delta& operator=(Delta&& other) = default;
@@ -458,7 +461,7 @@ public:
      */
     const StatePost& state_post(const State s) const {
         if (s >= num_of_states()) {
-          throw std::runtime_error("state post is out of range");
+            throw std::runtime_error("state post is out of range");
         }
         return state_posts_[s];
     }
@@ -505,7 +508,9 @@ public:
      * @return True if any state was allocated, false if the state was present already.
      */
     bool add_state(const State state) { // {{{
-        if(state < this->num_of_states()) { return false; }
+        if (state < this->num_of_states()) {
+            return false;
+        }
         state_posts_.resize(state + 1);
         return true;
     } // }}}
@@ -596,7 +601,7 @@ public:
      * States are NOT renamed in this function, they are expected to already have been renamed.
      */
     void append(const std::vector<StatePost>& post_vector) { // {{{
-        for(const StatePost& pst : post_vector) {
+        for (const StatePost& pst : post_vector) {
             this->state_posts_.push_back(pst);
         }
     } // }}}
@@ -638,10 +643,11 @@ public:
      * @tparam States A variadic parameter pack of states to resize the delta for.
      * @param states States to resize the delta for.
      */
-    template<typename... States> requires utils::AllOfType<State, States...>
+    template<typename... States>
+        requires utils::AllOfType<State, States...>
     Delta& resize_for_states(States... states) {
         if constexpr (sizeof...(states) > 0) {
-            if (const State max_state{ std::max({ static_cast<State>(states)... }) }; max_state >= num_of_states()) {
+            if (const State max_state{std::max({static_cast<State>(states)...})}; max_state >= num_of_states()) {
                 reserve_on_insert(state_posts_, max_state);
                 state_posts_.resize(max_state + 1);
             }
@@ -649,11 +655,11 @@ public:
         return *this;
     }
     Delta& resize_for_states(const std::vector<State>& states) {
-      if (!states.empty()) {
-          const State max_state = *std::ranges::max_element(states);
-          resize_for_states(max_state);
-      }
-      return *this;
+        if (!states.empty()) {
+            const State max_state = *std::ranges::max_element(states);
+            resize_for_states(max_state);
+        }
+        return *this;
     }
 
     /**
@@ -686,7 +692,7 @@ public:
      * Does not necessarily have to equal the set of symbols in the alphabet used by the automaton.
      * @return Set of symbols used on the transitions.
      */
-     utils::OrdVector<SymbolArity> get_used_symbols_arities() const; // todo test
+    utils::OrdVector<SymbolArity> get_used_symbols_arities() const; // todo test
 
     /**
      * @brief Defragment the Delta.
@@ -705,7 +711,7 @@ public:
      *
      * @param allowed [in, optional] Filter out transitions containing any state that is not allowed.
      */
-    ReversedDelta get_reversed(const BoolVector *allowed = nullptr) const;
+    ReversedDelta get_reversed(const BoolVector* allowed = nullptr) const;
 
     /**
      * @brief Compute epsilon closures for each state.
@@ -740,7 +746,7 @@ Delta defragment(const Delta& delta, const BoolVector& is_staying, const std::ve
 class Delta::Transitions {
 public:
     Transitions() = default;
-    explicit Transitions(const Delta* delta): delta_{ delta } {}
+    explicit Transitions(const Delta* delta) : delta_{delta} {}
     Transitions(Transitions&&) = default;
     Transitions(const Transitions&) = default;
     Transitions& operator=(Transitions&&) = default;
@@ -750,6 +756,7 @@ public:
     const_iterator begin() const;
 
     static const_iterator end();
+
 private:
     const Delta* delta_;
 }; // class Transitions.
@@ -763,7 +770,7 @@ private:
     size_t current_state_{};
     StatePost::const_iterator state_post_it_{};
     StateVectorSet::const_iterator symbol_post_it_{};
-    bool is_end_{ false };
+    bool is_end_{false};
     Transition transition_{};
 
 public:
@@ -773,7 +780,7 @@ public:
     using pointer = Transition*;
     using reference = Transition&;
 
-    const_iterator(): is_end_{ true } {}
+    const_iterator() : is_end_{true} {}
     explicit const_iterator(const Delta& delta);
     const_iterator(const Delta& delta, State current_state);
 
@@ -794,18 +801,19 @@ public:
     bool operator==(const const_iterator& other) const;
 }; // class Delta::Transitions::const_iterator.
 
-} // namespace nfta
+} // namespace mata::nfta
 
 namespace std {
-template<> struct hash<mata::nfta::Transition> {
-  size_t operator()(const mata::nfta::Transition& t) const noexcept {
-    size_t seed = 0;
-    seed = mata::utils::hash_combine(seed, t.single);
-    seed = mata::utils::hash_combine(seed, t.symbol);
-    seed = mata::utils::hash_combine(seed, t.tuple);
-    return seed;
-  }
+template<>
+struct hash<mata::nfta::Transition> {
+    size_t operator()(const mata::nfta::Transition& t) const noexcept {
+        size_t seed = 0;
+        seed = mata::utils::hash_combine(seed, t.single);
+        seed = mata::utils::hash_combine(seed, t.symbol);
+        seed = mata::utils::hash_combine(seed, t.tuple);
+        return seed;
+    }
 };
-}
-#endif //NFTA_DELTA_HH
+} // namespace std
+#endif // NFTA_DELTA_HH
 // end of file delta.hh

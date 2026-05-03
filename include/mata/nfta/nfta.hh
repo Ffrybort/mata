@@ -27,454 +27,455 @@
  * operations such as @c mata::nfta::remove_bottom_up_unreachable() or
  * @c mata::nfta::remove_top_down_unreachable() to get a reduced automaton.
  *
- * Users can create NFTAs manually by adding states and transitions using the methods provided in the @c mata::nfta::Nfta
- * and @c mata::nfta::Delta classes, or they can load an automaton from a string using the methods in the @c mata::nfta::Builder
+ * Users can create NFTAs manually by adding states and transitions using the methods provided in the @c
+ * mata::nfta::Nfta and @c mata::nfta::Delta classes, or they can load an automaton from a string using the methods in
+ * the @c mata::nfta::Builder
  *
- * Any alphabet implemented in Mata can be used with NFTAs, or none at all. A ranked alphabet is implemented in the @c mata::nfta::RankedAlphabet class.
- * Some operations (like completing an automaton) require the list of all symbols and arities to use. If an unranked alphabet is used,
- * this list can either be passed to these functions, otherwise symbols in @Delta are used by default.
+ * Any alphabet implemented in Mata can be used with NFTAs, or none at all. A ranked alphabet is implemented in the @c
+ * mata::nfta::RankedAlphabet class. Some operations (like completing an automaton) require the list of all symbols and
+ * arities to use. If an unranked alphabet is used, this list can either be passed to these functions, otherwise symbols
+ * in @Delta are used by default.
  */
 
 #ifndef MATA_NFTA_H
 #define MATA_NFTA_H
 
-#include <string>
 #include <iostream>
+#include <string>
 #include <utility>
 
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
-#include <mata/utils/sparse-set.hh>
 #include <mata/nfta/delta.hh>
+#include <mata/nfta/types.hh>
+#include <mata/utils/sparse-set.hh>
 #include <mata/utils/two-dimensional-map.hh>
 #include <mata/utils/utils.hh>
 
 namespace mata::nfta {
 
+/**
+ * @brief Class representing a nondeterministic finite tree automaton.
+ */
+class Nfta {
+public:
+    utils::SparseSet<State> root_states; ///< A set of root states
+    Alphabet* alphabet; ///< A shared alphabet (or null)
+    Delta delta; ///< transition relation
+
+    // constructors
+    explicit Nfta(utils::SparseSet<State> root_states = {}, Alphabet* alphabet = nullptr, Delta delta = {})
+        : root_states(std::move(root_states)), alphabet(alphabet), delta(std::move(delta)) {}
+    explicit Nfta(const size_t num_of_states) : root_states({}), alphabet(nullptr), delta(num_of_states) {}
+
+    Nfta(const Nfta& other) = default;
+    Nfta& operator=(const Nfta&) = default;
+
+    Nfta(Nfta&&) noexcept = default;
+    Nfta& operator=(Nfta&&) noexcept = default;
+
     /**
-     * @brief Class representing a nondeterministic finite tree automaton.
+     * @brief Add a root state, the state itself is also added if it didn't exist already.
      */
-    class Nfta {
-    public:
-        utils::SparseSet<State> root_states; ///< A set of root states
-        Alphabet* alphabet; ///< A shared alphabet (or null)
-        Delta delta; ///< transition relation
-
-        // constructors
-        explicit Nfta(utils::SparseSet<State> root_states = {}, Alphabet* alphabet = nullptr, Delta delta = {})
-            : root_states(std::move(root_states)), alphabet(alphabet), delta(std::move(delta)) {}
-        explicit Nfta(const size_t num_of_states) : root_states({}), alphabet(nullptr), delta(num_of_states) {}
-
-        Nfta(const Nfta& other) = default;
-        Nfta& operator=(const Nfta&) = default;
-
-        Nfta(Nfta&&) noexcept = default;
-        Nfta& operator=(Nfta&&) noexcept = default;
-
-        /**
-         * @brief Add a root state, the state itself is also added if it didn't exist already.
-         */
-        void add_root(const State state) { // {{{
-            delta.add_state(state);
-            root_states.insert(state);
-	    } // }}}
-
-        /**
-         * @brief Add multiple root states from an iterable structure.
-         */
-        template <typename Iterable>
-        void add_root_states(const Iterable& states) { // {{{
-            add_state(*std::max_element(states.begin(), states.end()));
-            root_states.insert(states.begin(), states.end());
-        } // }}}
-
-        /**
-         * @brief Add multiple final states from an initializer list.
-         */
-        void add_root_states(const std::initializer_list<State> states) { // {{{
-            delta.add_state(*std::ranges::max_element(states));
-            root_states.insert(states);
-        } // }}}
-
-        /**
-         * @brief Check whether a state is root.
-         */
-        bool is_state_root(const State& state) const { return root_states.contains(state); }
-
-        /**
-         * @brief Print the automaton in a parsable mata format.
-         */
-        void print_mata(std::ostream& os = std::cout) const;
-
-        /**
-         * @brief Print the automaton in an easy-to-read format.
-         */
-        void print_readable(std::ostream& os = std::cout) const;
-
-        /**
-         * @brief Print the automaton is a bottom up format.
-         */
-        void print_readable_bottom_up(std::ostream& os = std::cout) const;
-
-        /**
-         * @brief Print the automaton is timbuk parsable format.
-         */
-        void print_timbuk(std::ostream& os = std::cout, const std::string& name = "A") const;
-
-        /**
-         * @brief Check if the accepted language is empty.
-         */
-        bool is_lang_empty() const;
-
-        /**
-         * @brief Remove given states and rename the rest.
-         *
-         * @param is_staying[state] is false -> state gets removed.
-         */
-        void defragment(const BoolVector& is_staying);
-
-        /**
-         * @brief Check if the automata have identical root states and transitions. Alphabets are ignored.
-         *
-         * This does NOT check language equality.
-         */
-        bool is_identical_to(const Nfta& other) const;
-
-        /**
-         * @brief In-place union that does not preserve determinism.
-         *
-         * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet
-         * and may contain symbols that are not in its alphabet.
-         */
-        void unite_nondet_with(const Nfta& aut);
-
-        /**
-         *@brief Swap root and non-root states. Complement a deterministic and complete automaton.
-         *
-         * New root states consist of all states from delta that but current root states.
-         */
-        void swap_root_non_root() { root_states.complement(static_cast<State>(delta.num_of_states())); }
-
-        /**
-         * @brief Complement a and deterministic automaton. Automaton gets completed.
-         */
-        void complement_as_deterministic(
-            const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
-
-        /**
-         * @brief Check if the automaton is bottom-up deterministic.
-         *
-         * Every combination of symbol + set of targets appears at most once in delta. This function is expensive.
-         */
-        bool is_bottom_up_deterministic() const;
-
-        /**
-         * @brief Check if the automaton is top-down deterministic.
-         *
-         * For every source and symbol there is at most one set of targets.
-         */
-        bool is_top_down_deterministic() const;
-
-        /**
-         * @brief Check if the automaton is complete.
-         */
-        bool is_complete(const utils::OrdVector<Symbol> &symbols) const;
-        /**
-         * @brief Check if the automaton is complete using alphabet symbols or delta symbols (if alphabet is null).
-         */
-        bool is_complete() const;
-
-        /**
-         * @brief Check bottom-up completeness directly on a reversed delta.
-         */
-        bool is_complete(const ReversedDelta& rev_delta) const;
-
-        /**
-         * @brief Complete the automaton bottom-up with given symbols, add missing transitions leading to a sink state.
-         *
-         * @param symbols_arities_in OrdVector of symbols to be added if missing, and their arities.
-         * @param sink Sink state may be custom defined, the default value will use the next available state.
-         *
-         * Using default sink value is recommended, as using a higher sink value will lead to adding all states
-         * before it, and all possible transitions from those states. An existing state may be used as sink, in that
-         * case existing from it are NOT deleted.
-         */
-        void make_complete(
-          const utils::OrdVector<SymbolArity> *symbols_arities_in = nullptr, State sink = Limits::max_state);
-
-
-        /**
-         * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
-         *
-         * @param allowed [in, optional] filter out already unuseful states
-         */
-        BoolVector get_top_down_reachable(const BoolVector *allowed = nullptr) const;
-        /**
-         * @brief Get a bool vector where vector[state] is true iff the state is bottom-up reachable.
-         *
-         * @param allowed [in, optional] filter out already unuseful states
-         */
-        BoolVector get_bottom_up_reachable(const BoolVector *allowed = nullptr) const;
-
-        /**
-         * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
-         *
-         * @param early_exit_fn [in, optional] if true, this function ends
-         * @param allowed [in, optional] filter out already unuseful states
-         *
-         * The optional function @ early_exit_fn is applied to any newly found reachable state. If it returns true,
-         * this function ends immediately, leaving any unexplored states marked as false.
-         */
-        template<typename OnMarked>
-        BoolVector get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const BoolVector *allowed = nullptr) const;
-
-        /**
-         * @brief Remove top-down unreachable states
-         */
-        void remove_top_down_unreachable();
-
-        /**
-         * @brief Remove bottom-up unreachable states
-         */
-        void remove_bottom_up_unreachable();
-
-        /**
-         * @brief Reduce top-down, then bottom-up, then top-down again.
-         */
-        void remove_unreachable_top_bottom_top();
-        /**
-         * @brief Reduce bottom-up, then top-down.
-         */
-        void remove_unreachable_bottom_top();
-
-    }; // class Nfta
+    void add_root(const State state) { // {{{
+        delta.add_state(state);
+        root_states.insert(state);
+    } // }}}
 
     /**
-     * @brief Remove epsilon transitions from an automaton.
-     *
-     * @param aut Input automaton
-     * @param epsilon Symbol to consider as epsilon
-     * @throws std::runtime_error if epsilon is not unary (arity 1)
+     * @brief Add multiple root states from an iterable structure.
      */
-    Nfta remove_epsilon(const Nfta& aut, Symbol epsilon);
+    template<typename Iterable>
+    void add_root_states(const Iterable& states) { // {{{
+        add_state(*std::max_element(states.begin(), states.end()));
+        root_states.insert(states.begin(), states.end());
+    } // }}}
 
     /**
-     * @brief Union of two automata not preserving determinism.
-     *
-     * @param A, B [in] Automata to unite
-     *
-     * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
-     * contain symbols that are not in its alphabet.
+     * @brief Add multiple final states from an initializer list.
      */
-    Nfta union_nondet(const Nfta& A, const Nfta& B);
+    void add_root_states(const std::initializer_list<State> states) { // {{{
+        delta.add_state(*std::ranges::max_element(states));
+        root_states.insert(states);
+    } // }}}
 
     /**
-     * @brief Union preserving bottom-up determinism, computed by product construction.
-     *
-     * @param A, B [in] Automata to unite, both must be bottom-up complete
-     * @param state_mapping_out [out, optional] Mapping state pairs -> product state
-     *
-     * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
+     * @brief Check whether a state is root.
      */
-    Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
+    bool is_state_root(const State& state) const { return root_states.contains(state); }
 
     /**
-    * @brief Union preserving bottom-up determinism, computed by product construction.
-    *
-    * @param A, B [in] Automata to unite, both must be bottom-up complete
-    * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
-    *
-    * @p state_mapping_out needs to be initialized to (num of states in A + 1, num of states in B + 1) to accommodate
-    * the additional states added by completion.
-    * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
-    */
-    Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
-
-    /**
-     * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
-     *
-     * @param aut [in] Input automaton to complement.
-     * @param symbols_arities_in [in, optional] Vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
-     * @return Complement automaton.
-     *
-     * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
-     * or to used symbols in delta. Result is bottom-up deterministic, complete and reduced.
+     * @brief Print the automaton in a parsable mata format.
      */
-    Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
+    void print_mata(std::ostream& os = std::cout) const;
 
     /**
-     * @brief Create a product automaton.
-     *
-     * @param A, B Automata to intersect.
-     * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
-     *
-     * Both automata must be complete over the same set of symbols. The result automaton is constructed directly
-     * top-down. Result is top-down reduced, but not bottom-up reduced.
+     * @brief Print the automaton in an easy-to-read format.
      */
-    Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State> *state_mapping_out = nullptr);
-
-    Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete);
+    void print_readable(std::ostream& os = std::cout) const;
 
     /**
-     * @brief Determinization implementation.
-     *
-     * @param aut input automaton
-     * @param state_mapping [out, optional] mapping macrostates -> result states
-     * @param use_reverse_mapping if true, a mapping det state -> macrostate is used
-     * @param on_new_state function to do something at the beginning of processing a new state
-     * @param compute_targets function to match a tuple of det states to orig transitions and computate targets
-     * @param sink [in, optional] if true, the result is complete over the set of used symbols and the sink value is saved
-     *
-     * Only (bottom-up) reachable states are constructed.
+     * @brief Print the automaton is a bottom up format.
      */
-    template<typename OnNewState, typename ComputeTargets>
-    Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, bool use_reverse_mapping,
+    void print_readable_bottom_up(std::ostream& os = std::cout) const;
+
+    /**
+     * @brief Print the automaton is timbuk parsable format.
+     */
+    void print_timbuk(std::ostream& os = std::cout, const std::string& name = "A") const;
+
+    /**
+     * @brief Check if the accepted language is empty.
+     */
+    bool is_lang_empty() const;
+
+    /**
+     * @brief Remove given states and rename the rest.
+     *
+     * @param is_staying[state] is false -> state gets removed.
+     */
+    void defragment(const BoolVector& is_staying);
+
+    /**
+     * @brief Check if the automata have identical root states and transitions. Alphabets are ignored.
+     *
+     * This does NOT check language equality.
+     */
+    bool is_identical_to(const Nfta& other) const;
+
+    /**
+     * @brief In-place union that does not preserve determinism.
+     *
+     * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet
+     * and may contain symbols that are not in its alphabet.
+     */
+    void unite_nondet_with(const Nfta& aut);
+
+    /**
+     *@brief Swap root and non-root states. Complement a deterministic and complete automaton.
+     *
+     * New root states consist of all states from delta that but current root states.
+     */
+    void swap_root_non_root() { root_states.complement(static_cast<State>(delta.num_of_states())); }
+
+    /**
+     * @brief Complement a and deterministic automaton. Automaton gets completed.
+     */
+    void complement_as_deterministic(const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
+
+    /**
+     * @brief Check if the automaton is bottom-up deterministic.
+     *
+     * Every combination of symbol + set of targets appears at most once in delta. This function is expensive.
+     */
+    bool is_bottom_up_deterministic() const;
+
+    /**
+     * @brief Check if the automaton is top-down deterministic.
+     *
+     * For every source and symbol there is at most one set of targets.
+     */
+    bool is_top_down_deterministic() const;
+
+    /**
+     * @brief Check if the automaton is complete.
+     */
+    bool is_complete(const utils::OrdVector<Symbol>& symbols) const;
+    /**
+     * @brief Check if the automaton is complete using alphabet symbols or delta symbols (if alphabet is null).
+     */
+    bool is_complete() const;
+
+    /**
+     * @brief Check bottom-up completeness directly on a reversed delta.
+     */
+    bool is_complete(const ReversedDelta& rev_delta) const;
+
+    /**
+     * @brief Complete the automaton bottom-up with given symbols, add missing transitions leading to a sink state.
+     *
+     * @param symbols_arities_in OrdVector of symbols to be added if missing, and their arities.
+     * @param sink Sink state may be custom defined, the default value will use the next available state.
+     *
+     * Using default sink value is recommended, as using a higher sink value will lead to adding all states
+     * before it, and all possible transitions from those states. An existing state may be used as sink, in that
+     * case existing from it are NOT deleted.
+     */
+    void
+    make_complete(const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr, State sink = Limits::max_state);
+
+
+    /**
+     * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
+     *
+     * @param allowed [in, optional] filter out already unuseful states
+     */
+    BoolVector get_top_down_reachable(const BoolVector* allowed = nullptr) const;
+    /**
+     * @brief Get a bool vector where vector[state] is true iff the state is bottom-up reachable.
+     *
+     * @param allowed [in, optional] filter out already unuseful states
+     */
+    BoolVector get_bottom_up_reachable(const BoolVector* allowed = nullptr) const;
+
+    /**
+     * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
+     *
+     * @param early_exit_fn [in, optional] if true, this function ends
+     * @param allowed [in, optional] filter out already unuseful states
+     *
+     * The optional function @ early_exit_fn is applied to any newly found reachable state. If it returns true,
+     * this function ends immediately, leaving any unexplored states marked as false.
+     */
+    template<typename OnMarked>
+    BoolVector get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const BoolVector* allowed = nullptr) const;
+
+    /**
+     * @brief Remove top-down unreachable states
+     */
+    void remove_top_down_unreachable();
+
+    /**
+     * @brief Remove bottom-up unreachable states
+     */
+    void remove_bottom_up_unreachable();
+
+    /**
+     * @brief Reduce top-down, then bottom-up, then top-down again.
+     */
+    void remove_unreachable_top_bottom_top();
+    /**
+     * @brief Reduce bottom-up, then top-down.
+     */
+    void remove_unreachable_bottom_top();
+
+}; // class Nfta
+
+/**
+ * @brief Remove epsilon transitions from an automaton.
+ *
+ * @param aut Input automaton
+ * @param epsilon Symbol to consider as epsilon
+ * @throws std::runtime_error if epsilon is not unary (arity 1)
+ */
+Nfta remove_epsilon(const Nfta& aut, Symbol epsilon);
+
+/**
+ * @brief Union of two automata not preserving determinism.
+ *
+ * @param A, B [in] Automata to unite
+ *
+ * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
+ * contain symbols that are not in its alphabet.
+ */
+Nfta union_nondet(const Nfta& A, const Nfta& B);
+
+/**
+ * @brief Union preserving bottom-up determinism, computed by product construction.
+ *
+ * @param A, B [in] Automata to unite, both must be bottom-up complete
+ * @param state_mapping_out [out, optional] Mapping state pairs -> product state
+ *
+ * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
+ */
+Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out = nullptr);
+
+/**
+ * @brief Union preserving bottom-up determinism, computed by product construction.
+ *
+ * @param A, B [in] Automata to unite, both must be bottom-up complete
+ * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
+ *
+ * @p state_mapping_out needs to be initialized to (num of states in A + 1, num of states in B + 1) to accommodate
+ * the additional states added by completion.
+ * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
+ */
+Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out = nullptr);
+
+/**
+ * @brief Complement the automaton using (optimized) determinization and swapping final and non-final states.
+ *
+ * @param aut [in] Input automaton to complement.
+ * @param symbols_arities_in [in, optional] Vector of (symbol, arity) pairs to consider instead of alphabet/used
+ * symbols.
+ * @return Complement automaton.
+ *
+ * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
+ * or to used symbols in delta. Result is bottom-up deterministic, complete and reduced.
+ */
+Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
+
+/**
+ * @brief Create a product automaton.
+ *
+ * @param A, B Automata to intersect.
+ * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
+ *
+ * Both automata must be complete over the same set of symbols. The result automaton is constructed directly
+ * top-down. Result is top-down reduced, but not bottom-up reduced.
+ */
+Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out = nullptr);
+
+Nfta determinize_impl(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, const bool make_complete);
+
+/**
+ * @brief Determinization implementation.
+ *
+ * @param aut input automaton
+ * @param state_mapping [out, optional] mapping macrostates -> result states
+ * @param use_reverse_mapping if true, a mapping det state -> macrostate is used
+ * @param on_new_state function to do something at the beginning of processing a new state
+ * @param compute_targets function to match a tuple of det states to orig transitions and computate targets
+ * @param sink [in, optional] if true, the result is complete over the set of used symbols and the sink value is saved
+ *
+ * Only (bottom-up) reachable states are constructed.
+ */
+template<typename OnNewState, typename ComputeTargets>
+Nfta determinize_impl(
+        const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping, bool use_reverse_mapping,
         OnNewState on_new_state, ComputeTargets compute_targets);
 
-    /**
-     * @brief Determinize an automaton.
-     *
-     * @param aut input automaton
-     * @param state_mapping [out, optional] mapping macrostates -> result states
-     *
-     * Only optimization is that only (bottom-up) reachable states are constructed.
-     */
-    Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+/**
+ * @brief Determinize an automaton.
+ *
+ * @param aut input automaton
+ * @param state_mapping [out, optional] mapping macrostates -> result states
+ *
+ * Only optimization is that only (bottom-up) reachable states are constructed.
+ */
+Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
-    /**
-     * @brief Determinize an automaton.
-     *
-     * @param aut input automaton
-     * @param state_mapping [out, optional] mapping macrostates -> result states
-     *
-     * Only (bottom-up) reachable states are constructed. todo describe
-     */
-    Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
+/**
+ * @brief Determinize an automaton.
+ *
+ * @param aut input automaton
+ * @param state_mapping [out, optional] mapping macrostates -> result states
+ *
+ * Only (bottom-up) reachable states are constructed. todo describe
+ */
+Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
-    /**
-     * @brief Complement the automaton.
-     *
-     * @param aut Input automaton to complement.
-     * @param symbols_arities_in [in, optional] Vector of (symbol, arity) pairs to complement over.
-     *        If not provided, defaults to alphabet symbols (if a ranked alphabet is used) or symbols used in delta.
-     * @param params [in, optional] Parameters:
-     * - "algorithm":
-     *      - "classical": Determinize, complete, and swap root and non-root states (default).
-     *      - "top_down": Constructs the complement directly top-down without determinization.
-     * - "determinization": (classical algorithm only)
-     *      - "naive": Scan the full reversed delta on each step.
-     *      - "optimized": Use a per-symbol cache to avoid redundant work (default).
-     *
-     * Result of "classical" is bottom-up deterministic, complete, and bottom-up reduced.
-     * Result of "top_down" is top-down reduced.
-     */
-    Nfta complement(const Nfta& aut, const ParameterMap& params = { { "algorithm", "classical" } },
-          const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
+/**
+ * @brief Complement the automaton.
+ *
+ * @param aut Input automaton to complement.
+ * @param symbols_arities_in [in, optional] Vector of (symbol, arity) pairs to complement over.
+ *        If not provided, defaults to alphabet symbols (if a ranked alphabet is used) or symbols used in delta.
+ * @param params [in, optional] Parameters:
+ * - "algorithm":
+ *      - "classical": Determinize, complete, and swap root and non-root states (default).
+ *      - "top_down": Constructs the complement directly top-down without determinization.
+ * - "determinization": (classical algorithm only)
+ *      - "naive": Scan the full reversed delta on each step.
+ *      - "optimized": Use a per-symbol cache to avoid redundant work (default).
+ *
+ * Result of "classical" is bottom-up deterministic, complete, and bottom-up reduced.
+ * Result of "top_down" is top-down reduced.
+ */
+Nfta complement(
+        const Nfta& aut, const ParameterMap& params = {{"algorithm", "classical"}},
+        const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
 
-    /**
-     * @brief Determinize an automaton.
-     *
-     * @param aut Input automaton.
-     * @param state_mapping [out, optional] Mapping macrostates -> result states.
-     * @param params [in, optional] Parameters:
-     * - "algorithm":
-     *      - "naive": Scan the full reversed delta on each step.
-     *      - "optimized": Use a per-symbol cache to avoid redundant work (default).
-     *
-     * Only bottom-up reachable states are constructed.
-     */
-    Nfta determinize(const Nfta& aut, const ParameterMap& params = { { "algorithm", "optimized" } },
+/**
+ * @brief Determinize an automaton.
+ *
+ * @param aut Input automaton.
+ * @param state_mapping [out, optional] Mapping macrostates -> result states.
+ * @param params [in, optional] Parameters:
+ * - "algorithm":
+ *      - "naive": Scan the full reversed delta on each step.
+ *      - "optimized": Use a per-symbol cache to avoid redundant work (default).
+ *
+ * Only bottom-up reachable states are constructed.
+ */
+Nfta determinize(
+        const Nfta& aut, const ParameterMap& params = {{"algorithm", "optimized"}},
         std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
-    /**
-     * @brief Construct a complement automaton without determinizing, directly top down.
-     *
-     * @param aut [in] Input automaton to complement.
-     * @param state_mapping [out, optional] Optional mapping macrostate (set of states) -> result state.
-     * @param symbols_arities_in [in, optional] Optional vector of (symbol, arity) pairs to consider instead of alphabet/used symbols.
-     * @return Complement automaton.
-     *
-     * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
-     * or to used symbols in delta. Result is top-down reduced.
-     */
-    Nfta complement_top_down(
-      const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
-      const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr
-    );
+/**
+ * @brief Construct a complement automaton without determinizing, directly top down.
+ *
+ * @param aut [in] Input automaton to complement.
+ * @param state_mapping [out, optional] Optional mapping macrostate (set of states) -> result state.
+ * @param symbols_arities_in [in, optional] Optional vector of (symbol, arity) pairs to consider instead of
+ * alphabet/used symbols.
+ * @return Complement automaton.
+ *
+ * If @ symbols_arities are not provided, the function defaults to alphabet symbols (if a ranked alphabet is used)
+ * or to used symbols in delta. Result is top-down reduced.
+ */
+Nfta complement_top_down(
+        const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
+        const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
 
-    enum class ComplementMethod { Classical, TopDown };
-    /**
-     * @brief Check if the language recognized by @p small in a subset of the language recognized by @p big.
-     *
-     * @param smaller, bigger input automata
-     * @param method complementation method to use (classical or top-down)
-     * @return true if L(small) <= L(big), false otherwise
-     */
-    bool is_lang_included(const Nfta& smaller, const Nfta& bigger, ComplementMethod method = ComplementMethod::Classical);
+enum class ComplementMethod { Classical, TopDown };
+/**
+ * @brief Check if the language recognized by @p small in a subset of the language recognized by @p big.
+ *
+ * @param smaller, bigger input automata
+ * @param method complementation method to use (classical or top-down)
+ * @return true if L(small) <= L(big), false otherwise
+ */
+bool is_lang_included(const Nfta& smaller, const Nfta& bigger, ComplementMethod method = ComplementMethod::Classical);
 
-    /**
-     * @brief Check if the language recognized by @p A equal to the language recognized by @p B.
-     *
-     * @param A, B input automata
-     * @param method complementation method to use (classical or top-down)
-     * @return true if L(A) == L(B), false otherwise
-     */
-    bool is_lang_equal(const Nfta& A, const Nfta& B, ComplementMethod method = ComplementMethod::Classical);
+/**
+ * @brief Check if the language recognized by @p A equal to the language recognized by @p B.
+ *
+ * @param A, B input automata
+ * @param method complementation method to use (classical or top-down)
+ * @return true if L(A) == L(B), false otherwise
+ */
+bool is_lang_equal(const Nfta& A, const Nfta& B, ComplementMethod method = ComplementMethod::Classical);
 
-    // helper to resolve symbols and arities - use given or default
-    const utils::OrdVector<SymbolArity>& resolve_symbols_arities (
-        const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in, utils::OrdVector<SymbolArity>& tmp
-        );
+// helper to resolve symbols and arities - use given or default
+const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
+        const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in, utils::OrdVector<SymbolArity>& tmp);
 
 // increment by 1 as a number with the given base, overflow => return false todo move this somewhere
 bool inline next_tuple(std::vector<State>& tuple, const size_t base) {
-  size_t pos = tuple.size();
-  while (pos > 0) {
-    --pos;
-    if (++tuple[pos] < base) { return true; }
-    tuple[pos] = 0;
-  }
-  return false;
+    size_t pos = tuple.size();
+    while (pos > 0) {
+        --pos;
+        if (++tuple[pos] < base) {
+            return true;
+        }
+        tuple[pos] = 0;
+    }
+    return false;
 } // next_tuple
 
 
 struct MacrostateContext { // todo move this
-  Nfta result{};
-  std::unordered_map<StateSet, State>* mapping;
-  std::vector<StateSet> s_to_macro;
+    Nfta result{};
+    std::unordered_map<StateSet, State>* mapping;
+    std::vector<StateSet> s_to_macro;
 
-  std::unordered_map<StateSet, State> local_mapping;
+    std::unordered_map<StateSet, State> local_mapping;
 
-  explicit MacrostateContext(const Nfta& aut,
-      std::unordered_map<StateSet, State>* state_mapping = nullptr)
-      : result(),
-        mapping(state_mapping ? state_mapping : &local_mapping),
-        s_to_macro(),
-        local_mapping()
-  {
-    result.alphabet = aut.alphabet;
-    s_to_macro.reserve(aut.delta.num_of_states());
-  }
-
-  MacrostateContext(const MacrostateContext&) = delete;
-  MacrostateContext& operator=(const MacrostateContext&) = delete;
-
-  State get_or_create_macrostate(const StateSet& orig_states, const bool use_reversed_map = false) {
-    assert(mapping);
-    if (const auto it = mapping->find(orig_states); it != mapping->end()) {
-      return it->second;
+    explicit MacrostateContext(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr)
+        : result(), mapping(state_mapping ? state_mapping : &local_mapping), s_to_macro(), local_mapping() {
+        result.alphabet = aut.alphabet;
+        s_to_macro.reserve(aut.delta.num_of_states());
     }
 
-    State new_s = result.delta.add_state();
-    (*mapping)[orig_states] = new_s;
+    MacrostateContext(const MacrostateContext&) = delete;
+    MacrostateContext& operator=(const MacrostateContext&) = delete;
 
-    if (use_reversed_map) {
-      s_to_macro.resize(new_s + 1);
-      s_to_macro[new_s] = orig_states;
+    State get_or_create_macrostate(const StateSet& orig_states, const bool use_reversed_map = false) {
+        assert(mapping);
+        if (const auto it = mapping->find(orig_states); it != mapping->end()) {
+            return it->second;
+        }
+
+        State new_s = result.delta.add_state();
+        (*mapping)[orig_states] = new_s;
+
+        if (use_reversed_map) {
+            s_to_macro.resize(new_s + 1);
+            s_to_macro[new_s] = orig_states;
+        }
+
+        return new_s;
     }
-
-    return new_s;
-  }
 };
 
 } // namespace mata::nfta

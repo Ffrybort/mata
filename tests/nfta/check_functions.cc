@@ -4,10 +4,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -56,7 +56,7 @@ TEST_CASE("mata::nfta determinism check") {
     SECTION("Nondeterministic both directions") {
         Nfta aut({0}, &alphabet, Delta(2));
 
-        aut.delta.add(0, alphabet["f"],  {1});
+        aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(1, alphabet["f"], {1});
         aut.delta.add(0, alphabet["f"], {0});
 
@@ -92,10 +92,10 @@ TEST_CASE("mata::nfta determinism check") {
         aut.delta.add(1, alphabet["f"], {0});
         aut.delta.add(0, alphabet["f"], {1});
 
-        aut.delta.add(0, alphabet["g"], {0,0});
-        aut.delta.add(1, alphabet["g"], {0,1});
-        aut.delta.add(1, alphabet["g"], {1,0});
-        aut.delta.add(0, alphabet["g"], {1,1});
+        aut.delta.add(0, alphabet["g"], {0, 0});
+        aut.delta.add(1, alphabet["g"], {0, 1});
+        aut.delta.add(1, alphabet["g"], {1, 0});
+        aut.delta.add(0, alphabet["g"], {1, 1});
 
         CHECK(aut.is_bottom_up_deterministic());
         CHECK_FALSE(aut.is_top_down_deterministic());
@@ -109,8 +109,8 @@ TEST_CASE("mata::nfta determinism check") {
         aut.delta.add(1, alphabet["f"], {0});
         aut.delta.add(0, alphabet["f"], {1});
 
-        aut.delta.add(0, alphabet["g"], {0,0});
-        aut.delta.add(1, alphabet["g"], {0,0});
+        aut.delta.add(0, alphabet["g"], {0, 0});
+        aut.delta.add(1, alphabet["g"], {0, 0});
 
         CHECK_FALSE(aut.is_bottom_up_deterministic());
         CHECK(aut.is_top_down_deterministic());
@@ -125,16 +125,16 @@ TEST_CASE("mata::nfta determinism check") {
         aut.delta.add(1, alphabet["f"], {1});
         aut.delta.add(2, alphabet["f"], {2});
 
-        aut.delta.add(0, alphabet["g"], {0,0});
-        aut.delta.add(1, alphabet["g"], {0,1});
-        aut.delta.add(1, alphabet["g"], {1,0});
-        aut.delta.add(1, alphabet["g"], {1,1});
+        aut.delta.add(0, alphabet["g"], {0, 0});
+        aut.delta.add(1, alphabet["g"], {0, 1});
+        aut.delta.add(1, alphabet["g"], {1, 0});
+        aut.delta.add(1, alphabet["g"], {1, 1});
 
-        aut.delta.add(2, alphabet["g"], {2,0});
-        aut.delta.add(2, alphabet["g"], {0,2});
-        aut.delta.add(2, alphabet["g"], {2,1});
-        aut.delta.add(2, alphabet["g"], {1,2});
-        aut.delta.add(2, alphabet["g"], {2,2});
+        aut.delta.add(2, alphabet["g"], {2, 0});
+        aut.delta.add(2, alphabet["g"], {0, 2});
+        aut.delta.add(2, alphabet["g"], {2, 1});
+        aut.delta.add(2, alphabet["g"], {1, 2});
+        aut.delta.add(2, alphabet["g"], {2, 2});
 
         CHECK(aut.is_bottom_up_deterministic());
         CHECK_FALSE(aut.is_top_down_deterministic());
@@ -153,40 +153,40 @@ TEST_CASE("mata::nfta determinism check") {
         aut.delta.add(4, alphabet["f"], {3});
         aut.delta.add(4, alphabet["f"], {4});
 
-        aut.delta.add(3, alphabet["g"], {0,0});
-        aut.delta.add(3, alphabet["g"], {1,0});
-        aut.delta.add(3, alphabet["g"], {0,1});
-        aut.delta.add(3, alphabet["g"], {1,1});
+        aut.delta.add(3, alphabet["g"], {0, 0});
+        aut.delta.add(3, alphabet["g"], {1, 0});
+        aut.delta.add(3, alphabet["g"], {0, 1});
+        aut.delta.add(3, alphabet["g"], {1, 1});
 
-        aut.delta.add(2, alphabet["g"], {2,0});
-        aut.delta.add(2, alphabet["g"], {0,2});
-        aut.delta.add(2, alphabet["g"], {2,1});
-        aut.delta.add(2, alphabet["g"], {1,2});
-        aut.delta.add(2, alphabet["g"], {2,2});
+        aut.delta.add(2, alphabet["g"], {2, 0});
+        aut.delta.add(2, alphabet["g"], {0, 2});
+        aut.delta.add(2, alphabet["g"], {2, 1});
+        aut.delta.add(2, alphabet["g"], {1, 2});
+        aut.delta.add(2, alphabet["g"], {2, 2});
 
-        aut.delta.add(4, alphabet["g"], {3,3});
-        aut.delta.add(4, alphabet["g"], {4,0});
-        aut.delta.add(4, alphabet["g"], {0,4});
-        aut.delta.add(4, alphabet["g"], {4,4});
-        aut.delta.add(4, alphabet["g"], {3,4});
-        aut.delta.add(4, alphabet["g"], {4,3});
+        aut.delta.add(4, alphabet["g"], {3, 3});
+        aut.delta.add(4, alphabet["g"], {4, 0});
+        aut.delta.add(4, alphabet["g"], {0, 4});
+        aut.delta.add(4, alphabet["g"], {4, 4});
+        aut.delta.add(4, alphabet["g"], {3, 4});
+        aut.delta.add(4, alphabet["g"], {4, 3});
 
-        aut.delta.add(0, alphabet["h"], {0,0,0,0});
-        aut.delta.add(1, alphabet["h"], {1,1,1,1});
-        aut.delta.add(2, alphabet["h"], {2,2,2,2});
-        aut.delta.add(3, alphabet["h"], {3,3,3,3});
-        aut.delta.add(4, alphabet["h"], {4,4,4,4});
+        aut.delta.add(0, alphabet["h"], {0, 0, 0, 0});
+        aut.delta.add(1, alphabet["h"], {1, 1, 1, 1});
+        aut.delta.add(2, alphabet["h"], {2, 2, 2, 2});
+        aut.delta.add(3, alphabet["h"], {3, 3, 3, 3});
+        aut.delta.add(4, alphabet["h"], {4, 4, 4, 4});
 
-        aut.delta.add(4, alphabet["h"], {0,0,0,1});
-        aut.delta.add(4, alphabet["h"], {0,0,1,0});
-        aut.delta.add(4, alphabet["h"], {0,1,0,0});
-        aut.delta.add(4, alphabet["h"], {1,0,0,0});
-        aut.delta.add(4, alphabet["h"], {2,2,2,3});
-        aut.delta.add(4, alphabet["h"], {3,2,2,2});
-        aut.delta.add(4, alphabet["h"], {1,2,1,2});
-        aut.delta.add(4, alphabet["h"], {0,3,0,3});
-        aut.delta.add(4, alphabet["h"], {4,1,4,1});
-        aut.delta.add(4, alphabet["h"], {2,3,4,0});
+        aut.delta.add(4, alphabet["h"], {0, 0, 0, 1});
+        aut.delta.add(4, alphabet["h"], {0, 0, 1, 0});
+        aut.delta.add(4, alphabet["h"], {0, 1, 0, 0});
+        aut.delta.add(4, alphabet["h"], {1, 0, 0, 0});
+        aut.delta.add(4, alphabet["h"], {2, 2, 2, 3});
+        aut.delta.add(4, alphabet["h"], {3, 2, 2, 2});
+        aut.delta.add(4, alphabet["h"], {1, 2, 1, 2});
+        aut.delta.add(4, alphabet["h"], {0, 3, 0, 3});
+        aut.delta.add(4, alphabet["h"], {4, 1, 4, 1});
+        aut.delta.add(4, alphabet["h"], {2, 3, 4, 0});
 
         CHECK(aut.is_bottom_up_deterministic());
         CHECK_FALSE(aut.is_top_down_deterministic());
@@ -203,15 +203,15 @@ TEST_CASE("mata::nfta determinism check") {
         aut.delta.add(3, alphabet["f"], {3});
         aut.delta.add(2, alphabet["f"], {2});
 
-        aut.delta.add(0, alphabet["g"], {1,1});
-        aut.delta.add(1, alphabet["g"], {0,0});
-        aut.delta.add(2, alphabet["g"], {2,2});
-        aut.delta.add(3, alphabet["g"], {3,3});
+        aut.delta.add(0, alphabet["g"], {1, 1});
+        aut.delta.add(1, alphabet["g"], {0, 0});
+        aut.delta.add(2, alphabet["g"], {2, 2});
+        aut.delta.add(3, alphabet["g"], {3, 3});
 
-        aut.delta.add(0, alphabet["h"], {2,2,2,2});
-        aut.delta.add(1, alphabet["h"], {2,2,2,2});
-        aut.delta.add(2, alphabet["h"], {3,3,3,3});
-        aut.delta.add(3, alphabet["h"], {0,0,0,0});
+        aut.delta.add(0, alphabet["h"], {2, 2, 2, 2});
+        aut.delta.add(1, alphabet["h"], {2, 2, 2, 2});
+        aut.delta.add(2, alphabet["h"], {3, 3, 3, 3});
+        aut.delta.add(3, alphabet["h"], {0, 0, 0, 0});
 
         CHECK(aut.is_top_down_deterministic());
         CHECK_FALSE(aut.is_bottom_up_deterministic());
@@ -227,21 +227,21 @@ TEST_CASE("mata::nfta_is_complete") {
     SECTION("Complete automaton") {
         Nfta aut({}, &alphabet, Delta{2});
 
-        aut.delta.add( 0, alphabet["a"], {});
+        aut.delta.add(0, alphabet["a"], {});
 
-        aut.delta.add( 0, alphabet["g"], {0});
-        aut.delta.add( 0, alphabet["g"], {1});
-        aut.delta.add( 1, alphabet["g"], {0});
-        aut.delta.add( 1, alphabet["g"], {1});
+        aut.delta.add(0, alphabet["g"], {0});
+        aut.delta.add(0, alphabet["g"], {1});
+        aut.delta.add(1, alphabet["g"], {0});
+        aut.delta.add(1, alphabet["g"], {1});
 
-        aut.delta.add(0, alphabet["f"],  {0,0});
-        aut.delta.add(0, alphabet["f"],  {0,1});
-        aut.delta.add(0, alphabet["f"],  {1,0});
-        aut.delta.add(0, alphabet["f"],  {1,1});
-        aut.delta.add(1, alphabet["f"],  {0,0});
-        aut.delta.add(1, alphabet["f"],  {0,1});
-        aut.delta.add(1, alphabet["f"],  {1,0});
-        aut.delta.add(1, alphabet["f"],  {1,1});
+        aut.delta.add(0, alphabet["f"], {0, 0});
+        aut.delta.add(0, alphabet["f"], {0, 1});
+        aut.delta.add(0, alphabet["f"], {1, 0});
+        aut.delta.add(0, alphabet["f"], {1, 1});
+        aut.delta.add(1, alphabet["f"], {0, 0});
+        aut.delta.add(1, alphabet["f"], {0, 1});
+        aut.delta.add(1, alphabet["f"], {1, 0});
+        aut.delta.add(1, alphabet["f"], {1, 1});
 
         CHECK(aut.is_complete(alphabet.get_alphabet_symbols()));
     }
@@ -249,8 +249,8 @@ TEST_CASE("mata::nfta_is_complete") {
     SECTION("Incomplete automaton") {
         Nfta aut({}, &alphabet, {});
 
-        aut.delta.add(0, alphabet["a"],  {});
-        aut.delta.add(1, alphabet["a"],  {});
+        aut.delta.add(0, alphabet["a"], {});
+        aut.delta.add(1, alphabet["a"], {});
 
         aut.delta.add(0, alphabet["g"], {0});
         aut.delta.add(1, alphabet["g"], {0});
@@ -275,10 +275,10 @@ TEST_CASE("mata::nfta_is_complete") {
         aut.delta.add(1, alphabet["g"], {1});
 
         // only a few tuples
-        aut.delta.add(0, alphabet["h"], {0,0,0});
-        aut.delta.add(1, alphabet["h"], {1,1,1});
+        aut.delta.add(0, alphabet["h"], {0, 0, 0});
+        aut.delta.add(1, alphabet["h"], {1, 1, 1});
 
-        aut.delta.add(2, alphabet["k"], {0,0,0,0});
+        aut.delta.add(2, alphabet["k"], {0, 0, 0, 0});
 
         CHECK_FALSE(aut.is_complete(alphabet.get_alphabet_symbols()));
     }
@@ -291,28 +291,28 @@ TEST_CASE("mata::nfta_is_complete") {
 
         aut.delta.add(0, alphabet["a"], {});
 
-        for (State s : {0u,1u}) {
+        for (State s : {0u, 1u}) {
             aut.delta.add(0, alphabet["g"], {s});
             aut.delta.add(1, alphabet["g"], {s});
         }
 
         // all tuples for h
-        for (State a : {0u,1u}) {
-            for (State b : {0u,1u}) {
-                for (State c : {0u,1u}) {
-                    aut.delta.add(0, alphabet["h"], {a,b,c});
-                    aut.delta.add(1, alphabet["h"], {a,b,c});
+        for (State a : {0u, 1u}) {
+            for (State b : {0u, 1u}) {
+                for (State c : {0u, 1u}) {
+                    aut.delta.add(0, alphabet["h"], {a, b, c});
+                    aut.delta.add(1, alphabet["h"], {a, b, c});
                 }
             }
         }
 
         // all tuples for k
-        for (State a : {0u,1u}) {
-            for (State b : {0u,1u}) {
-                for (State c : {0u,1u}) {
-                    for (State d : {0u,1u}) {
-                        aut.delta.add(0, alphabet["k"], {a,b,c,d});
-                        aut.delta.add(1, alphabet["k"], {a,b,c,d});
+        for (State a : {0u, 1u}) {
+            for (State b : {0u, 1u}) {
+                for (State c : {0u, 1u}) {
+                    for (State d : {0u, 1u}) {
+                        aut.delta.add(0, alphabet["k"], {a, b, c, d});
+                        aut.delta.add(1, alphabet["k"], {a, b, c, d});
                     }
                 }
             }

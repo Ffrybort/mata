@@ -1,6 +1,6 @@
+#include <cctype>
 #include <iostream>
 #include <ostream>
-#include <cctype>
 #include <string>
 
 #include "mata/nfta/nfta.hh"
@@ -9,15 +9,19 @@ namespace mata::nfta {
 
 void print_transitions(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
     for (const auto& transition : transitions) {
-        os <<  transition.single << " -> ";
-        if (alphabet) { os << alphabet->reverse_translate_symbol(transition.symbol); }
-        else { os << transition.symbol; }
+        os << transition.single << " -> ";
+        if (alphabet) {
+            os << alphabet->reverse_translate_symbol(transition.symbol);
+        } else {
+            os << transition.symbol;
+        }
         if (!transition.tuple.empty()) {
 
-            os <<"(";
+            os << "(";
             for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
                 os << transition.tuple[i];
-                if (i + 1 < transition.tuple.size()) os << ",";
+                if (i + 1 < transition.tuple.size())
+                    os << ",";
             }
             os << ")";
         }
@@ -25,19 +29,24 @@ void print_transitions(std::ostream& os, const std::vector<Transition>& transiti
     }
 } // print_transitions
 
-void print_transitions_bottom_up(std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
+void print_transitions_bottom_up(
+        std::ostream& os, const std::vector<Transition>& transitions, const Alphabet* alphabet) {
     for (const auto& transition : transitions) {
-        os <<"(";
+        os << "(";
         for (std::size_t i = 0; i < transition.tuple.size(); ++i) {
             os << transition.tuple[i];
-            if (i + 1 < transition.tuple.size()) os << ",";
+            if (i + 1 < transition.tuple.size())
+                os << ",";
         }
         os << ")";
 
         os << " -> ";
-        if (alphabet) { os << alphabet->reverse_translate_symbol(transition.symbol); }
-        else { os << transition.symbol; }
-        os << " " <<  transition.single;
+        if (alphabet) {
+            os << alphabet->reverse_translate_symbol(transition.symbol);
+        } else {
+            os << transition.symbol;
+        }
+        os << " " << transition.single;
         os << std::endl;
     }
 } // print_transitions
@@ -47,11 +56,12 @@ void Nfta::print_mata(std::ostream& os) const {
     os << "%States-marked " << std::endl;
     os << "%Alphabet-auto " << std::endl;
     os << "%Initial ";
-    for (const State state : root_states) { os << "q" << state << " "; }
+    for (const State state : root_states) {
+        os << "q" << state << " ";
+    }
     os << std::endl;
 
-    for (const auto& transition : delta.get_transitions())
-    {
+    for (const auto& transition : delta.get_transitions()) {
         os << "q" << transition.single << " ";
 
         // symbol
@@ -64,8 +74,7 @@ void Nfta::print_mata(std::ostream& os) const {
 
         // targets
         os << "(";
-        for (const auto& target : transition.tuple)
-        {
+        for (const auto& target : transition.tuple) {
             os << "q" << target << " ";
         }
         os << ")";
@@ -94,11 +103,9 @@ void Nfta::print_readable(std::ostream& os) const {
     if (alphabet) {
         try {
             for (const Symbol sym : alphabet->get_alphabet_symbols()) {
-                os << "  "<< alphabet->try_reverse_translate_symbol(sym); // todo print arities
+                os << "  " << alphabet->try_reverse_translate_symbol(sym); // todo print arities
             }
-        } catch (const std::exception& e) {
-            ;
-        }
+        } catch (const std::exception& e) { ; }
     } else {
         os << "  none\n";
     }
@@ -130,11 +137,9 @@ void Nfta::print_readable_bottom_up(std::ostream& os) const {
     if (alphabet) {
         try {
             for (const Symbol sym : alphabet->get_alphabet_symbols()) {
-                os << "  "<< alphabet->try_reverse_translate_symbol(sym); // todo print arities
+                os << "  " << alphabet->try_reverse_translate_symbol(sym); // todo print arities
             }
-        } catch (const std::exception& e) {
-            ;
-        }
+        } catch (const std::exception& e) { ; }
     } else {
         os << "  none\n";
     }
@@ -167,7 +172,7 @@ void Nfta::defragment(const BoolVector& is_staying) {
     root_states = std::move(new_inital_states);
 } // defragment
 
-void sanitize_symbol(std::string &s) {
+void sanitize_symbol(std::string& s) {
     if (s.empty()) {
         s = "a";
         return;
@@ -192,8 +197,11 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     for (const auto& [symbol, arity] : symbols) {
         std::string sym_str;
 
-        if (alphabet) { sym_str = alphabet->try_reverse_translate_symbol(symbol); }
-        else { sym_str = std::to_string(symbol); }
+        if (alphabet) {
+            sym_str = alphabet->try_reverse_translate_symbol(symbol);
+        } else {
+            sym_str = std::to_string(symbol);
+        }
         sanitize_symbol(sym_str);
 
         os << sym_str << ":" << arity << " ";
@@ -217,8 +225,11 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
     for (const auto& t : delta.get_transitions()) {
         std::string sym_str;
 
-        if (alphabet) { sym_str = alphabet->reverse_translate_symbol(t.symbol); }
-        else { sym_str = std::to_string(t.symbol); }
+        if (alphabet) {
+            sym_str = alphabet->reverse_translate_symbol(t.symbol);
+        } else {
+            sym_str = std::to_string(t.symbol);
+        }
         sanitize_symbol(sym_str);
 
         if (t.tuple.empty()) {
@@ -229,18 +240,17 @@ void Nfta::print_timbuk(std::ostream& os, const std::string& name) const {
             os << "  " << sym_str << "(";
             for (size_t i = 0; i < t.tuple.size(); ++i) {
                 os << "q" << t.tuple[i];
-                if (i + 1 < t.tuple.size()) os << ",";
+                if (i + 1 < t.tuple.size())
+                    os << ",";
             }
             os << ") -> q" << t.single << std::endl;
         }
     }
 }
 
-bool Nfta::is_identical_to (const Nfta& other) const {
-    return delta.num_of_states() == other.delta.num_of_states()
-        && root_states == other.root_states
-        && delta == other.delta
-        && alphabet == other.alphabet;
+bool Nfta::is_identical_to(const Nfta& other) const {
+    return delta.num_of_states() == other.delta.num_of_states() && root_states == other.root_states &&
+           delta == other.delta && alphabet == other.alphabet;
 } // operator==
 
-}
+} // namespace mata::nfta

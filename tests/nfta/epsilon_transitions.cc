@@ -1,9 +1,9 @@
 // testing epsilon-related operations
 
 #include <catch2/catch_test_macros.hpp>
-#include "mata/nfta/nfta.hh"
-#include "mata/nfta/builder.hh"
 #include "mata/alphabet.hh"
+#include "mata/nfta/builder.hh"
+#include "mata/nfta/nfta.hh"
 
 using namespace mata::nfta;
 using namespace mata;
@@ -89,20 +89,19 @@ TEST_CASE("mata::nfta::get_epsilon_closures") {
 
         auto closures = delta.get_epsilon_closures(eps);
         REQUIRE(closures.size() == 8);
-        auto check_set = [](const StateSet& set,
-                            const std::vector<State>& expected) {
+        auto check_set = [](const StateSet& set, const std::vector<State>& expected) {
             REQUIRE(set.size() == expected.size());
             for (auto s : expected) {
                 REQUIRE(set.count(s) == 1);
             }
         };
 
-        check_set(closures[0], {0,1,2,3,4,5,6,7});
-        check_set(closures[1], {1,2,3,7});
-        check_set(closures[2], {2,3,7});
+        check_set(closures[0], {0, 1, 2, 3, 4, 5, 6, 7});
+        check_set(closures[1], {1, 2, 3, 7});
+        check_set(closures[2], {2, 3, 7});
         check_set(closures[3], {3});
-        check_set(closures[4], {4,5,6});
-        check_set(closures[5], {5,6});
+        check_set(closures[4], {4, 5, 6});
+        check_set(closures[5], {5, 6});
         check_set(closures[6], {6});
         check_set(closures[7], {7});
     }
@@ -155,14 +154,11 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         auto transitions = aut.delta.get_transitions();
 
-        REQUIRE(std::none_of(transitions.begin(), transitions.end(),
-            [eps](const auto& t){ return t.symbol == eps; }));
+        REQUIRE(std::none_of(transitions.begin(), transitions.end(), [eps](const auto& t) { return t.symbol == eps; }));
 
-        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
-            [&](const auto& t){
-                return t.single == 0 &&
-                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
-            }));
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(), [&](const auto& t) {
+            return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0";
+        }));
     }
 
 
@@ -183,14 +179,11 @@ TEST_CASE("mata::nfta::remove_epsilon") {
         aut = remove_epsilon(aut, eps);
         auto transitions = aut.delta.get_transitions();
 
-        REQUIRE(std::none_of(transitions.begin(), transitions.end(),
-            [eps](const auto& t){ return t.symbol == eps; }));
+        REQUIRE(std::none_of(transitions.begin(), transitions.end(), [eps](const auto& t) { return t.symbol == eps; }));
 
-        auto count = std::ranges::count_if(transitions,
-            [&](const auto& t){
-                return t.single == 0 &&
-                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
-            });
+        auto count = std::ranges::count_if(transitions, [&](const auto& t) {
+            return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0";
+        });
 
         REQUIRE(count == 2);
     }
@@ -214,16 +207,12 @@ TEST_CASE("mata::nfta::remove_epsilon") {
 
         auto transitions = aut.delta.get_transitions();
 
-        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
-            [&](const auto& t){
-                return t.single == 0 &&
-                       alphabet.reverse_translate_symbol(t.symbol) == "a1";
-            }));
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(), [&](const auto& t) {
+            return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a1";
+        }));
 
-        REQUIRE(std::any_of(transitions.begin(), transitions.end(),
-            [&](const auto& t){
-                return t.single == 0 &&
-                       alphabet.reverse_translate_symbol(t.symbol) == "a0";
-            }));
+        REQUIRE(std::any_of(transitions.begin(), transitions.end(), [&](const auto& t) {
+            return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0";
+        }));
     }
 }

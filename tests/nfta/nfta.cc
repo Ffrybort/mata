@@ -3,10 +3,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -43,7 +43,7 @@ TEST_CASE("mata::nfta") {
     }
 
     SECTION("Constructor initialization") {
-        Nfta aut( {1}, &alphabet, Delta(2)); // 2 states: 0 and 1, initial state 1
+        Nfta aut({1}, &alphabet, Delta(2)); // 2 states: 0 and 1, initial state 1
         CHECK(aut.delta.contains_state(0));
         CHECK(aut.delta.contains_state(1));
         CHECK(aut.is_state_root(1));
@@ -53,7 +53,7 @@ TEST_CASE("mata::nfta") {
 
     SECTION("Print sanity") {
         Nfta aut({0}, &alphabet, {});
-        aut.delta.add(0, alphabet["f"], {0,1});
+        aut.delta.add(0, alphabet["f"], {0, 1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
         CHECK_NOTHROW(aut.print_readable(std::cout));
         CHECK_NOTHROW(aut.print_timbuk(std::cout));
@@ -90,7 +90,7 @@ TEST_CASE("mata::nfta") {
         aut.defragment(is_staying);
 
         CHECK(aut.delta.num_of_states() == 2);
-        CHECK(aut.delta.contains(0, alphabet["f"], {1,2}) == false);
+        CHECK(aut.delta.contains(0, alphabet["f"], {1, 2}) == false);
         CHECK(aut.is_state_root(1));
     }
 

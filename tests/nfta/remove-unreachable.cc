@@ -1,10 +1,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -58,7 +58,7 @@ TEST_CASE("mata::nfta::get_top_down_reachable") {
     SECTION("Branching") {
         Nfta aut({0}, &alphabet, Delta(4));
 
-        aut.delta.add(0, alphabet["g"], {1,2});
+        aut.delta.add(0, alphabet["g"], {1, 2});
         aut.delta.add(2, alphabet["f"], {3});
 
         BoolVector acc = aut.get_top_down_reachable();
@@ -108,7 +108,7 @@ TEST_CASE("mata::nfta::get_top_down_reachable") {
     }
 
     SECTION("Multiple initial states") {
-        Nfta aut({0,2}, &alphabet, Delta(4));
+        Nfta aut({0, 2}, &alphabet, Delta(4));
 
         aut.delta.add(0, alphabet["f"], {1});
         aut.delta.add(2, alphabet["f"], {3});
@@ -157,7 +157,7 @@ TEST_CASE("mata::nfta::get_top_down_reachable") {
     SECTION("Another simple") {
         Nfta aut({0}, &alphabet, Delta(3));
 
-        aut.delta.add(0, alphabet["g"], {1,1});
+        aut.delta.add(0, alphabet["g"], {1, 1});
         aut.delta.add(1, alphabet["f"], {2});
 
         BoolVector acc = aut.get_top_down_reachable();
@@ -224,7 +224,7 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["g"], {0,1});
+        aut.delta.add(2, alphabet["g"], {0, 1});
         aut.delta.add(3, alphabet["f"], {2});
 
         BoolVector acc = aut.get_bottom_up_reachable();
@@ -239,7 +239,7 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
         Nfta aut({}, &alphabet, Delta(3));
 
         aut.delta.add(0, alphabet["a"], {});
-        aut.delta.add(2, alphabet["g"], {0,1}); // 1 missing
+        aut.delta.add(2, alphabet["g"], {0, 1}); // 1 missing
 
         BoolVector acc = aut.get_bottom_up_reachable();
 
@@ -254,8 +254,8 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["a"], {});
 
-        aut.delta.add(2, alphabet["g"], {0,1});
-        aut.delta.add(3, alphabet["g"], {1,0});
+        aut.delta.add(2, alphabet["g"], {0, 1});
+        aut.delta.add(3, alphabet["g"], {1, 0});
         aut.delta.add(4, alphabet["f"], {3});
 
         BoolVector acc = aut.get_bottom_up_reachable();
@@ -290,8 +290,8 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
 
         aut.delta.add(0, alphabet["a"], {});
         aut.delta.add(1, alphabet["f"], {0});
-        aut.delta.add(2, alphabet["g"], {0,1});
-        aut.delta.add(3, alphabet["h"], {1,2,3});
+        aut.delta.add(2, alphabet["g"], {0, 1});
+        aut.delta.add(3, alphabet["h"], {1, 2, 3});
 
         BoolVector reachable = aut.get_bottom_up_reachable();
         CHECK(reachable[0]);
@@ -324,8 +324,8 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
         aut.delta.add(1, alphabet["b"], {});
         aut.delta.add(2, alphabet["f"], {0});
         aut.delta.add(3, alphabet["f"], {1});
-        aut.delta.add(4, alphabet["g"], {4,4});
-        aut.delta.add(5, alphabet["h"], {0,1,2});
+        aut.delta.add(4, alphabet["g"], {4, 4});
+        aut.delta.add(5, alphabet["h"], {0, 1, 2});
 
         BoolVector reachable = aut.get_bottom_up_reachable();
         CHECK(reachable[0]);
@@ -339,13 +339,17 @@ TEST_CASE("mata::nfta::get_bottom_up_reachable") {
     SECTION("Larger automaton") {
         constexpr size_t N = 10;
         Nfta aut({}, &alphabet, Delta(N));
-        for (State s = 0; s < 3; ++s) {aut.delta.add(s, alphabet["a"], {}); }
-        for (State s = 3; s < 6; ++s) {aut.delta.add(s, alphabet["f"], {s-3}); }
+        for (State s = 0; s < 3; ++s) {
+            aut.delta.add(s, alphabet["a"], {});
+        }
+        for (State s = 3; s < 6; ++s) {
+            aut.delta.add(s, alphabet["f"], {s - 3});
+        }
 
-        aut.delta.add(6, alphabet["g"], {0,1});
-        aut.delta.add(7, alphabet["g"], {1,2});
-        aut.delta.add(8, alphabet["g"], {3,4});
-        aut.delta.add(9, alphabet["h"], {5,6,7});
+        aut.delta.add(6, alphabet["g"], {0, 1});
+        aut.delta.add(7, alphabet["g"], {1, 2});
+        aut.delta.add(8, alphabet["g"], {3, 4});
+        aut.delta.add(9, alphabet["h"], {5, 6, 7});
 
         BoolVector reachable = aut.get_bottom_up_reachable();
 
@@ -500,7 +504,8 @@ TEST_CASE("mata::nfta::remove_bottom_up_unreachable") {
     }
 }
 
-TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_bottom_top") { // todo check with equality
+TEST_CASE(
+        "mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_bottom_top") { // todo check with equality
     OnTheFlyAlphabet alphabet;
     alphabet.add_new_symbol("a"); // arity 0
     alphabet.add_new_symbol("f"); // arity 1
@@ -516,16 +521,12 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
 
     SECTION("Empty automaton") {
         Nfta aut({}, &alphabet, Delta(10));
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 0);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 0); });
     }
 
     SECTION("Only initial state, no transitions") {
         Nfta aut({0}, &alphabet, Delta(5));
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 0);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 0); });
     }
 
     SECTION("Simple — all states useful") {
@@ -534,9 +535,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(1, alphabet["f"], {2});
         aut.delta.add(2, alphabet["a"], {});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 3);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 3); });
     }
 
     SECTION("State reachable top-down but not bottom-up — removed") {
@@ -546,9 +545,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(1, alphabet["f"], {2});
         // state 2 has no leaf, so 1 and 2 are dead
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 1);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 1); });
     }
 
     SECTION("State bottom-up reachable but not top-down — removed") {
@@ -559,9 +556,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(1, alphabet["f"], {2});
         aut.delta.add(3, alphabet["f"], {1});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 1);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 1); });
     }
 
     SECTION("Binary — both children must be reachable") {
@@ -572,9 +567,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(3, alphabet["a"], {});
         aut.delta.add(4, alphabet["f"], {3});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 3);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 3); });
     }
 
     SECTION("Dead branch") {
@@ -586,9 +579,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(3, alphabet["f"], {4});
         aut.delta.add(5, alphabet["a"], {});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 3);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 3); });
     }
 
     SECTION("Cycle — all reachable") {
@@ -597,9 +588,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(1, alphabet["f"], {0});
         aut.delta.add(1, alphabet["a"], {});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 2);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 2); });
     }
 
     SECTION("Cycle without leaf — all removed") {
@@ -608,9 +597,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(1, alphabet["f"], {0});
         aut.delta.add(3, alphabet["a"], {});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 0);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 0); });
     }
 
     SECTION("Multiple initial states — partial reduction") {
@@ -622,9 +609,7 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(3, alphabet["a"], {});
         aut.delta.add(4, alphabet["f"], {3});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 3);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 3); });
     }
 
     SECTION("Mixed reachability") {
@@ -638,8 +623,6 @@ TEST_CASE("mata::nfta::remove_unreachable_top_bottom_top and remove_unreachable_
         aut.delta.add(6, alphabet["a"], {});
         aut.delta.add(7, alphabet["f"], {6});
 
-        check_both(aut, aut, [](const Nfta& a) {
-            CHECK(a.delta.num_of_states() == 4);
-        });
+        check_both(aut, aut, [](const Nfta& a) { CHECK(a.delta.num_of_states() == 4); });
     }
 }

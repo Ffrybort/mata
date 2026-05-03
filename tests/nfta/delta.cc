@@ -6,10 +6,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -40,7 +40,7 @@ TEST_CASE("mata::nfta::delta") {
     }
 
     SECTION("Number of transitions") {
-        delta.add(0, SymbolPost{ 1, StateVectorSet{{2},{3}} });
+        delta.add(0, SymbolPost{1, StateVectorSet{{2}, {3}}});
         delta.add(1, 2, {3});
         delta.add(1, 2, {4}); // same symbol, added separately
 
@@ -55,21 +55,17 @@ TEST_CASE("mata::nfta::delta") {
         auto transitions = delta.get_transitions();
         CHECK(transitions.size() == 3);
 
-        CHECK(std::any_of(transitions.begin(), transitions.end(),
-            [](const Transition& t){
-                return t.single == 0 && t.symbol == 1 && t.tuple == std::vector<State>{2};
-            }));
+        CHECK(std::any_of(transitions.begin(), transitions.end(), [](const Transition& t) {
+            return t.single == 0 && t.symbol == 1 && t.tuple == std::vector<State>{2};
+        }));
 
-        CHECK(std::any_of(transitions.begin(), transitions.end(),
-            [](const Transition& t){
-                return t.single == 0 && t.symbol == 2 && t.tuple == std::vector<State>{3};
-            }));
+        CHECK(std::any_of(transitions.begin(), transitions.end(), [](const Transition& t) {
+            return t.single == 0 && t.symbol == 2 && t.tuple == std::vector<State>{3};
+        }));
 
-        CHECK(std::any_of(transitions.begin(), transitions.end(),
-            [](const Transition& t){
-                return t.single == 1 && t.symbol == 1 && t.tuple == std::vector<State>{0};
-            }));
-
+        CHECK(std::any_of(transitions.begin(), transitions.end(), [](const Transition& t) {
+            return t.single == 1 && t.symbol == 1 && t.tuple == std::vector<State>{0};
+        }));
     }
 
     SECTION("Get successors") {
@@ -91,7 +87,7 @@ TEST_CASE("mata::nfta::delta") {
     }
 
     SECTION("Moves iteration over a single StatePost") {
-        delta.add(0, 1, {2,3});
+        delta.add(0, 1, {2, 3});
         delta.add(0, 2, {0, 1, 2, 3, 4});
         delta.add(0, 3, {4});
 
@@ -120,10 +116,10 @@ TEST_CASE("mata::nfta::delta") {
     }
 
     SECTION("Equality and inequality") {
-        Move m1{1, {2,3}};
-        Move m2{1, {2,3}};
-        Move m3{1, {3,2}};
-        Move m4{2, {2,3}};
+        Move m1{1, {2, 3}};
+        Move m2{1, {2, 3}};
+        Move m3{1, {3, 2}};
+        Move m4{2, {2, 3}};
 
         CHECK(m1 == m2);
         CHECK_FALSE(m1 == m3);
@@ -132,9 +128,7 @@ TEST_CASE("mata::nfta::delta") {
 
     delta.clear();
 
-    SECTION("Nonexistent state post") {
-        CHECK_THROWS(delta.state_post(0));
-    }
+    SECTION("Nonexistent state post") { CHECK_THROWS(delta.state_post(0)); }
 
     SECTION("Multiple target tuples under same symbol") {
         delta.add(0, 1, {2});
@@ -237,7 +231,7 @@ TEST_CASE("mata::nfta::delta") {
         Delta temp;
         temp.add(0, 1, {2});
         Delta d2{std::move(temp)};
-        CHECK(d2.contains(0,1,{2}));
+        CHECK(d2.contains(0, 1, {2}));
     }
 
     SECTION("Copy assignment") {
@@ -251,7 +245,7 @@ TEST_CASE("mata::nfta::delta") {
         temp.add(0, 1, {2});
         Delta d2;
         d2 = std::move(temp);
-        CHECK(d2.contains(0,1,{2}));
+        CHECK(d2.contains(0, 1, {2}));
     }
 
     SECTION("Defragment removes deleted states and renames correctly") {
@@ -286,7 +280,7 @@ TEST_CASE("mata::nfta::delta") {
     SECTION("Defragment removes transitions containing removed targets") {
         delta.clear();
 
-        delta.add(0, 1, {1,2});
+        delta.add(0, 1, {1, 2});
         delta.add(0, 2, {2});
 
         BoolVector is_staying{true, false, true};
@@ -294,7 +288,7 @@ TEST_CASE("mata::nfta::delta") {
 
         delta.defragment(is_staying, renaming);
 
-        CHECK_FALSE(delta.contains(0, 1, {0,1}));
+        CHECK_FALSE(delta.contains(0, 1, {0, 1}));
         CHECK(delta.contains(0, 2, {1}));
 
         auto delta_transitions = delta.get_transitions();
@@ -338,7 +332,7 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(1, 2, {0});
 
         BoolVector is_staying{false, false};
-        std::vector<State> renaming{0,0};
+        std::vector<State> renaming{0, 0};
 
         delta.defragment(is_staying, renaming);
 
@@ -368,13 +362,13 @@ TEST_CASE("mata::nfta::delta") {
         d.add(0, 5, {2});
 
         auto& sp = d.mutable_state_post(0); // another symbol post with source 0 symbol 5
-        sp.push_back(SymbolPost{5, StateVectorSet{ {2},  {3}}});
+        sp.push_back(SymbolPost{5, StateVectorSet{{2}, {3}}});
 
         CHECK_FALSE(d.is_sorted());
     }
 
     SECTION("Delta detects unsorted target tuples") {
-        Delta d {1};
+        Delta d{1};
 
         auto& sp = d.mutable_state_post(0);
         StateVectorSet targets;
@@ -400,8 +394,8 @@ TEST_CASE("mata::nfta::delta") {
     SECTION("Reversed delta basic case") {
         delta.clear();
 
-        delta.add(0, 1, {2,3});
-        delta.add(1, 1, {2,3});
+        delta.add(0, 1, {2, 3});
+        delta.add(1, 1, {2, 3});
 
         auto rev = delta.get_reversed();
 
@@ -411,7 +405,7 @@ TEST_CASE("mata::nfta::delta") {
 
         REQUIRE(sym.state_tuple_posts.size() == 1);
         const auto& src = sym.state_tuple_posts.front();
-        CHECK(src.sources == std::vector<State>{2,3});
+        CHECK(src.sources == std::vector<State>{2, 3});
 
         CHECK(src.targets.count(0) == 1);
         CHECK(src.targets.count(1) == 1);
@@ -480,9 +474,9 @@ TEST_CASE("mata::nfta::delta") {
     SECTION("Reversed delta merges multiple original sources") {
         delta.clear();
 
-        delta.add(0, 5, {1,2});
-        delta.add(3, 5, {1,2});
-        delta.add(4, 5, {1,2});
+        delta.add(0, 5, {1, 2});
+        delta.add(3, 5, {1, 2});
+        delta.add(4, 5, {1, 2});
 
         auto rev = delta.get_reversed();
 
@@ -491,7 +485,7 @@ TEST_CASE("mata::nfta::delta") {
         REQUIRE(sym.state_tuple_posts.size() == 1);
 
         const auto& src = sym.state_tuple_posts.front();
-        CHECK(src.sources == std::vector<State>{1,2});
+        CHECK(src.sources == std::vector<State>{1, 2});
         REQUIRE(src.targets.size() == 3);
         CHECK(src.targets.count(0) == 1);
         CHECK(src.targets.count(2) == 0);
@@ -578,7 +572,7 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(1, 1, {2, 3});
         delta.add(2, 1, {4, 5});
 
-        BoolVector allowed{ true, true, true, true, false, true }; // state 4 not allowed
+        BoolVector allowed{true, true, true, true, false, true}; // state 4 not allowed
         auto rev = delta.get_reversed(&allowed);
 
         auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
@@ -586,13 +580,17 @@ TEST_CASE("mata::nfta::delta") {
 
         bool found_2_3 = false;
         for (const auto& src : sym1_it->state_tuple_posts) {
-            if (src.sources == std::vector<State>{2, 3}) { found_2_3 = true; }
+            if (src.sources == std::vector<State>{2, 3}) {
+                found_2_3 = true;
+            }
         }
         CHECK(found_2_3);
 
         bool found_4_5 = false;
         for (const auto& src : sym1_it->state_tuple_posts) {
-            if (src.sources == std::vector<State>{4, 5}) { found_4_5 = true; }
+            if (src.sources == std::vector<State>{4, 5}) {
+                found_4_5 = true;
+            }
         }
         CHECK_FALSE(found_4_5);
     }
@@ -604,13 +602,12 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(1, 1, {4, 5});
 
         // only states 0 and 1 allowed — both tuples contain disallowed states
-        BoolVector allowed{ true, true, false, false, false, false };
+        BoolVector allowed{true, true, false, false, false, false};
         auto rev = delta.get_reversed(&allowed);
 
         auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
         // either no symbol entry at all, or no source transitions
-        bool empty = sym1_it == rev.symbol_posts.end()
-                  || sym1_it->state_tuple_posts.empty();
+        bool empty = sym1_it == rev.symbol_posts.end() || sym1_it->state_tuple_posts.empty();
         CHECK(empty);
     }
 
@@ -620,7 +617,7 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(0, 1, {2, 3});
         delta.add(1, 1, {2, 3});
 
-        BoolVector allowed{ true, true, true, true };
+        BoolVector allowed{true, true, true, true};
         auto rev_filtered = delta.get_reversed(&allowed);
         auto rev_unfiltered = delta.get_reversed();
 
@@ -634,7 +631,7 @@ TEST_CASE("mata::nfta::delta") {
         // allowed filter applies to tuple targets, not sources — verify source 0 still appears
         delta.add(0, 1, {2, 3});
 
-        BoolVector allowed{ false, true, true, true };
+        BoolVector allowed{false, true, true, true};
         auto rev = delta.get_reversed(&allowed);
 
         auto sym1_it = rev.symbol_posts.find(ReversedDelta::RevSymbolPost{1});
@@ -649,7 +646,7 @@ TEST_CASE("mata::nfta::delta") {
         delta.add(0, 2, {2, 3}); // filtered — state 3 not allowed
         delta.add(0, 2, {1, 2}); // allowed
 
-        BoolVector allowed{ true, true, true, false }; // state 3 not allowed
+        BoolVector allowed{true, true, true, false}; // state 3 not allowed
         auto rev = delta.get_reversed(&allowed);
 
         // symbol 1: only {1,2} survives

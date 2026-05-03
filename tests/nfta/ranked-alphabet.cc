@@ -56,26 +56,20 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
     }
 
     SECTION("initializer_list constructor (StringArity -> Symbol)") {
-        RankedOnTheFlyAlphabet a{
-            { {{"a", 1}, 5}, {{"b", 2}, 7} }
-        };
+        RankedOnTheFlyAlphabet a{{{{"a", 1}, 5}, {{"b", 2}, 7}}};
         CHECK(a.translate_symbol("a", 1) == 5);
         CHECK(a.translate_symbol("b", 2) == 7);
         CHECK(a.get_next_value() == 8);
     }
 
     SECTION("vector<StringArity> constructor") {
-        std::vector<StringArity> v{
-            {"a", 1}, {"b", 2}
-        };
+        std::vector<StringArity> v{{"a", 1}, {"b", 2}};
         RankedOnTheFlyAlphabet a{v};
         CHECK(a.get_number_of_symbols() == 2);
     }
 
     SECTION("iterator constructor") {
-        std::vector<StringArity> v{
-            {"x", 0}, {"y", 1}
-        };
+        std::vector<StringArity> v{{"x", 0}, {"y", 1}};
         RankedOnTheFlyAlphabet a{v.begin(), v.end()};
         CHECK(a.get_number_of_symbols() == 2);
     }
@@ -132,7 +126,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         CHECK(a.get_next_value() == 0);
     }
 
-     SECTION("translate_or_add_ranked_symb adds and reuses symbol") {
+    SECTION("translate_or_add_ranked_symb adds and reuses symbol") {
         RankedOnTheFlyAlphabet a{};
         Symbol s1 = a.translate_or_add_symbol("a", 2);
         Symbol s2 = a.translate_or_add_symbol("a", 2);
@@ -150,7 +144,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         Symbol s1 = a.translate_or_add_symbol("a", 0);
         Symbol s2 = a.translate_or_add_symbol("b", 0);
 
-        utils::OrdVector<Symbol> subset{ s1 };
+        utils::OrdVector<Symbol> subset{s1};
         auto complement = a.get_complement(subset);
 
         CHECK(complement.size() == 1);
@@ -160,9 +154,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
 
     SECTION("add_symbols_from(vector<StringArity>) inserts all symbols") {
         RankedOnTheFlyAlphabet a{};
-        std::vector<StringArity> symbols{
-            {"a", 1}, {"b", 2}
-        };
+        std::vector<StringArity> symbols{{"a", 1}, {"b", 2}};
         a.add_symbols_from(symbols);
         CHECK(a.get_number_of_symbols() == 2);
     }
@@ -171,10 +163,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         RankedOnTheFlyAlphabet a{};
         Symbol existing = a.translate_or_add_symbol("a", 1);
 
-        RankedOnTheFlyAlphabet::SymbolArityMap map{
-            {{"a", 1}, 42},
-            {{"b", 2}, 7}
-        };
+        RankedOnTheFlyAlphabet::SymbolArityMap map{{{"a", 1}, 42}, {{"b", 2}, 7}};
 
         a.add_symbols_from(map);
 
@@ -189,9 +178,9 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
     }
 
     SECTION("string + arity constructor throws on size mismatch") {
-        std::vector<std::string> names{ "a", "b" };
-        std::vector<unsigned> arities{ 1 };
-        CHECK_THROWS(RankedOnTheFlyAlphabet{ names, arities });
+        std::vector<std::string> names{"a", "b"};
+        std::vector<unsigned> arities{1};
+        CHECK_THROWS(RankedOnTheFlyAlphabet{names, arities});
     }
 
     SECTION("erase by StringArity removes symbol") {
@@ -212,24 +201,23 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         RankedOnTheFlyAlphabet a{};
         a.translate_or_add_symbol("a", 1);
 
-        RankedOnTheFlyAlphabet b{ a };
+        RankedOnTheFlyAlphabet b{a};
         CHECK(b.get_number_of_symbols() == 1);
-        CHECK(b.translate_symbol("a", 1) ==
-              a.translate_symbol("a", 1));
+        CHECK(b.translate_symbol("a", 1) == a.translate_symbol("a", 1));
     }
 
     SECTION("move constructor transfers alphabet") {
         RankedOnTheFlyAlphabet a{};
         a.translate_or_add_symbol("a", 1);
 
-        RankedOnTheFlyAlphabet b{ std::move(a) };
+        RankedOnTheFlyAlphabet b{std::move(a)};
         CHECK(b.get_number_of_symbols() == 1);
     }
 
     SECTION("pointer constructor") {
         RankedOnTheFlyAlphabet a{};
         a.translate_or_add_symbol("a", 1);
-        RankedOnTheFlyAlphabet b{ &a };
+        RankedOnTheFlyAlphabet b{&a};
         CHECK(b.get_number_of_symbols() == 1);
     }
 
@@ -243,16 +231,13 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
     }
 
     SECTION("SymbolArityMap constructor") {
-    RankedOnTheFlyAlphabet::SymbolArityMap map{
-        {{"a", 1}, 5},
-        {{"b", 2}, 7}
-    };
+        RankedOnTheFlyAlphabet::SymbolArityMap map{{{"a", 1}, 5}, {{"b", 2}, 7}};
 
-    RankedOnTheFlyAlphabet a{ map };
+        RankedOnTheFlyAlphabet a{map};
 
-    CHECK(a.translate_symbol("a", 1) == 5);
-    CHECK(a.translate_symbol("b", 2) == 7);
-}
+        CHECK(a.translate_symbol("a", 1) == 5);
+        CHECK(a.translate_symbol("b", 2) == 7);
+    }
 
     SECTION("move assignment") {
         RankedOnTheFlyAlphabet a{};
@@ -278,7 +263,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         a.update_next_symbol_value(10);
         CHECK(a.get_next_value() == 11);
 
-        a.update_next_symbol_value(5);  // should not decrease
+        a.update_next_symbol_value(5); // should not decrease
         CHECK(a.get_next_value() == 11);
     }
 
@@ -378,7 +363,7 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         a.translate_or_add_symbol("f", 1);
         a.translate_or_add_symbol("p", 2);
 
-        auto consts     = a.get_constant_symbols();
+        auto consts = a.get_constant_symbols();
         auto non_consts = a.get_non_constant_symbols();
 
         CHECK(consts.size() + non_consts.size() == a.get_number_of_symbols());
@@ -389,4 +374,3 @@ TEST_CASE("mata::RankedOnTheFlyAlphabet") {
         }
     }
 }
-

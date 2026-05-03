@@ -1,12 +1,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 #include <mata/nfta/builder.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
 #include <mata/nfta/ranked-alphabet.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -14,15 +14,17 @@ using namespace mata;
 
 // Count how many target tuples a state has over a given symbol
 static size_t count_tuples(const Nfta& aut, State src, Symbol sym) {
-    if (src >= aut.delta.num_of_states()) return 0;
-    auto it = aut.delta[src].find(SymbolPost{ sym });
-    if (it == aut.delta[src].end()) return 0;
+    if (src >= aut.delta.num_of_states())
+        return 0;
+    auto it = aut.delta[src].find(SymbolPost{sym});
+    if (it == aut.delta[src].end())
+        return 0;
     return it->target_tuples.size();
 }
 
 TEST_CASE("mata::nfta::complement (classical)") {
-    const ParameterMap classical_naive     = { { "algorithm", "classical"  }, { "determinization", "naive"      } };
-    const ParameterMap classical_optimized = { { "algorithm", "classical"  }, { "determinization", "optimized"  } };
+    const ParameterMap classical_naive = {{"algorithm", "classical"}, {"determinization", "naive"}};
+    const ParameterMap classical_optimized = {{"algorithm", "classical"}, {"determinization", "optimized"}};
 
     SECTION("Empty automaton") {
         RankedOnTheFlyAlphabet alphabet;
@@ -64,7 +66,7 @@ TEST_CASE("mata::nfta::complement (classical)") {
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 2), {0, 0}));
         CHECK(comp.delta.contains(0, alphabet.translate_symbol("a", 0), {}));
     }
-        SECTION("Universal automaton complement is empty") {
+    SECTION("Universal automaton complement is empty") {
         IntAlphabet alphabet;
         Nfta aut({0}, &alphabet, Delta(1));
         aut.delta.add(0, 0, {});
@@ -98,7 +100,7 @@ TEST_CASE("mata::nfta::complement (classical)") {
         Symbol a = alphabet["a"];
 
         // aut accepts the single tree 'a'
-        Nfta aut({ 0 }, &alphabet, Delta(1));
+        Nfta aut({0}, &alphabet, Delta(1));
         aut.delta.add(0, a, {});
 
         Nfta comp = complement(aut, classical_optimized);
@@ -114,9 +116,9 @@ TEST_CASE("mata::nfta::complement (classical)") {
         Symbol f = alphabet["f"];
 
         // 0 -f-> 1 -f-> 0, only 1 accepts a
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, f, { 1 });
-        aut.delta.add(1, f, { 0 });
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, f, {1});
+        aut.delta.add(1, f, {0});
         aut.delta.add(1, a, {});
 
         Nfta comp = complement(aut, classical_optimized);
@@ -133,9 +135,9 @@ TEST_CASE("mata::nfta::complement (classical)") {
         Symbol a = alphabet["a"];
         Symbol f = alphabet["f"];
 
-        Nfta aut({ 0, 1 }, &alphabet, Delta(2));
-        aut.delta.add(0, f, { 0 });
-        aut.delta.add(1, f, { 1 });
+        Nfta aut({0, 1}, &alphabet, Delta(2));
+        aut.delta.add(0, f, {0});
+        aut.delta.add(1, f, {1});
         aut.delta.add(0, a, {});
         aut.delta.add(1, a, {});
 
@@ -152,10 +154,10 @@ TEST_CASE("mata::nfta::complement (classical)") {
         Symbol a = alphabet["a"];
         Symbol p = alphabet["p"];
 
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, p, { 0, 1 });
-        aut.delta.add(0, p, { 1, 0 });
-        aut.delta.add(1, p, { 0, 0 });
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, p, {0, 1});
+        aut.delta.add(0, p, {1, 0});
+        aut.delta.add(1, p, {0, 0});
         aut.delta.add(1, a, {});
 
         Nfta comp = complement(aut, classical_optimized);
@@ -170,12 +172,12 @@ TEST_CASE("mata::nfta::complement (classical)") {
     SECTION("Unknown algorithm throws") {
         OnTheFlyAlphabet alphabet;
         Nfta aut({}, &alphabet, {});
-        CHECK_THROWS(complement(aut, { { "algorithm", "classical" }, { "determinization", "unknown" } }));
+        CHECK_THROWS(complement(aut, {{"algorithm", "classical"}, {"determinization", "unknown"}}));
     }
 }
 
 TEST_CASE("mata::nfta::complement_top_down") {
-    const ParameterMap top_down_params     = { { "algorithm", "top_down"   } };
+    const ParameterMap top_down_params = {{"algorithm", "top_down"}};
     SECTION("Empty automaton") {
         RankedOnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a", 2);
@@ -219,35 +221,35 @@ TEST_CASE("mata::nfta::complement_top_down") {
 
     SECTION("Example with parity") {
         OnTheFlyAlphabet alphabet;
-        alphabet.add_new_symbol("a");   // arity 0
-        alphabet.add_new_symbol("s");   // arity 1
-        alphabet.add_new_symbol("p");   // arity 2
+        alphabet.add_new_symbol("a"); // arity 0
+        alphabet.add_new_symbol("s"); // arity 1
+        alphabet.add_new_symbol("p"); // arity 2
         Symbol a = alphabet["a"];
         Symbol s = alphabet["s"];
         Symbol p = alphabet["p"];
 
-        Nfta aut({ 0 }, &alphabet, Delta(2));
+        Nfta aut({0}, &alphabet, Delta(2));
         aut.delta.add(0, a, {});
-        aut.delta.add(0, s, { 1 });
-        aut.delta.add(0, p, { 0, 0 });
-        aut.delta.add(0, p, { 1, 1 });
-        aut.delta.add(1, s, { 0 });
-        aut.delta.add(1, p, { 0, 1 });
-        aut.delta.add(1, p, { 1, 0 });
+        aut.delta.add(0, s, {1});
+        aut.delta.add(0, p, {0, 0});
+        aut.delta.add(0, p, {1, 1});
+        aut.delta.add(1, s, {0});
+        aut.delta.add(1, p, {0, 1});
+        aut.delta.add(1, p, {1, 0});
 
         std::unordered_map<StateSet, State> mapping;
         Nfta comp = complement_top_down(aut, &mapping);
 
         // Identify macrostates by their image in mapping
-        REQUIRE(mapping.contains({ 0 }));
-        REQUIRE(mapping.contains({ 1 }));
-        REQUIRE(mapping.contains({ 0, 1 }));
+        REQUIRE(mapping.contains({0}));
+        REQUIRE(mapping.contains({1}));
+        REQUIRE(mapping.contains({0, 1}));
         REQUIRE(mapping.contains({}));
 
-        State m0  = mapping.at({ 0 });
-        State m1  = mapping.at({ 1 });
-        State m01 = mapping.at({ 0, 1 });
-        State mE  = mapping.at({});
+        State m0 = mapping.at({0});
+        State m1 = mapping.at({1});
+        State m01 = mapping.at({0, 1});
+        State mE = mapping.at({});
 
         // initial state {0}
         CHECK(comp.root_states.size() == 1);
@@ -257,43 +259,43 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // no leaf transition on a (state 0 accepts a)
         CHECK_FALSE(comp.delta.contains(m0, a, {}));
         // s -> {1}
-        CHECK(comp.delta.contains(m0, s, { m1 }));
+        CHECK(comp.delta.contains(m0, s, {m1}));
         // p: exactly the 4 minimal tuples (pruned)
-        CHECK(comp.delta.contains(m0, p, { m0,  m1  }));
-        CHECK(comp.delta.contains(m0, p, { m1,  m0  }));
-        CHECK(comp.delta.contains(m0, p, { m01, mE  }));
-        CHECK(comp.delta.contains(m0, p, { mE,  m01 }));
+        CHECK(comp.delta.contains(m0, p, {m0, m1}));
+        CHECK(comp.delta.contains(m0, p, {m1, m0}));
+        CHECK(comp.delta.contains(m0, p, {m01, mE}));
+        CHECK(comp.delta.contains(m0, p, {mE, m01}));
         CHECK(count_tuples(comp, m0, p) == 4);
 
         // --- {1} transitions ---
         // leaf a accepted (state 1 has no a-transition)
         CHECK(comp.delta.contains(m1, a, {}));
         // s -> {0}
-        CHECK(comp.delta.contains(m1, s, { m0 }));
+        CHECK(comp.delta.contains(m1, s, {m0}));
         // p: 4 minimal tuples
-        CHECK(comp.delta.contains(m1, p, { m0,  m0  }));
-        CHECK(comp.delta.contains(m1, p, { m1,  m1  }));
-        CHECK(comp.delta.contains(m1, p, { m01, mE  }));
-        CHECK(comp.delta.contains(m1, p, { mE,  m01 }));
+        CHECK(comp.delta.contains(m1, p, {m0, m0}));
+        CHECK(comp.delta.contains(m1, p, {m1, m1}));
+        CHECK(comp.delta.contains(m1, p, {m01, mE}));
+        CHECK(comp.delta.contains(m1, p, {mE, m01}));
         CHECK(count_tuples(comp, m1, p) == 4);
 
         // --- {0,1} transitions ---
         // no leaf on a
         CHECK_FALSE(comp.delta.contains(m01, a, {}));
         // s -> {0,1}
-        CHECK(comp.delta.contains(m01, s, { m01 }));
+        CHECK(comp.delta.contains(m01, s, {m01}));
         // p -> ({0, 1}, {0, 1})
-        CHECK(comp.delta.contains(m01, p, { mE,  m01 }));
-        CHECK(comp.delta.contains(m01, p, { m01, mE  }));
+        CHECK(comp.delta.contains(m01, p, {mE, m01}));
+        CHECK(comp.delta.contains(m01, p, {m01, mE}));
         CHECK(count_tuples(comp, m01, p) == 2);
 
         // --- {} (empty) transitions ---
         // leaf a accepted vacuously
         CHECK(comp.delta.contains(mE, a, {}));
         // s -> {}
-        CHECK(comp.delta.contains(mE, s, { mE }));
+        CHECK(comp.delta.contains(mE, s, {mE}));
         // p -> ({},{})
-        CHECK(comp.delta.contains(mE, p, { mE, mE }));
+        CHECK(comp.delta.contains(mE, p, {mE, mE}));
         CHECK(count_tuples(comp, mE, p) == 1);
     }
 
@@ -302,15 +304,15 @@ TEST_CASE("mata::nfta::complement_top_down") {
         alphabet.add_new_symbol("a");
         Symbol a = alphabet["a"];
 
-        Nfta aut({ 0 }, &alphabet, Delta(1));
+        Nfta aut({0}, &alphabet, Delta(1));
         aut.delta.add(0, a, {});
 
         std::unordered_map<StateSet, State> mapping;
         Nfta comp = complement_top_down(aut, &mapping);
 
-        REQUIRE(mapping.contains({ 0 }));
+        REQUIRE(mapping.contains({0}));
         CHECK(mapping.size() == 1);
-        State m0 = mapping.at({ 0 });
+        State m0 = mapping.at({0});
 
         // single initial state
         CHECK(comp.root_states.size() == 1);
@@ -327,19 +329,19 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Symbol a = alphabet["a"];
         Symbol f = alphabet["f"];
 
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, f, { 1 });
-        aut.delta.add(1, f, { 1 });
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, f, {1});
+        aut.delta.add(1, f, {1});
         aut.delta.add(1, a, {});
 
         std::unordered_map<StateSet, State> mapping;
         const Nfta comp = complement_top_down(aut, &mapping);
 
-        REQUIRE(mapping.contains({ 0 }));
-        REQUIRE(mapping.contains({ 1 }));
+        REQUIRE(mapping.contains({0}));
+        REQUIRE(mapping.contains({1}));
         CHECK(mapping.size() == 2);
-        State m0 = mapping.at({ 0 });
-        State m1 = mapping.at({ 1 });
+        State m0 = mapping.at({0});
+        State m1 = mapping.at({1});
 
         // single initial state
         CHECK(comp.root_states.size() == 1);
@@ -348,9 +350,9 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // {0} accepts a
         CHECK(comp.delta.contains(m0, a, {}));
         // {0} -> f({1})
-        CHECK(comp.delta.contains(m0, f, { 1 }));
+        CHECK(comp.delta.contains(m0, f, {1}));
         // {1} -> f({1})
-        CHECK(comp.delta.contains(m1, f, { 1 }));
+        CHECK(comp.delta.contains(m1, f, {1}));
     }
 
     SECTION("Unary chain") {
@@ -361,26 +363,26 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Symbol f = alphabet["f"];
 
         // 0 -f-> 1 -f-> 0,  only 1 accepts a
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, f, { 1 });
-        aut.delta.add(1, f, { 0 });
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, f, {1});
+        aut.delta.add(1, f, {0});
         aut.delta.add(1, a, {});
 
         std::unordered_map<StateSet, State> mapping;
         Nfta comp = complement_top_down(aut, &mapping);
 
-        REQUIRE(mapping.contains({ 0 }));
-        REQUIRE(mapping.contains({ 1 }));
-        State m0 = mapping.at({ 0 });
-        State m1 = mapping.at({ 1 });
+        REQUIRE(mapping.contains({0}));
+        REQUIRE(mapping.contains({1}));
+        State m0 = mapping.at({0});
+        State m1 = mapping.at({1});
 
         // {0} accepts a
         CHECK(comp.delta.contains(m0, a, {}));
         // {1} should NOT accept a
         CHECK_FALSE(comp.delta.contains(m1, a, {}));
         // f-transitions preserved
-        CHECK(comp.delta.contains(m0, f, { m1 }));
-        CHECK(comp.delta.contains(m1, f, { m0 }));
+        CHECK(comp.delta.contains(m0, f, {m1}));
+        CHECK(comp.delta.contains(m1, f, {m0}));
     }
 
 
@@ -391,9 +393,9 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Symbol a = alphabet["a"];
         Symbol f = alphabet["f"];
 
-        Nfta aut({ 0, 1 }, &alphabet, Delta(2));
-        aut.delta.add(0, f, { 0 });
-        aut.delta.add(1, f, { 1 });
+        Nfta aut({0, 1}, &alphabet, Delta(2));
+        aut.delta.add(0, f, {0});
+        aut.delta.add(1, f, {1});
         aut.delta.add(0, a, {});
         aut.delta.add(1, a, {});
 
@@ -401,8 +403,8 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Nfta comp = complement_top_down(aut, &mapping);
 
         // initial macrostate should be {0,1}
-        REQUIRE(mapping.contains({ 0, 1 }));
-        State m01 = mapping.at({ 0, 1 });
+        REQUIRE(mapping.contains({0, 1}));
+        State m01 = mapping.at({0, 1});
         CHECK(comp.is_state_root(m01));
         CHECK(comp.root_states.size() == 1);
 
@@ -417,22 +419,22 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Symbol a = alphabet["a"];
         Symbol p = alphabet["p"];
 
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, p, { 0, 1 });
-        aut.delta.add(0, p, { 1, 0 });
-        aut.delta.add(1, p, { 0, 0 });
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, p, {0, 1});
+        aut.delta.add(0, p, {1, 0});
+        aut.delta.add(1, p, {0, 0});
         aut.delta.add(1, a, {});
 
         std::unordered_map<StateSet, State> mapping;
         Nfta comp = complement_top_down(aut, &mapping);
 
-        REQUIRE(mapping.contains({ 0 }));
-        State m0 = mapping.at({ 0 });
+        REQUIRE(mapping.contains({0}));
+        State m0 = mapping.at({0});
 
         // {0} has no a-transition, so complement accepts a there
         CHECK(comp.delta.contains(m0, a, {}));
 
-        auto it = comp.delta[m0].find(SymbolPost{ p });
+        auto it = comp.delta[m0].find(SymbolPost{p});
         REQUIRE(it != comp.delta[m0].end());
         for (const auto& tup : it->target_tuples) {
             REQUIRE(mapping.count({}));
@@ -449,9 +451,9 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Symbol a = alphabet["a"];
         Symbol s = alphabet["s"];
 
-        Nfta aut({ 0 }, &alphabet, Delta(2));
-        aut.delta.add(0, s, { 1 });
-        aut.delta.add(1, s, { 0 });
+        Nfta aut({0}, &alphabet, Delta(2));
+        aut.delta.add(0, s, {1});
+        aut.delta.add(1, s, {0});
         aut.delta.add(1, a, {});
 
         std::unordered_map<StateSet, State> mapping1;
@@ -459,23 +461,23 @@ TEST_CASE("mata::nfta::complement_top_down") {
         // first complement
         Nfta comp1 = complement_top_down(aut, &mapping1);
         CHECK(mapping1.size() == 2);
-        const State m0 = mapping1.at({ 0 });
-        const State m1 = mapping1.at({ 1 });
+        const State m0 = mapping1.at({0});
+        const State m1 = mapping1.at({1});
         CHECK(comp1.root_states.size() == 1);
         CHECK(comp1.is_state_root(m0));
 
         CHECK(comp1.delta.contains(m0, a, {}));
-        CHECK(comp1.delta.contains(m0, s, { 1 }));
-        CHECK(comp1.delta.contains(m1, s, { 0 }));
+        CHECK(comp1.delta.contains(m0, s, {1}));
+        CHECK(comp1.delta.contains(m1, s, {0}));
 
         // complement of a complement
         std::unordered_map<StateSet, State> mapping2;
         Nfta comp2 = complement_top_down(comp1, &mapping2);
         CHECK(comp2.root_states.size() == 1);
         CHECK(comp2.is_state_root(m0));
-        CHECK(comp2.delta.contains(m0, s, { 1 }));
+        CHECK(comp2.delta.contains(m0, s, {1}));
         CHECK(comp2.delta.contains(m1, a, {}));
-        CHECK(comp2.delta.contains(m1, s, { 0 }));
+        CHECK(comp2.delta.contains(m1, s, {0}));
         // todo check with equality
     }
 
@@ -486,19 +488,19 @@ TEST_CASE("mata::nfta::complement_top_down") {
         Symbol a = alphabet.translate_symbol("a", 0);
         Symbol f = alphabet.translate_symbol("f", 1);
 
-        Nfta aut({ 0 }, &alphabet, Delta(1));
-        aut.delta.add(0, f, { 0 });
+        Nfta aut({0}, &alphabet, Delta(1));
+        aut.delta.add(0, f, {0});
 
         std::unordered_map<StateSet, State> mapping;
         Nfta comp = complement_top_down(aut, &mapping);
 
-        REQUIRE(mapping.count({ 0 }));
-        State m0 = mapping.at({ 0 });
+        REQUIRE(mapping.count({0}));
+        State m0 = mapping.at({0});
 
         // complement should accept a at {0}
         CHECK(comp.delta.contains(m0, a, {}));
         // f should loop: {0} on f -> ({0})
-        CHECK(comp.delta.contains(m0, f, { m0 }));
+        CHECK(comp.delta.contains(m0, f, {m0}));
     }
 
     SECTION("Complement of universal automaton is empty") {

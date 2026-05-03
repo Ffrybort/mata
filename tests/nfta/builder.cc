@@ -3,11 +3,11 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
 
-#include <mata/nfta/nfta.hh>
-#include <mata/nfta/delta.hh>
-#include <mata/nfta/types.hh>
 #include <mata/alphabet.hh>
 #include <mata/nfta/builder.hh>
+#include <mata/nfta/delta.hh>
+#include <mata/nfta/nfta.hh>
+#include <mata/nfta/types.hh>
 
 using namespace mata::nfta;
 using namespace mata::utils;
@@ -192,10 +192,9 @@ TEST_CASE("mata::nfta::builder") {
         alphabet.clear();
         Nfta aut = parse_from_mata(input, &alphabet);
         std::vector<Transition> t = aut.delta.get_transitions();
-        CHECK(std::count_if(
-            t.begin(), t.end(),
-            [alphabet](const auto& t){ return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0"; }
-        ) == 2);
+        CHECK(std::count_if(t.begin(), t.end(), [alphabet](const auto& t) {
+                  return t.single == 0 && alphabet.reverse_translate_symbol(t.symbol) == "a0";
+              }) == 2);
     }
 
 
@@ -219,8 +218,8 @@ TEST_CASE("mata::nfta::builder") {
                 targets_found.insert(it->targets);
             }
         }
-        CHECK(targets_found.count({1,2}) == 1); // q1 q2
-        CHECK(targets_found.count({2,3}) == 1); // q2 q3
+        CHECK(targets_found.count({1, 2}) == 1); // q1 q2
+        CHECK(targets_found.count({2, 3}) == 1); // q2 q3
         CHECK(targets_found.size() == 2);
     }
 
@@ -404,9 +403,7 @@ TEST_CASE("mata::nfta::builder") {
         CHECK(ranked_alphabet.get_alphabet_symbols().size() == 3);
 
         // arities inferred from transitions
-        CHECK(ranked_alphabet.get_arity(
-            ranked_alphabet.translate_symbol("f", 3)
-        ) == std::vector<unsigned>{3});
+        CHECK(ranked_alphabet.get_arity(ranked_alphabet.translate_symbol("f", 3)) == std::vector<unsigned>{3});
     }
 
     SECTION("Ranked alphabet constant symbols") {
@@ -487,10 +484,7 @@ TEST_CASE("mata::nfta::builder") {
             q0 f q1
         )";
 
-        CHECK_THROWS_AS(
-            parse_from_mata(input, &ranked_alphabet),
-            std::runtime_error
-        );
+        CHECK_THROWS_AS(parse_from_mata(input, &ranked_alphabet), std::runtime_error);
     }
 
     SECTION("Ranked alphabet consistency with generic alphabet") {
