@@ -1,6 +1,7 @@
 #include <mata/nfta/builder.hh>
 #include <mata/nfta/nfta.hh>
-#include "mata/utils/two-dimensional-map.hh"
+#include <mata/nfta/utils.hh>
+
 
 namespace mata::nfta {
 Nfta determinize(const Nfta& aut, const ParameterMap& params, std::unordered_map<StateSet, State>* state_mapping) {
@@ -52,54 +53,6 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
                 return targets;
             });
 }
-
-struct DeterminizeCache {
-    using SymbolCache = std::vector<           // state
-                    std::vector<               // position
-                        utils::OrdVector<      // set of targets
-                            const State*>>>;   // pointers into rev delta
-
-    std::unordered_map<Symbol, SymbolCache> symbol_caches;
-
-    void resize_for_state(Symbol symbol, State new_s, unsigned arity) {
-        auto& sc = symbol_caches[symbol];
-        if (new_s >= sc.size()) sc.resize(new_s + 1);
-        sc[new_s].resize(arity);
-    }
-
-    bool fill(const Symbol symbol, const State new_s, const unsigned arity,
-              const ReversedDelta::RevSymbolPost& symbol_post,
-              const StateSet& new_macro)
-    {
-        resize_for_state(symbol, new_s, arity);
-        auto& new_s_cache = symbol_caches[symbol][new_s];
-        bool is_nonempty = false;
-
-        std::vector<std::vector<const State*>> collector(arity);
-        for (const auto& tuple_post : symbol_post.state_tuple_posts) {
-            for (unsigned i = 0; i < arity; i++) {
-                if (new_macro.contains(tuple_post.sources[i])) {
-                    collector[i].reserve(collector[i].size() + tuple_post.targets.size());
-                    for (const State& t : tuple_post.targets) {
-                        collector[i].push_back(&t);
-                    }
-                }
-            }
-        }
-
-        for (unsigned i = 0; i < arity; i++) {
-            if (!collector[i].empty()) {
-                is_nonempty = true;
-                new_s_cache[i] = utils::OrdVector(std::move(collector[i]));
-            }
-        }
-        return is_nonempty;
-    }
-
-    utils::OrdVector<const State*>& operator()(Symbol sym, State s, unsigned pos) {
-        return symbol_caches[sym][s][pos];
-    }
-};
 
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping) {
 

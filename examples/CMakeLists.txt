@@ -2,6 +2,7 @@ file(GLOB MATA_EXAMPLES "${CMAKE_CURRENT_SOURCE_DIR}/*.cc")
 foreach(MATA_EXAMPLE ${MATA_EXAMPLES})
     get_filename_component(MATA_EXAMPLE_NAME ${MATA_EXAMPLE} NAME_WE)
     add_executable(${MATA_EXAMPLE_NAME} ${MATA_EXAMPLE}
-            ../include/mata/nfta/ranked-alphabet.hh)
+            ../include/mata/nfta/ranked-alphabet.hh
+            ../include/mata/nfta/utils.hh)
     target_link_libraries(${MATA_EXAMPLE_NAME} PRIVATE libmata)
 endforeach()

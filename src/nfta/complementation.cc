@@ -6,13 +6,13 @@
 
 #include <mata/nfta/builder.hh>
 #include "mata/nfta/nfta.hh"
-#include "mata/nfta/ranked-alphabet.hh"
-#include "mata/utils/two-dimensional-map.hh"
+#include <mata/nfta/utils.hh>
+
 
 namespace mata::nfta {
 
 Nfta complement(
-        const Nfta& aut, const ParameterMap& params, // TODO use
+        const Nfta& aut, const ParameterMap& params,
         const utils::OrdVector<SymbolArity>* symbols_arities_in) {
     if (!utils::haskey(params, "algorithm")) {
         throw std::runtime_error(

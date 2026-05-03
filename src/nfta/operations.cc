@@ -6,6 +6,7 @@
 
 #include <mata/nfta/builder.hh>
 #include "mata/nfta/nfta.hh" // todo resolve headers
+#include <mata/nfta/utils.hh>
 #include "mata/nfta/ranked-alphabet.hh"
 #include "mata/utils/two-dimensional-map.hh"
 
@@ -766,7 +767,7 @@ bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ComplementM
     Nfta bigger_compl{};
     if (method == ComplementMethod::Classical) {
         bigger_compl = complement(bigger);
-    } // todo params
+    } // TODO: params
     else if (method == ComplementMethod::TopDown) {
         bigger_compl = complement_top_down(bigger);
     } else {
@@ -777,7 +778,12 @@ bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ComplementM
 }
 
 bool is_lang_included_opt(const Nfta& smaller, const Nfta& bigger) {
-    // MacrostateContext ctx(bigger, nullptr);
+    // using SymbolCache = std::vector< // state
+    //         std::vector< // position
+    //                 utils::OrdVector< // set of targets
+    //                         const State* // pointers to rev delta
+    //                         >>>;
+    // std::unordered_map<Symbol, SymbolCache> cache;
     // const ReversedDelta bigger_rev_delta = bigger.delta.get_reversed();
     //
     // struct Item {
