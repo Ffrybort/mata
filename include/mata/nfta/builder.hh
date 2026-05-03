@@ -36,8 +36,6 @@ inline Nfta create_empty(Alphabet* alphabet = nullptr) { return Nfta({0}, alphab
 Nfta create_universal(RankedAlphabet* alphabet);
 
 /**
- * todo what to do with alphabet
- * todo test
  * @brief Create an automaton accepting any tree build from the symbols.
  *
  * @param symbols [in] Symbols and arities used in the language.
@@ -54,7 +52,7 @@ Nfta create_universal(const utils::OrdVector<SymbolArity>* symbols, Alphabet* al
  * @return A transition, with the symbol remaining a std::string, and states translated to internal numeric values.
  *
  * The reason for not translating a symbol right away is there is currently no unified way to do so for every possible
- * construction. todo this might have been resolved in alphabet already
+ * construction.
  */
 RawTransition get_transition(
         const FormulaNode& formula_node, const FormulaGraph& formula_graph, Alphabet& alphabet,
