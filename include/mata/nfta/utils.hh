@@ -3,7 +3,6 @@
  *
  */
 
-
 #ifndef MATA_NFTA_UTILS_HH
 #define MATA_NFTA_UTILS_HH
 #include <mata/nfta/nfta.hh>
@@ -16,18 +15,19 @@ struct DeterminizeCache {
 
     std::unordered_map<Symbol, SymbolCache> symbol_caches;
 
-    void resize_for_state(Symbol symbol, State new_s, unsigned arity) {
-        auto& sc = symbol_caches[symbol];
-        if (new_s >= sc.size()) sc.resize(new_s + 1);
-        sc[new_s].resize(arity);
-    }
-
     bool fill(const Symbol symbol, const State new_s, const unsigned arity,
               const ReversedDelta::RevSymbolPost& symbol_post,
               const StateSet& new_macro)
     {
-        resize_for_state(symbol, new_s, arity);
+        // this function returned false if the resulting cache is empty - the state can be discarded
+        // when called on an already nonempty symbol + state combination, nothing is done and true is returned
+        auto& symbol_cache = symbol_caches[symbol];
+
+        if (new_s >= symbol_cache.size()) { symbol_cache.resize(new_s + 1); }
         auto& new_s_cache = symbol_caches[symbol][new_s];
+        if (!new_s_cache.empty()) { return true; }
+        new_s_cache.resize(arity);
+
         bool is_nonempty = false;
 
         std::vector<std::vector<const State*>> collector(arity);
@@ -61,7 +61,7 @@ struct DeterminizeCache {
 const utils::OrdVector<SymbolArity>& resolve_symbols_arities(
         const Nfta& aut, const utils::OrdVector<SymbolArity>* symbols_arities_in, utils::OrdVector<SymbolArity>& tmp);
 
-// increment by 1 as a number with the given base, overflow => return false TODO: move this somewhere
+// increment by 1 as a number with the given base, overflow => return false
 bool inline next_tuple(std::vector<State>& tuple, const size_t base) {
     size_t pos = tuple.size();
     while (pos > 0) {
