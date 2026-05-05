@@ -69,36 +69,8 @@ Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>*
     };
 
     auto compute_targets = [&](const ReversedDelta::RevSymbolPost& symbol_post,
-                               const std::vector<State>& big_tuple_s, auto&) -> StateSet {
-        const Symbol symbol = symbol_post.symbol;
-        const unsigned arity = symbol_post.get_arity();
-        auto& symbol_cache = cache.symbol_caches[symbol];
-
-        std::vector<unsigned> order(arity);
-        bool skip = false;
-        for (unsigned i = 0; i < arity; i++) {
-            if (symbol_cache[big_tuple_s[i]][i].empty()) {
-                skip = true;
-                continue;
-            }
-            order[i] = i;
-        }
-        if (skip) return utils::OrdVector<State>{};
-
-        std::ranges::sort(order, [&](unsigned a, unsigned b) {
-            return symbol_cache[big_tuple_s[a]][a].size() < symbol_cache[big_tuple_s[b]][b].size();
-        });
-
-        auto surviving = symbol_cache[big_tuple_s[order[0]]][order[0]];
-        for (unsigned i : order) {
-            surviving = surviving.intersection(symbol_cache[big_tuple_s[i]][i]);
-        }
-
-        std::vector<State> target_collector(surviving.size());
-        for (unsigned i = 0; i < surviving.size(); i++) {
-            target_collector[i] = *surviving.at(i);
-        }
-        return utils::OrdVector(target_collector);
+                           const std::vector<State>& big_tuple_s, auto&) -> StateSet {
+        return cache.compute_targets(symbol_post.symbol, symbol_post.get_arity(), big_tuple_s);
     };
 
     return determinize_impl(aut, state_mapping, true, on_new_state, compute_targets);

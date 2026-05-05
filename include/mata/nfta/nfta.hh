@@ -13,15 +13,13 @@
  * root states (initial for top-down and final for bottom-up
  * interpretation) is stored in a @c mata::utils::SparseSet.
  *
- * @section nfta_directions Top-down vs. Bottom-up
- *
- * Most algorithms in this library operate either top-down (starting from root
+ * Operations in this library operate either top-down (starting from root
  * states, following transitions toward leaves) or bottom-up (starting from
  * constant transitions, propagating upward). The direction is noted in each
  * function's documentation. Bottom-up operations internally use a reversed
  * delta (@c mata::nfta::ReversedDelta).
  *
- * @section nfta_usage Working with NFTAs
+ * @section nfta_usage Working with NFTA
  *
  * Operation outputs are not by default reduced or otherwise optimized. Apply
  * operations such as @c mata::nfta::remove_bottom_up_unreachable() or
@@ -202,7 +200,6 @@ public:
      */
     void
     make_complete(const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr, State sink = Limits::max_state);
-
 
     /**
      * @brief Get a bool vector where vector[state] is true iff the state is top-down reachable.
@@ -412,20 +409,32 @@ enum class ComplementMethod { Classical, TopDown };
  * @brief Check if the language recognized by @p small in a subset of the language recognized by @p big.
  *
  * @param smaller, bigger input automata
- * @param method complementation method to use (classical or top-down)
+ * @param params [in, optional] parameters
+ * - "algorithm":
+ *      - "naive": Build complement, then intersect, then compute language emptiness
+ *      - "on-the-fly" (default): Complement is computed on-the-fly.
+ *
+ * If the naive algorithm is used, any other parameters are passed to @complement.
+ *
  * @return true if L(small) <= L(big), false otherwise
  */
-bool is_lang_included(const Nfta& smaller, const Nfta& bigger, ComplementMethod method = ComplementMethod::Classical);
+bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMap& params = {{"algorithm", "on-the-fly"}});
+
+// on the fly determinization (experimental)
+bool is_lang_included_opt(const Nfta& smaller, const Nfta& bigger);
 
 /**
  * @brief Check if the language recognized by @p A equal to the language recognized by @p B.
  *
  * @param A, B input automata
- * @param method complementation method to use (classical or top-down)
+ * @param params
+
  * @return true if L(A) == L(B), false otherwise
  */
-bool is_lang_equal(const Nfta& A, const Nfta& B, ComplementMethod method = ComplementMethod::Classical);
-
+inline bool is_lang_equal(const Nfta& A, const Nfta& B, const ParameterMap& params) {
+  return is_lang_included(A, B, params) &&
+         is_lang_included(B, A, params);
+}
 
 } // namespace mata::nfta
 #endif // MATA_NFTA_H

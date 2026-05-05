@@ -177,7 +177,7 @@ TEST_CASE("mata::nfta::complement (classical)") {
 }
 
 TEST_CASE("mata::nfta::complement_top_down") {
-    const ParameterMap top_down_params = {{"algorithm", "top_down"}};
+    const ParameterMap top_down_params = {{"algorithm", "top-down"}};
     SECTION("Empty automaton") {
         RankedOnTheFlyAlphabet alphabet;
         alphabet.add_new_symbol("a", 2);
@@ -478,7 +478,6 @@ TEST_CASE("mata::nfta::complement_top_down") {
         CHECK(comp2.delta.contains(m0, s, {1}));
         CHECK(comp2.delta.contains(m1, a, {}));
         CHECK(comp2.delta.contains(m1, s, {0}));
-        // todo check with equality
     }
 
     SECTION("Single state and constant, using ranked alphabet") {

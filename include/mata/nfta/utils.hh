@@ -7,7 +7,7 @@
 #define MATA_NFTA_UTILS_HH
 #include <mata/nfta/nfta.hh>
 namespace mata::nfta {
-struct DeterminizeCache {
+struct DeterminizeCache { // TODO: move functions into some .cc
     using SymbolCache = std::vector<           // state
                     std::vector<               // position
                         utils::OrdVector<      // set of targets
@@ -53,6 +53,39 @@ struct DeterminizeCache {
 
     utils::OrdVector<const State*>& operator()(Symbol sym, State s, unsigned pos) {
         return symbol_caches[sym][s][pos];
+    }
+
+    StateSet compute_targets(const Symbol symbol, const unsigned arity,
+                         const std::vector<State>& big_tuple_s) {
+        auto& symbol_cache = symbol_caches[symbol];
+
+        std::vector<unsigned> order(arity);
+        bool skip = false;
+        for (unsigned i = 0; i < arity; i++) {
+            assert(big_tuple_s[i] < symbol_cache.size() && !symbol_cache[big_tuple_s[i]].empty()
+                && "empty cache");
+            if (symbol_cache[big_tuple_s[i]][i].empty()) {
+                skip = true;
+                break; // no point continuing
+                }
+            order[i] = i;
+        }
+        if (skip) return utils::OrdVector<State>{};
+
+        std::ranges::sort(order, [&](unsigned a, unsigned b) {
+            return symbol_cache[big_tuple_s[a]][a].size() < symbol_cache[big_tuple_s[b]][b].size();
+        });
+
+        auto surviving = symbol_cache[big_tuple_s[order[0]]][order[0]];
+        for (unsigned i : order) {
+            surviving = surviving.intersection(symbol_cache[big_tuple_s[i]][i]);
+        }
+
+        std::vector<State> target_collector(surviving.size());
+        for (unsigned i = 0; i < surviving.size(); i++) {
+            target_collector[i] = *surviving.at(i);
+        }
+        return utils::OrdVector(target_collector);
     }
 };
 

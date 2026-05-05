@@ -10,6 +10,9 @@ using namespace mata;
 using namespace mata::nfta;
 
 TEST_CASE("mata::nfta::is_lang_included") {
+    const ParameterMap naive_classical = {{"algorithm", "naive"}, {"complement", "classical"}};
+    const ParameterMap naive_top_down = {{"algorithm", "naive"}, {"complement", "top-down"}};
+    const ParameterMap on_the_fly = {{"algorithm", "on-the-fly"}, };
 
     SECTION("Both empty automata") {
         RankedOnTheFlyAlphabet alphabet;
@@ -18,8 +21,9 @@ TEST_CASE("mata::nfta::is_lang_included") {
         Nfta small_aut({}, &alphabet, Delta(1));
         Nfta big_aut({}, &alphabet, Delta(1));
 
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::Classical));
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(small_aut, big_aut, naive_classical));
+        CHECK(is_lang_included(small_aut, big_aut, naive_top_down));
+        CHECK(is_lang_included(small_aut, big_aut, on_the_fly));
     }
 
     SECTION("Empty included in non-empty") {
@@ -31,8 +35,9 @@ TEST_CASE("mata::nfta::is_lang_included") {
         Nfta big_aut({0}, &alphabet, Delta(1));
         big_aut.delta.add(0, a, {});
 
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::Classical));
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(small_aut, big_aut, naive_classical));
+        CHECK(is_lang_included(small_aut, big_aut, naive_top_down));
+        CHECK(is_lang_included(small_aut, big_aut, on_the_fly));
     }
 
     SECTION("Non-empty not included in empty") {
@@ -44,8 +49,9 @@ TEST_CASE("mata::nfta::is_lang_included") {
         small_aut.delta.add(0, a, {});
         Nfta big_aut({}, &alphabet, Delta(1));
 
-        CHECK_FALSE(is_lang_included(small_aut, big_aut, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(small_aut, big_aut, ComplementMethod::TopDown));
+        CHECK_FALSE(is_lang_included(small_aut, big_aut, naive_classical));
+        CHECK_FALSE(is_lang_included(small_aut, big_aut, naive_top_down));
+        CHECK_FALSE(is_lang_included(small_aut, big_aut, on_the_fly));
     }
 
     SECTION("Same automaton - inclusion holds") {
@@ -59,8 +65,9 @@ TEST_CASE("mata::nfta::is_lang_included") {
         aut.delta.add(0, f, {1});
         aut.delta.add(1, a, {});
 
-        CHECK(is_lang_included(aut, aut, ComplementMethod::Classical));
-        CHECK(is_lang_included(aut, aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(aut, aut, naive_classical));
+        CHECK(is_lang_included(aut, aut, naive_top_down));
+        CHECK(is_lang_included(aut, aut, on_the_fly));
     }
 
     SECTION("Subset") {
@@ -81,10 +88,12 @@ TEST_CASE("mata::nfta::is_lang_included") {
         big_aut.delta.add(0, a, {});
         big_aut.delta.add(1, a, {});
 
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::Classical));
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::TopDown));
-        CHECK_FALSE(is_lang_included(big_aut, small_aut, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(big_aut, small_aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(small_aut, big_aut, naive_classical));
+        CHECK(is_lang_included(small_aut, big_aut, naive_top_down));
+        CHECK(is_lang_included(small_aut, big_aut, on_the_fly));
+        CHECK_FALSE(is_lang_included(big_aut, small_aut, naive_classical));
+        CHECK_FALSE(is_lang_included(big_aut, small_aut, naive_top_down));
+        CHECK_FALSE(is_lang_included(big_aut, small_aut, on_the_fly));
     }
 
     SECTION("Incomparable languages") {
@@ -100,10 +109,12 @@ TEST_CASE("mata::nfta::is_lang_included") {
         Nfta aut_b({0}, &alphabet, Delta(1));
         aut_b.delta.add(0, b, {});
 
-        CHECK_FALSE(is_lang_included(aut_a, aut_b, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(aut_a, aut_b, ComplementMethod::TopDown));
-        CHECK_FALSE(is_lang_included(aut_b, aut_a, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(aut_b, aut_a, ComplementMethod::TopDown));
+        CHECK_FALSE(is_lang_included(aut_a, aut_b, naive_classical));
+        CHECK_FALSE(is_lang_included(aut_a, aut_b, naive_top_down));
+        CHECK_FALSE(is_lang_included(aut_a, aut_b, on_the_fly));
+        CHECK_FALSE(is_lang_included(aut_b, aut_a, naive_classical));
+        CHECK_FALSE(is_lang_included(aut_b, aut_a, naive_top_down));
+        CHECK_FALSE(is_lang_included(aut_b, aut_a, on_the_fly));
     }
 
     SECTION("Universal language contains everything") {
@@ -121,10 +132,12 @@ TEST_CASE("mata::nfta::is_lang_included") {
         // universal automaton
         Nfta universal = create_universal(&alphabet);
 
-        CHECK(is_lang_included(small_aut, universal, ComplementMethod::Classical));
-        CHECK(is_lang_included(small_aut, universal, ComplementMethod::TopDown));
-        CHECK_FALSE(is_lang_included(universal, small_aut, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(universal, small_aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(small_aut, universal, naive_classical));
+        CHECK(is_lang_included(small_aut, universal,naive_top_down));
+        CHECK(is_lang_included(small_aut, universal, on_the_fly));
+        CHECK_FALSE(is_lang_included(universal, small_aut, naive_classical));
+        CHECK_FALSE(is_lang_included(universal, small_aut, naive_top_down));
+        CHECK_FALSE(is_lang_included(universal, small_aut, on_the_fly));
     }
 
     SECTION("Inclusion holds, binary symbol") {
@@ -134,22 +147,22 @@ TEST_CASE("mata::nfta::is_lang_included") {
         Symbol a = alphabet.translate_symbol("a", 0);
         Symbol p = alphabet.translate_symbol("p", 2);
 
-        // small: accepts p(a,a) only
         Nfta small_aut({0}, &alphabet, Delta(2));
         small_aut.delta.add(0, p, {1, 1});
         small_aut.delta.add(1, a, {});
 
-        // big: accepts any tree with p at root
         Nfta big_aut({0}, &alphabet, Delta(2));
         big_aut.delta.add(0, p, {1, 1});
         big_aut.delta.add(0, p, {0, 1});
         big_aut.delta.add(0, p, {1, 0});
         big_aut.delta.add(1, a, {});
 
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::Classical));
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::TopDown));
-        CHECK_FALSE(is_lang_included(big_aut, small_aut, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(big_aut, small_aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(small_aut, big_aut, naive_classical));
+        CHECK(is_lang_included(small_aut, big_aut, naive_top_down));
+        CHECK(is_lang_included(small_aut, big_aut, on_the_fly));
+        CHECK_FALSE(is_lang_included(big_aut, small_aut, naive_classical));
+        CHECK_FALSE(is_lang_included(big_aut, small_aut, naive_top_down));
+        CHECK_FALSE(is_lang_included(big_aut, small_aut, on_the_fly));
     }
 
     SECTION("Parity example") {
@@ -172,10 +185,12 @@ TEST_CASE("mata::nfta::is_lang_included") {
         odd_aut.delta.add(1, s, {0});
 
         // even and odd are incomparable
-        CHECK_FALSE(is_lang_included(even_aut, odd_aut, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(even_aut, odd_aut, ComplementMethod::TopDown));
-        CHECK_FALSE(is_lang_included(odd_aut, even_aut, ComplementMethod::Classical));
-        CHECK_FALSE(is_lang_included(odd_aut, even_aut, ComplementMethod::TopDown));
+        CHECK_FALSE(is_lang_included(even_aut, odd_aut, naive_classical));
+        CHECK_FALSE(is_lang_included(even_aut, odd_aut, naive_top_down));
+        CHECK_FALSE(is_lang_included(even_aut, odd_aut, on_the_fly));
+        CHECK_FALSE(is_lang_included(odd_aut, even_aut, naive_classical));
+        CHECK_FALSE(is_lang_included(odd_aut, even_aut, naive_top_down));
+        CHECK_FALSE(is_lang_included(odd_aut, even_aut, on_the_fly));
 
         // union of even and odd includes each individually
         Nfta both({0, 1}, &alphabet, Delta(2));
@@ -183,10 +198,12 @@ TEST_CASE("mata::nfta::is_lang_included") {
         both.delta.add(0, s, {1});
         both.delta.add(1, s, {0});
 
-        CHECK(is_lang_included(even_aut, both, ComplementMethod::Classical));
-        CHECK(is_lang_included(even_aut, both, ComplementMethod::TopDown));
-        CHECK(is_lang_included(odd_aut, both, ComplementMethod::Classical));
-        CHECK(is_lang_included(odd_aut, both, ComplementMethod::TopDown));
+        CHECK(is_lang_included(even_aut, both, naive_classical));
+        CHECK(is_lang_included(even_aut, both, naive_top_down));
+        CHECK(is_lang_included(even_aut, both, on_the_fly));
+        CHECK(is_lang_included(odd_aut, both, naive_classical));
+        CHECK(is_lang_included(odd_aut, both, naive_top_down));
+        CHECK(is_lang_included(odd_aut, both, on_the_fly));
     }
 
     SECTION("Nondeterministic smaller included in deterministic bigger") {
@@ -206,7 +223,8 @@ TEST_CASE("mata::nfta::is_lang_included") {
         big_aut.delta.add(0, f, {1});
         big_aut.delta.add(1, a, {});
 
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::Classical));
-        CHECK(is_lang_included(small_aut, big_aut, ComplementMethod::TopDown));
+        CHECK(is_lang_included(small_aut, big_aut, naive_classical));
+        CHECK(is_lang_included(small_aut, big_aut, naive_top_down));
+        CHECK(is_lang_included(small_aut, big_aut, on_the_fly));
     }
 }

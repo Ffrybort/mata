@@ -23,9 +23,10 @@ Nfta complement(
     }
 
     const std::string& str_algo = params.at("algorithm");
-    if (str_algo == "top_down") {
+    if (str_algo == "top-down") {
         return complement_top_down(aut, nullptr, symbols_arities_in);
-    } else if (str_algo == "classical") {
+    }
+    if (str_algo == "classical") {
         const std::string str_det =
                 utils::haskey(params, "determinization") ? params.at("determinization") : "optimized";
 
@@ -40,10 +41,11 @@ Nfta complement(
         }
         det.complement_as_deterministic(symbols_arities_in);
         return det;
-    } else {
-        throw std::runtime_error(
-                std::to_string(__func__) + " received an unknown value of the \"algorithm\" key: " + str_algo);
     }
+
+    throw std::runtime_error(
+                std::to_string(__func__) + " received an unknown value of the \"algorithm\" key: " + str_algo);
+
 }
 
 
@@ -227,7 +229,7 @@ Nfta complement_top_down(
     if (result.root_states.empty() || result.delta.empty()) {
         return create_empty(aut.alphabet);
     }
-    return std::move(result);
+    return result;
 } // complement_top_down
 
 } // namespace mata::nfta
