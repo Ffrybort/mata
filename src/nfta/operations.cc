@@ -1,8 +1,8 @@
 /**
  * @file operations.cc
  *
- * @brief Implementation of NFTA operations. Other operations are implemented in ``determinization.cc'' and
- * ``complementation.cc.''
+ * @brief Implementation of NFTA operations. Other operations are implemented in ``determinization.cc'',
+ * ``complementation.cc.'', and ``inclusion.cc''
  */
 
 #include <utility>
@@ -11,7 +11,6 @@
 #include <mata/nfta/utils.hh>
 #include "mata/nfta/ranked-alphabet.hh"
 #include "mata/utils/two-dimensional-map.hh"
-
 
 namespace mata::nfta {
 

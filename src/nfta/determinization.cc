@@ -114,11 +114,14 @@ Nfta determinize_impl(
         worklist.pop_back();
         processed.push_back(new_s);
 
+        // NOTE: Iterating over symbols first and then enumerating all possible tuples has proven to be faster, though
+        // this has only been tested on moderate-size binary alphabets. Switching the do-while and for cycles (enumerating
+        // tuples of a given arity ONCE for all symbols of that arity) *could* be faster for larger alphabets.
         for (const auto& symbol_post : rev_delta.symbol_posts) {
-            if (symbol_post.is_constant()) continue;
             const unsigned arity = symbol_post.get_arity();
 
-            if (!on_new_state(new_s, new_macro, symbol_post, ctx)) continue;
+            // constants are ignored, and a new state and symbol combination is optionally skipped
+            if (arity == 0 || !on_new_state(new_s, new_macro, symbol_post, ctx)) { continue; }
 
             const size_t base = processed.size();
             const unsigned small_size = arity - 1;
