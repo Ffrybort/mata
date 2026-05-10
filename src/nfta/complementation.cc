@@ -174,7 +174,6 @@ Nfta complement_top_down(
             utils::OrdVector<std::vector<State>> dominated;
 
             size_t m = constrains.size();
-            std::cout << "constrains size: " << m << std::endl;
             std::vector<std::vector<State>> res_symbol_post_tmp;
             std::vector<unsigned> selector(m, 0);
             std::vector<std::vector<StateSet>> minimal_macro_tuples;
