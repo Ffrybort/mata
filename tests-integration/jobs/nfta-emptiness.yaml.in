@@ -1,0 +1,2 @@
+nfta-emp:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-emptiness $1

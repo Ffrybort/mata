@@ -421,7 +421,7 @@ enum class ComplementMethod { Classical, TopDown };
 bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMap& params = {{"algorithm", "on-the-fly"}});
 
 // on the fly determinization (experimental)
-bool is_lang_included_opt(const Nfta& smaller, const Nfta& bigger);
+bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger);
 
 /**
  * @brief Check if the language recognized by @p A equal to the language recognized by @p B.
