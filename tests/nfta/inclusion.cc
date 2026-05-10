@@ -12,7 +12,7 @@ using namespace mata::nfta;
 TEST_CASE("mata::nfta::is_lang_included") {
     const ParameterMap naive_classical = {{"algorithm", "naive"}, {"complement", "classical"}};
     const ParameterMap naive_top_down = {{"algorithm", "naive"}, {"complement", "top-down"}};
-    const ParameterMap on_the_fly = {{"algorithm", "on-the-fly"}, };
+    const ParameterMap on_the_fly = {{"algorithm", "antichains"}, };
 
     SECTION("Both empty automata") {
         RankedOnTheFlyAlphabet alphabet;

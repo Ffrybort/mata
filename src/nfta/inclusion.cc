@@ -39,7 +39,7 @@ bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMa
     }
 
 
-    if (algo == "on-the-fly") {
+    if (algo == "antichains") {
         return is_lang_included_antichains(smaller, bigger);
     }
 
@@ -51,9 +51,9 @@ bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMa
 bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
     DeterminizeCache cache;
 
-    //  1 -> a <= b
-    // -1 -> b < a
-    //  0 -> incomparable
+    //  1 if a <= b
+    // -1 if b < a
+    //  0 if incomparable
     auto subset = [](const StateSet& a, const StateSet& b) -> int {
         bool a_sub_b = true;
         bool b_sub_a = true;
@@ -79,44 +79,59 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
         return 0;
     };
 
+    // mapping macrostates to det states without constructing a result automaton
     unsigned state_cnt = 0;
     auto macrostate_mapping = make_mapping(bigger, [&state_cnt]{ return state_cnt++; });
+
     const ReversedDelta bigger_rev_delta = bigger.delta.get_reversed();
     const ReversedDelta smaller_rev_delta = smaller.delta.get_reversed();
+
     ReversedDelta::RevSymbolPost dummy{}; // empty symbol post
 
     struct ProductPair {
         State smaller;
         State bigger;
-        StateSet bigger_macro;
 
         ProductPair() = default;
-        ProductPair(const State smaller, const State bigger, const StateSet& states)
+        ProductPair(const State smaller, const State bigger)
             : smaller(smaller),
-              bigger(bigger),
-              bigger_macro(states)
+              bigger(bigger)
         {}
     };
 
-    auto compare = [](const ProductPair& a, const ProductPair& b) {
-        return a.bigger_macro.size() > b.bigger_macro.size();
+    auto compare = [&macrostate_mapping](const ProductPair& a, const ProductPair& b) {
+        return macrostate_mapping.s_to_macro[a.bigger].size() > macrostate_mapping.s_to_macro[b.bigger].size();
     };
 
     std::vector<ProductPair> worklist;
     std::vector<ProductPair> processed;
 
+    // remove useless state pairs from processed in one pass
+    auto remove_pruned = [&processed](const BoolVector &state_pair_usefulness) {
+        size_t write = 0;
+        for (size_t read = 0; read < processed.size(); ++read) {
+            if (state_pair_usefulness[read]) {
+                if (write != read) {
+                    processed[write] = std::move(processed[read]);
+                }
+                ++write;
+            }
+        }
+        processed.resize(write);
+    };
+
     // return true if inclusion holds so far, false it inclusion is broken
     auto process_new_pair_and_check_inclusion = [&](StateSet& smaller_states, const StateSet& bigger_states, BoolVector *useful_pairs) {
-        // std::cout << "processing: " << smaller_states << " " << bigger_states << std::endl;
         if (smaller.root_states.intersects_with(smaller_states) && !bigger.root_states.intersects_with(bigger_states)) {
             return false;
         }
-        const State bigger_det_state = macrostate_mapping.get_or_create_macrostate(bigger_states);
+        const State bigger_det_state = macrostate_mapping.get_or_create_macrostate(bigger_states, true);
 
         for (unsigned i = 0; i < processed.size(); ++i) {
             State processed_smaller = processed[i].smaller;
+            StateSet& bigger_macro = macrostate_mapping.s_to_macro[processed[i].bigger];
             if (!smaller_states.contains(processed_smaller)) { continue; }
-            int subset_res = subset(processed[i].bigger_macro, bigger_states);
+            int subset_res = subset(bigger_macro, bigger_states);
             if (subset_res > 0) {
                 // this pair is useless
                 smaller_states.erase(processed_smaller);
@@ -127,11 +142,12 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
         }
 
         for (unsigned i = 0; i < worklist.size(); ++i) {
-            State processed_smaller = worklist[i].smaller;
-            if (!smaller_states.contains(processed_smaller)) { continue; }
-            int subset_res = subset(worklist[i].bigger_macro, bigger_states);
+            State worklist_smaller = worklist[i].smaller;
+            StateSet& worklist_bigger_macro = macrostate_mapping.s_to_macro[worklist[i].bigger];
+            if (!smaller_states.contains(worklist_smaller)) { continue; }
+            int subset_res = subset(worklist_bigger_macro, bigger_states);
             if (subset_res > 0) {
-                smaller_states.erase(processed_smaller);
+                smaller_states.erase(worklist_smaller);
             }
             if (subset_res < 0) {
                 worklist.erase(worklist.begin() + i);
@@ -141,7 +157,7 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
 
         // add the surviving pairs
         for (const State s : smaller_states) {
-            worklist.push_back(ProductPair{s, bigger_det_state, bigger_states});
+            worklist.push_back(ProductPair{s, bigger_det_state});
         }
 
         std::ranges::make_heap(worklist, compare);
@@ -161,7 +177,7 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
             StateSet&smaller_states = sml_it->second; // individual states
             StateSet bigger_states{}; // a state set that will make a single det state
 
-            // TODO: could there be any redundant states?
+            // nothing is in processed, so no need to prune it
             if (!process_new_pair_and_check_inclusion(smaller_states, bigger_states, nullptr)) { return false; }
             ++sml_it;
          } else if (big_it->first < sml_it->first) {
@@ -172,7 +188,7 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
             StateSet&smaller_states = sml_it->second; // individual states
             StateSet& bigger_states  = big_it->second; // a state set that will make a single det state
 
-             // TODO: could there be any redundant states?
+             // nothing is in processed, so no need to prune it
              if (!process_new_pair_and_check_inclusion(smaller_states, bigger_states, nullptr)) { return false; }
 
             ++big_it;
@@ -180,9 +196,7 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
         }
     }
 
-    unsigned i = 0;
     while (!worklist.empty()) {
-        i++;
         std::ranges::pop_heap(worklist, compare);
         ProductPair new_pair  = worklist.back();
         worklist.pop_back();
@@ -196,78 +210,83 @@ bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger) {
             Symbol symbol = smaller_symbol_post.symbol;
             Symbol arity = smaller_symbol_post.get_arity();
 
-            while (bigger_sp_it->symbol < symbol) {
+            while (bigger_sp_it != bigger_rev_delta.symbol_posts.end() && bigger_sp_it->symbol < symbol) {
                 // symbol is not in smaller (or it was a constant) -> skip to same or bigger
                 ++bigger_sp_it;
             }
-            if (bigger_sp_it->symbol > symbol) {
+            if (bigger_sp_it == bigger_rev_delta.symbol_posts.end() || bigger_sp_it->symbol > symbol) {
                 // symbol in smaller only -> fill cache with an empty symbol post
-                cache.fill(symbol, new_pair.bigger, arity, dummy, new_pair.bigger_macro);
+                cache.fill(symbol, new_pair.bigger, arity, dummy, macrostate_mapping.s_to_macro[new_pair.bigger]);
             } else {
                 // symbol in both -> fill cache
                 const auto& bigger_symbol_post = *bigger_sp_it;
                 assert(arity == bigger_symbol_post.get_arity());
-                cache.fill(symbol, new_pair.bigger, arity, bigger_symbol_post, new_pair.bigger_macro);
+                cache.fill(symbol, new_pair.bigger, arity, bigger_symbol_post, macrostate_mapping.s_to_macro[new_pair.bigger]);
                 ++bigger_sp_it;
             }
 
             // iterate all tuples containing the new
             const size_t base = processed.size();
-            const unsigned small_size = arity - 1;
-            std::vector<unsigned> selector(small_size, 0);
-            std::vector<ProductPair> small_tuple(small_size);
-            std::vector<ProductPair> big_tuple(arity); // TODO: ptr or remove state set
+            const unsigned enum_size = arity - 1;
+            std::vector<unsigned> selector(enum_size, 0);
+            std::vector<ProductPair> enumerated_tuple(enum_size);
 
+            // pruned states are not actually removed until processing of the current symbol finishes
+            // instead, state usefulness is kept in a bool vector and useless states are skipped
             BoolVector state_pair_usefulness(processed.size(), true);
+
+            // index of the new state pair is always the last
             size_t new_pair_index = processed.size() - 1;
             do {
-                for (unsigned i = 0; i < small_size; i++) {
-                    small_tuple[i] = processed[selector[i]];
+                // if any of the states are useless, the tuple is skipped
+                bool skip_this_tuple = false;
+                for (unsigned i = 0; i < enum_size; i++) {
+                    if (selector[i] >= processed.size()) { throw std::runtime_error("this is bad"); }
+                    if (!state_pair_usefulness[selector[i]]) { skip_this_tuple = true; }
+                    enumerated_tuple[i] = processed[selector[i]];
                 }
-                for (unsigned pos = 0; pos < arity; pos++) {
-                    std::copy_n(small_tuple.begin(), pos, big_tuple.begin()); // TODO: a lot of coppying - coud use pointers or smth
-                    big_tuple[pos] = new_pair;
-                    std::copy(small_tuple.begin() + pos, small_tuple.end(), big_tuple.begin() + pos + 1);
+                if (skip_this_tuple) { continue; }
 
-                    // extract smaller states from the big tuple
+                // insert new pait into every position
+                for (unsigned pos = 0; pos < arity; pos++) {
+                    // build a tuple of smaller and bigger states by inserting the new state into pos
                     std::vector<State> smaller_tuple(arity);
                     std::vector<State> bigger_tuple(arity);
-                    for (unsigned i = 0; i < arity; i++) {
-                        smaller_tuple[i] = big_tuple[i].smaller;
-                        bigger_tuple[i] = big_tuple[i].bigger;
+                    for (unsigned i = 0; i < pos; ++i) {
+                        smaller_tuple[i] = enumerated_tuple[i].smaller;
+                        bigger_tuple[i]  = enumerated_tuple[i].bigger;
+                    }
+                    smaller_tuple[pos] = new_pair.smaller;
+                    bigger_tuple[pos]  = new_pair.bigger;
+                    for (unsigned i = pos; i < enumerated_tuple.size(); ++i) {
+                        smaller_tuple[i + 1] = enumerated_tuple[i].smaller;
+                        bigger_tuple[i + 1]  = enumerated_tuple[i].bigger;
                     }
 
                     // find matching source tuple in smaller symbol post
-                    StateSet small_targets{}; // ptr?
+                    StateSet small_targets{};
                     if (const auto it = smaller_symbol_post.state_tuple_posts.find(
                             ReversedDelta::RevStateTuplePost{std::move(smaller_tuple)});
                             it != smaller_symbol_post.state_tuple_posts.end()) {
                         small_targets = it->targets;
-                            }
+                    }
                     if (small_targets.empty()) { continue; }
 
+                    // get targets of the macrostate
                     StateSet bigger_targets = cache.compute_targets(symbol, arity, bigger_tuple);
 
                     // if any of the smaller target is root and none of the bigger target is root, inclusion does not hold
                     if (!process_new_pair_and_check_inclusion(small_targets, bigger_targets, &state_pair_usefulness)) {
                         return false;
                     }
-                    if (!state_pair_usefulness[new_pair_index]) { break; } // break from here and the whole do-while
+                    // stop if the new pair is useless
+                    if (!state_pair_usefulness[new_pair_index]) { break; } // break from here and from the do-while
                 }
                 if (!state_pair_usefulness[new_pair_index]) { break; }
             } while (next_tuple(selector, base));
 
-            // remove useless state pair
-            size_t write = 0;
-            for (size_t read = 0; read < processed.size(); ++read) {
-                if (state_pair_usefulness[read]) {
-                    if (write != read) {
-                        processed[write] = std::move(processed[read]);
-                    }
-                    ++write;
-                }
-            }
-            processed.resize(write);
+            // remove useless state pairs from processed in one pass
+            remove_pruned(state_pair_usefulness);
         }
     }
     return true;

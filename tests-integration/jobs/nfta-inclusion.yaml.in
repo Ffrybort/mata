@@ -1,0 +1,2 @@
+nfta-incl:
+  cmd: @CMAKE_CURRENT_BINARY_DIR@/nfta-inclusion $1 $2

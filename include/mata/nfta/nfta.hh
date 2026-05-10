@@ -412,13 +412,13 @@ enum class ComplementMethod { Classical, TopDown };
  * @param params [in, optional] parameters
  * - "algorithm":
  *      - "naive": Build complement, then intersect, then compute language emptiness
- *      - "on-the-fly" (default): Complement is computed on-the-fly.
+ *      - "antichains" (default): Complement is computed on-the-fly using the antichain optimisation.
  *
  * If the naive algorithm is used, any other parameters are passed to @complement.
  *
  * @return true if L(small) <= L(big), false otherwise
  */
-bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMap& params = {{"algorithm", "on-the-fly"}});
+bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMap& params = {{"algorithm", "antichains"}});
 
 // on the fly determinization (experimental)
 bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger);
