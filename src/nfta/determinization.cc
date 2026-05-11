@@ -11,7 +11,7 @@
 
 
 namespace mata::nfta {
-Nfta determinize(const Nfta& aut, const ParameterMap& params, std::unordered_map<StateSet, State>* state_mapping) {
+Nfta determinize(const Nfta& aut, const ParameterMap& params, std::unordered_map<StateSet, State>* state_mapping_out) {
     if (!utils::haskey(params, "algorithm")) {
         throw std::runtime_error(
                 std::to_string(__func__) +
@@ -22,10 +22,10 @@ Nfta determinize(const Nfta& aut, const ParameterMap& params, std::unordered_map
 
     const std::string& str_algo = params.at("algorithm");
     if (str_algo == "optimized") {
-        return determinize_optimized(aut, state_mapping);
+        return determinize_optimized(aut, state_mapping_out);
     }
     if (str_algo == "naive") {
-        return determinize_naive(aut, state_mapping);
+        return determinize_naive(aut, state_mapping_out);
     }
     throw std::runtime_error(
             std::to_string(__func__) + " received an unknown value of the \"algorithm\" key: " + str_algo);
