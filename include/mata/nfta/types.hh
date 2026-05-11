@@ -1,6 +1,11 @@
 /**
- * @file types.hh
- * @brief Basic nfta-bench types.
+* @file
+ *
+ * @brief Basic types, constants, and aliases for nondeterministic finite tree automata (NFTA).
+ *
+ * This file defines the core types and structures used throughout the NFTA implementation in Mata.
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #ifndef NFTA_TYPES_HH

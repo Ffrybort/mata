@@ -1,22 +1,36 @@
 /**
- * @file
+* @file
  *
- * @brief An explicit, top-down oriented structure to hold the transition relation of a tree automaton.
+ * @brief Data structures for representing the transition relation of nondeterministic finite tree automata (NFTA).
  *
+ * This file implements the core transition-relation infrastructure used by tree automata in Mata. The transition
+ * relation is represented top-down as a hierarchical structure composed of:
+ *  - @c Delta
+ *  - @c StatePost
+ *  - @c SymbolPost
+ *  - @c OrdVector of target state tuples each represented as a @c std::vector<State>
  *
+ * The file also provides:
+ *  - utilities for renaming and defragmentation,
+ *  - reversed (bottom-up oriented) transition structures,
+ *  - epsilon-closure computation.
  *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #ifndef NFTA_DELTA_HH
-    #define NFTA_DELTA_HH
+#define NFTA_DELTA_HH
 
-    #include <algorithm>
-    #include <functional>
-    #include <iterator>
-    #include <mata/alphabet.hh>
-    #include <mata/nfta/types.hh>
-    #include <queue>
-    #include <utility>
+// mata headers
+#include <mata/alphabet.hh>
+#include <mata/nfta/types.hh>
+#include <algorithm>
+#include <functional>
+#include <iterator>
+
+// other headers
+#include <queue>
+#include <utility>
 
 namespace mata::nfta {
 

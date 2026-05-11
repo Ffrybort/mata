@@ -1,6 +1,25 @@
+/**
+* @file
+ *
+ * @brief Ranked alphabet interface and implementations for nondeterministic finite tree automata (NFTA).
+ *
+ * This file provides an abstract interface and an implementations for ranked alphabet used by tree automata in Mata.
+ * Ranked alphabets store arity to each symbol.
+ *
+ * The file defines:
+ *  - @c RankedAlphabet, an abstract interface for ranked alphabets,
+ *  - @c RankedOnTheFlyAlphabet, a ranked alphabet implementation, mapping each symbol's name and arity to an internal
+ *                               symbol representation abd allowing multiple symbols of the same name to exist
+ *
+ * Symbols are internally represented as unsigned integers.
+ *
+ * Copyright (C) 2026, Felix Frybort.
+ */
+
 #ifndef MATA_RANKED_ALPHABET_HH
 #define MATA_RANKED_ALPHABET_HH
 
+// mata headers
 #include "mata/nfta/types.hh"
 
 namespace mata::nfta {
@@ -283,122 +302,6 @@ public:
         next_symbol_value_ = 0;
     }
 }; // class RankedOnTheFlyAlphabet.
-
-//
-// /** todo
-//  * This alphabet needs some rethinking if it is to be used.
-//  */
-// class RankedEnumAlphabet : public Alphabet {
-// public:
-//     using SymbolArity = std::pair<Symbol, unsigned>;
-//     explicit RankedEnumAlphabet() = default;
-//     RankedEnumAlphabet(const RankedEnumAlphabet& alphabet) = default;
-//     explicit RankedEnumAlphabet(const RankedEnumAlphabet* const alphabet): RankedEnumAlphabet(*alphabet) {}
-//     RankedEnumAlphabet(RankedEnumAlphabet&& rhs) = default;
-//
-//     utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const override;
-//     utils::OrdVector<Symbol> get_alphabet_symbols() const override;
-//     utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const override {
-//         return get_alphabet_symbols().difference(symbols);
-//     }
-//
-//     std::string reverse_translate_symbol(Symbol symbol) const override;
-//
-//     RankedEnumAlphabet& operator=(const RankedEnumAlphabet& rhs) = default;
-//     RankedEnumAlphabet& operator=(RankedEnumAlphabet&& rhs) = default;
-//
-//     /**
-//      * Add symbols from an iterable structure, ignore duplicates.
-//      */
-//     template <class InputIt> void add_symbols_from(InputIt first, InputIt last) {
-//        for (; first != last; ++first) {
-//           if (!symbols_.contains(first->first)) {
-//               add_new_symbol(first->first, first->second);
-//           }
-//        }
-//     }
-//
-//     /**
-//      * @brief Expand alphabet by symbols from the passed @p alphabet. Ignore duplicates or invalid inputs.
-//      */
-//     void add_symbols_from(const RankedEnumAlphabet& alphabet) {
-//         auto symbols_to_add = alphabet.get_alphabet_symbols_arities(); // keep it alive
-//         add_symbols_from(symbols_to_add.begin(), symbols_to_add.end());
-//     }
-//
-//     Symbol translate_symb(const std::string& str) override;
-//
-//     /**
-//      * @brief Add new symbol to the alphabet with the value identical to its string representation.
-//      *
-//      * @param[in] symbol User-space representation of the symbol.
-//      * @return Result of the insertion as @c InsertionResult.
-//      */
-//     void add_new_symbol(const std::string& str, unsigned arity);
-//
-//     /**
-//      * @brief Add new symbol to the alphabet.
-//      *
-//      * @param[in] symbol Numeric value of the symbol.
-//      * @param[in] arity of the symbol.
-//      * @return Result of the insertion as @c InsertionResult.
-//      */
-//     void add_new_symbol(Symbol symbol, unsigned arity);
-//
-//
-//     /**
-//      * Get the next value for a potential new symbol.
-//      * @return Next Symbol value.
-//      */
-//     Symbol get_next_value() const { return next_symbol_value_; }
-//
-//     /**
-//      * Get the number of existing symbols, epsilon symbols excluded.
-//      * @return The number of symbols.
-//      */
-//     size_t get_number_of_symbols() const { return symbols_.size(); }
-//
-//     bool empty() const override { return symbols_.empty(); }
-//
-// private:
-//     std::unordered_map<Symbol, unsigned> symbols_{}; ///< Vector of symbol + arity pairs..
-//     Symbol next_symbol_value_{ 0 }; ///< Next value to be used for a newly added symbol.
-//
-// public:
-//     /**
-//      * @brief Update next symbol value when appropriate.
-//      *
-//      * When the newly inserted value is larger or equal to the current next symbol value, update the next symbol
-//      *  value to a value one larger than the new value.
-//      * @param value The value of the newly added symbol.
-//      */
-//     void update_next_symbol_value(Symbol value) { next_symbol_value_ = std::max(next_symbol_value_, value + 1); }
-//
-//     /**
-//      * @brief Erase a symbol from the alphabet.
-//      * @return Number of symbols erased (0 or 1).
-//      */
-//     size_t erase(Symbol symbol) { return symbols_.erase(symbol); }
-//
-//     /**
-//      * @brief Remove a symbol name value pair from the position @p pos from the alphabet.
-//      * @return Iterator following the last removed element.
-//      */
-//     void erase(const std::unordered_map<Symbol, unsigned>::const_iterator pos) { symbols_.erase(pos); }
-//
-//     /**
-//      * @brief Remove a symbol name value pair from the positions between @p first and @p last from the alphabet.
-//      * @return Iterator following the last removed element.
-//      */
-//     void erase(const std::unordered_map<Symbol, unsigned>::const_iterator first,
-//                const std::unordered_map<Symbol, unsigned>::const_iterator last) {
-//         symbols_.erase(first, last);
-//     }
-//
-//     void clear() override { symbols_.clear(); next_symbol_value_ = 0; }
-//     Symbol translate_or_add_symbol(const std::string &str, unsigned arity) override;
-//     Symbol translate_symbol(const std::string &str, unsigned arity) override;
-// }; //RankedEnumAlphabet
 
 } // namespace mata::nfta
 #endif // RANKED_ALPHABET_HH

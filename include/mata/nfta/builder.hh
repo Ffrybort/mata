@@ -1,11 +1,18 @@
 /**
- * @file builder.hh
+* @file builder.hh
+ *
  * @brief A builder for NFTA.
+ *
+ * This file contains functions to load a tree automaton from a string or file, as well as functions to construct
+ * an empty or universal automaton.
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #ifndef NFTA_BUILDER_HH
 #define NFTA_BUILDER_HH
 
+// mata headers
 #include <mata/alphabet.hh>
 #include <mata/nft/nft.hh>
 #include <mata/nfta/nfta.hh>

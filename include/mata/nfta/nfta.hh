@@ -33,21 +33,25 @@
  * mata::nfta::RankedAlphabet class. Some operations (like completing an automaton) require the list of all symbols and
  * arities to use. If an unranked alphabet is used, this list can either be passed to these functions, otherwise symbols
  * in @Delta are used by default.
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #ifndef MATA_NFTA_H
 #define MATA_NFTA_H
 
-#include <iostream>
-#include <string>
-#include <utility>
-
+// mata headers
 #include <mata/alphabet.hh>
 #include <mata/nfta/delta.hh>
 #include <mata/nfta/types.hh>
 #include <mata/utils/sparse-set.hh>
 #include <mata/utils/two-dimensional-map.hh>
 #include <mata/utils/utils.hh>
+
+// other headers
+#include <iostream>
+#include <string>
+#include <utility>
 
 namespace mata::nfta {
 
@@ -259,7 +263,7 @@ Nfta remove_epsilon(const Nfta& aut, Symbol epsilon);
 /**
  * @brief Union of two automata not preserving determinism.
  *
- * @param A, B [in] Automata to unite
+ * @param A, B [in] Automata to unite.
  *
  * Automata should use the same alphabet, otherwise the result automaton can be assigned either alphabet and may
  * contain symbols that are not in its alphabet.
@@ -269,21 +273,23 @@ Nfta union_nondet(const Nfta& A, const Nfta& B);
 /**
  * @brief Union preserving bottom-up determinism, computed by product construction.
  *
- * @param A, B [in] Automata to unite, both must be bottom-up complete
- * @param state_mapping_out [out, optional] Mapping state pairs -> product state
+ * @param A, B [in] Automata to unite, both must be bottom-up complete.
+ * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
  *
- * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
+ * This implementation is slow. The result is bottom-up reduced, but not top-down reduced. The mapping needs to be sized
+ * to A.delta.num_of_states() x B.delta.num_of_states() or bigger.
  */
 Nfta union_det_on_complete(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out = nullptr);
 
 /**
  * @brief Union preserving bottom-up determinism, computed by product construction.
  *
- * @param A, B [in] Automata to unite, both must be bottom-up complete
+ * @param A, B [in] Automata to unite, both must be bottom-up complete.
  * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
  *
  * @p state_mapping_out needs to be initialized to (num of states in A + 1, num of states in B + 1) to accommodate
- * the additional states added by completion.
+ * the additional states added by completion. The mapping needs to be sized to
+ * A.delta.num_of_states() x B.delta.num_of_states() or bigger.
  * This implementation is slow. The result is bottom-up reduced, but not top-down reduced.
  */
 Nfta union_det(Nfta& A, Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out = nullptr);
@@ -308,7 +314,8 @@ Nfta complement_classical(const Nfta& aut, const utils::OrdVector<SymbolArity>* 
  * @param state_mapping_out [out, optional] Mapping state pairs -> product state.
  *
  * Both automata must be complete over the same set of symbols. The result automaton is constructed directly
- * top-down. Result is top-down reduced, but not bottom-up reduced.
+ * top-down. Result is top-down reduced, but not bottom-up reduced. The mapping needs to be sized to
+ * A.delta.num_of_states() x B.delta.num_of_states() or bigger.
  */
 Nfta intersection(const Nfta& A, const Nfta& B, utils::TwoDimensionalMap<State>* state_mapping_out = nullptr);
 
@@ -376,7 +383,7 @@ Nfta complement(
  * @brief Determinize an automaton.
  *
  * @param aut Input automaton.
- * @param state_mapping [out, optional] Mapping macrostates -> result states.
+ * @param state_mapping_out [out, optional] Mapping macrostates -> result states.
  * @param params [in, optional] Parameters:
  * - "algorithm":
  *      - "naive": Scan the full reversed delta on each step.
@@ -386,7 +393,7 @@ Nfta complement(
  */
 Nfta determinize(
         const Nfta& aut, const ParameterMap& params = {{"algorithm", "optimized"}},
-        std::unordered_map<StateSet, State>* state_mapping = nullptr);
+        std::unordered_map<StateSet, State>* state_mapping_out = nullptr);
 
 /**
  * @brief Construct a complement automaton without determinizing, directly top down.
@@ -404,7 +411,6 @@ Nfta complement_top_down(
         const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr,
         const utils::OrdVector<SymbolArity>* symbols_arities_in = nullptr);
 
-enum class ComplementMethod { Classical, TopDown };
 /**
  * @brief Check if the language recognized by @p small in a subset of the language recognized by @p big.
  *

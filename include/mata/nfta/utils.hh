@@ -1,6 +1,18 @@
 /**
- * NFTA-specific structures and helpers
+* @file
  *
+ * @brief Utility structures and helper functions for nondeterministic finite tree automata (NFTA).
+ *
+ * This file provides data structures and utility functions used by NFTA operations implemented in Mata.
+ * It contains:
+ *  - a caching structure supporting determinization procedures,
+ *  - a mapping between macrostates and generated states.
+ *  - a utility for resolving symbol-arity pairs,
+ *  - a tuple iteration helper,
+ *
+ * The utilities defined here are primarily intended for internal algorithmic support and optimization.
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #ifndef MATA_NFTA_UTILS_HH
