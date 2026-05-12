@@ -1,7 +1,15 @@
+/**
+* @file inclusion.cc
+ *
+ * @brief Implementation of NFTA inclusion.
+ *
+ * Copyright (C) 2026, Felix Frybort.
+ */
+
 #include <utility>
 #include <mata/nfta/builder.hh>
 #include "mata/nfta/nfta.hh"
-#include <mata/nfta/utils.hh>
+#include <mata/nfta/nfta-utils.hh>
 
 namespace mata::nfta {
 bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMap& params) {

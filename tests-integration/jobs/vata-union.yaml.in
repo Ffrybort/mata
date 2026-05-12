@@ -1,2 +1,0 @@
-vata-union:
-  cmd: @VATA_CLI_DIR@/vata -r expl union $1 $2 -n -t

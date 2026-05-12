@@ -1,3 +1,11 @@
+/**
+* @file inclusion.cc
+ *
+ * @brief Testing NFTA inclusion.
+ *
+ * Copyright (C) 2026, Felix Frybort.
+ */
+
 #include <catch2/catch_test_macros.hpp>
 #include <mata/nfta/delta.hh>
 #include <mata/nfta/types.hh>

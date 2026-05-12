@@ -111,16 +111,6 @@ public:
     void print_mata(std::ostream& os = std::cout) const;
 
     /**
-     * @brief Print the automaton in an easy-to-read format.
-     */
-    void print_readable(std::ostream& os = std::cout) const;
-
-    /**
-     * @brief Print the automaton is a bottom up format.
-     */
-    void print_readable_bottom_up(std::ostream& os = std::cout) const;
-
-    /**
      * @brief Print the automaton is timbuk parsable format.
      */
     void print_timbuk(std::ostream& os = std::cout, const std::string& name = "A") const;
@@ -354,7 +344,7 @@ Nfta determinize_naive(const Nfta& aut, std::unordered_map<StateSet, State>* sta
  * @param aut input automaton
  * @param state_mapping [out, optional] mapping macrostates -> result states
  *
- * Only (bottom-up) reachable states are constructed. TODO: describe
+ * Only (bottom-up) reachable states are constructed. This function uses a @c DeterminizeCache to store repeatedly needed data.
  */
 Nfta determinize_optimized(const Nfta& aut, std::unordered_map<StateSet, State>* state_mapping = nullptr);
 
@@ -426,7 +416,15 @@ Nfta complement_top_down(
  */
 bool is_lang_included(const Nfta& smaller, const Nfta& bigger, const ParameterMap& params = {{"algorithm", "antichains"}});
 
-// on the fly determinization (experimental)
+/**
+ * @brief Find if one automaton's language is included in another.
+ *
+ * @param smaller, bigger input automata
+ *
+ * @return True if L(smaller) <= L(bigger), false otherwise
+ *
+ * The bigger automaton is determinized on-the-fly, the algorithm is optimized using antichains.
+ */
 bool is_lang_included_antichains(const Nfta& smaller, const Nfta& bigger);
 
 /**

@@ -3,12 +3,14 @@
  *
  * @brief Implementation of NFTA operations. Other operations are implemented in ``determinization.cc'',
  * ``complementation.cc.'', and ``inclusion.cc''
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #include <utility>
 #include <mata/nfta/builder.hh>
 #include "mata/nfta/nfta.hh"
-#include <mata/nfta/utils.hh>
+#include <mata/nfta/nfta-utils.hh>
 #include "mata/nfta/ranked-alphabet.hh"
 #include "mata/utils/two-dimensional-map.hh"
 
@@ -695,7 +697,7 @@ BoolVector Nfta::get_bottom_up_reachable_impl(OnMarked&& early_exit_fn, const Bo
             if (current >= symbol_cache.size()) {
                 continue;
             }
-            for (unsigned pos = 0; pos < symbol_cache[current].size(); ++pos) { // todo cach by pos has no benefit
+            for (unsigned pos = 0; pos < symbol_cache[current].size(); ++pos) {
                 for (const auto* src_tr : symbol_cache[current][pos]) {
                     bool all_marked = true;
                     for (const State s : src_tr->sources) {

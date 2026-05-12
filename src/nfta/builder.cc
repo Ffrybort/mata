@@ -1,3 +1,11 @@
+/**
+ * @file builder.cc
+ *
+ * @brief Implementation of NFTA parsing and building functions.
+ *
+ * Copyright (C) 2026, Felix Frybort.
+ */
+
 #include "mata/nfta/builder.hh"
 
 namespace mata::nfta {
@@ -61,7 +69,6 @@ void add_initial_and_final_states(const IntermediateAut* inter_aut, NameStateMap
  * @brief Helper function to extract a transition from an inter_aut.
  * @param formula_node A node containing the left-hand side (source state).
  * @param formula_graph A graph containing the right-hand side (symbol and target(s)).
- * @param alphabet
  * @param state_map A mapping of state names to numbers used by the constructor.
  * @return A transition, with the symbol remaining a std::string, and states translated to internal numeric values.
  *
@@ -130,7 +137,8 @@ Nfta construct_from_inter_aut(const IntermediateAut* inter_aut, RankedAlphabet* 
         alphabet->try_add_new_symbol(inter_aut->symbols_names[i], inter_aut->symbols_arities[i]);
     }
 
-    // todo states can be enumerated too
+    // NOTE: states can be enumerated too, and could be processed in a similar way as symbols are,
+    //       though this is not necessary
 
     // transitions
     // if symbols are not enumerated, they are added when first encountered, arity is set to match the transition

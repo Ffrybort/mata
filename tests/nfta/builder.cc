@@ -1,4 +1,10 @@
-// testing parse_from_mata
+/**
+ * @file builder.cc
+ *
+ * @brief Testing NFTA parsing and building functions.
+ *
+ * Copyright (C) 2026, Felix Frybort.
+ */
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>

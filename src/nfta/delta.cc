@@ -1,5 +1,8 @@
 /** @file delta.cc
+ *
  * @brief Implementation of the @c mata::nfta::Delta class and related functions.
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #include "mata/nfta/delta.hh"

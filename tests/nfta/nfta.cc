@@ -1,4 +1,10 @@
-// testing basic nfta functionality
+/**
+ * @file nfta.cc
+ *
+ * @brief Testing basic NFTA functionality.
+ *
+ * Copyright (C) 2026, Felix Frybort.
+ */
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_vector.hpp>
@@ -55,7 +61,6 @@ TEST_CASE("mata::nfta") {
         Nfta aut({0}, &alphabet, {});
         aut.delta.add(0, alphabet["f"], {0, 1});
         CHECK_NOTHROW(aut.print_mata(std::cout));
-        CHECK_NOTHROW(aut.print_readable(std::cout));
         CHECK_NOTHROW(aut.print_timbuk(std::cout));
     }
 

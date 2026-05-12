@@ -30,12 +30,18 @@ class RankedAlphabet : public Alphabet {
 public:
     using Alphabet::add_new_symbol;
 
+    /// Adding a symbol without specifying arity is not possible.
     void try_add_new_symbol(const std::string& symbol) override {
         (void) symbol;
         throw std::runtime_error("Unimplemented");
     }
 
-    /// translates a string into a symbol
+    /// translating without specifying arity is not supported
+    Symbol translate_symb(const std::string&)override { throw std::runtime_error("Not supported"); }
+
+    /**
+     * Translate a symbol and arity pair into an internal symbol representation.
+     */
     virtual Symbol translate_symbol(const std::string& symbol, unsigned arity) = 0;
 
     /// also translates strings to symbols
@@ -50,13 +56,29 @@ public:
         throw std::runtime_error("Unimplemented");
     }
 
+    /**
+     * @brief Get an OrdVector of all arity > 0 symbols.
+     *
+     * This operation is slow as a new OrdVector is built.
+     */
     virtual utils::OrdVector<Symbol> get_non_constant_symbols() const { throw std::runtime_error("Unimplemented"); }
 
+    /**
+     * @brief Get an OrdVector of all arity 0 symbols.
+     */
     virtual utils::OrdVector<Symbol> get_constant_symbols() const { throw std::runtime_error("Unimplemented"); }
 
     ~RankedAlphabet() override = default;
 
+    /**
+     * @brief Add a symbol to the alphabet.
+     * @throws std::runtime_error if the symbol already exists.
+     */
     virtual void add_new_symbol(const std::string& symbol, unsigned arity) = 0;
+
+    /**
+     * @brief Add a symbol to the alphabet. Ignore if the symbol already exists.
+     */
     virtual void try_add_new_symbol(const std::string& symbol, unsigned arity) = 0;
 
 protected:
@@ -66,6 +88,7 @@ protected:
 /**
  * @brief A ranked version of the OnTheFlyAlphabet. Allows multiple symbols of the same name with different arity.
  *
+ * The alphabet consists of a mapping from pairs, each made up of a string symbol name and arity, to internal symbols.
  * Symbols of the same name with different arities are internally represented as different symbol values.
  */
 class RankedOnTheFlyAlphabet : public RankedAlphabet {
@@ -89,12 +112,6 @@ public:
      * @throws std::runtime_error if symbol is missing.
      */
     Symbol translate_symbol(const std::string& str, unsigned arity);
-
-    /**
-     * @brief Translate a symbol with implicit arity 0. todo delete this?
-     * @throws std::runtime_error if symbol is missing.
-     */
-    Symbol translate_symb(const std::string& symb) override { return translate_symbol(symb, 0); }
 
     /**
      * @brief Create alphabet from a list of StringArity instances.
@@ -148,14 +165,33 @@ public:
      */
     utils::OrdVector<SymbolArity> get_alphabet_symbols_arities() const override;
 
+    /**
+     * @brief Get an OrdVector of all arity > 0 symbols.
+     *
+     * This operation is slow as a new OrdVector is built.
+     */
     utils::OrdVector<Symbol> get_non_constant_symbols() const override;
 
+    /**
+     * @brief Get an OrdVector of all arity 0 symbols.
+     */
     utils::OrdVector<Symbol> get_constant_symbols() const override;
 
+    /**
+     * @brief Get an OrdVector of all symbols.
+     *
+     * This operation is slow as a new OrdVector is built.
+     */
     utils::OrdVector<Symbol> get_alphabet_symbols() const override;
 
+    /**
+     * @brief Get all symbols from @p symbols that are not in this alphabet.
+     */
     utils::OrdVector<Symbol> get_complement(const utils::OrdVector<Symbol>& symbols) const override;
 
+    /**
+     * @brief Get the symbol name.
+     */
     std::string reverse_translate_symbol(Symbol symbol) const override;
 
 public:
@@ -189,10 +225,13 @@ public:
     /**
      * @brief Add new symbol to the alphabet with the value of @c next_symbol_value.
      * @throws std::runtime_error if the symbol was already present.
-     * @param[in] key std::string and artiy pair.
+     * @param[in] key std::string and arity pair.
      */
     void add_new_symbol(const StringArity& key) { add_new_symbol(key, next_symbol_value_); }
 
+    /**
+     * @brief Add new symbol. The function does not throw an error if the symbol already exists.
+     */
     void try_add_new_symbol(const std::string& symbol, unsigned arity) override;
 
     /**
@@ -244,10 +283,19 @@ public:
      */
     const SymbolArityMap& get_symbol_map() const { return symbol_map_; }
 
+    /**
+     * @brief Find if the alphabet is empty - contains no symbol.
+     */
     bool empty() const override { return symbol_map_.empty(); }
 
+    /**
+     * @brief Find if the given string is some symbol's name.
+     */
     size_t contains_symbol_name(const std::string& str);
 
+    /**
+     * @brief Get the arity of a given symbol
+     */
     std::vector<unsigned> get_arity(Symbol symbol) const;
 
     /**
@@ -283,20 +331,26 @@ public:
      */
     size_t erase(const StringArity& symbol_name);
 
+    /**
+     * @brief Remove a symbol entry given by its name and arity from the alphabet.
+     */
     size_t erase(const std::string& symbol_name, unsigned arity) { return erase(StringArity{symbol_name, arity}); }
 
     /**
-     * @brief Remove a symbol name value pair from the position @p pos from the alphabet.
+     * @brief Remove a symbol entry from the position @p pos from the alphabet.
      */
     void erase(const SymbolArityMap::const_iterator pos) { symbol_map_.erase(pos); }
 
     /**
-     * @brief Remove a symbol name value pair from the positions between @p first and @p last from the alphabet.
+     * @brief Remove a symbol entry from the positions between @p first and @p last from the alphabet.
      */
     void erase(const SymbolArityMap::const_iterator first, const SymbolArityMap::const_iterator last) {
         symbol_map_.erase(first, last);
     }
 
+    /**
+     * @brief Erase all symbols.
+     */
     void clear() override {
         symbol_map_.clear();
         next_symbol_value_ = 0;

@@ -1,2 +1,0 @@
-vata-inter:
-  cmd: @VATA_CLI_DIR@/vata -r expl witness $1 -n -t

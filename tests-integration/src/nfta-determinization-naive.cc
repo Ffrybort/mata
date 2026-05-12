@@ -1,5 +1,3 @@
-
-
 #include "mata/nfta/builder.hh"
 #include "mata/nfta/nfta.hh"
 #include "utils/utils.hh"

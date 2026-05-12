@@ -678,11 +678,10 @@ public:
 
     /**
      * Get the set of state vectors that are successors of the given @p state.
-     * @param s
-     * @param[in] state State from which successors are checked.
+     * @param[in] s State from which successors are checked.
      * @return Set of states that are successors of the given @p state.
      */
-    utils::OrdVector<State> get_successors(State s) const; // todo test
+    utils::OrdVector<State> get_successors(State s) const;
 
     /**
      * Get the set of state vectors that are successors of the given @p state.
@@ -690,7 +689,7 @@ public:
      * @param symbol
      * @return Set of states that are successors of the given @p state.
      */
-    utils::OrdVector<State> get_successors(State s, Symbol symbol) const; // todo test
+    utils::OrdVector<State> get_successors(State s, Symbol symbol) const;
 
     /**
      * @brief Get the set of symbols used on the transitions in the automaton.
@@ -706,7 +705,7 @@ public:
      * Does not necessarily have to equal the set of symbols in the alphabet used by the automaton.
      * @return Set of symbols used on the transitions.
      */
-    utils::OrdVector<SymbolArity> get_used_symbols_arities() const; // todo test
+    utils::OrdVector<SymbolArity> get_used_symbols_arities() const;
 
     /**
      * @brief Defragment the Delta.

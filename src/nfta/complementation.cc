@@ -2,12 +2,13 @@
  * @file complementation.cc
  *
  * @brief Implementation of NFTA complementation operations.
+ *
+ * Copyright (C) 2026, Felix Frybort.
  */
 
 #include <mata/nfta/builder.hh>
 #include "mata/nfta/nfta.hh"
-#include <mata/nfta/utils.hh>
-
+#include <mata/nfta/nfta-utils.hh>
 
 namespace mata::nfta {
 
