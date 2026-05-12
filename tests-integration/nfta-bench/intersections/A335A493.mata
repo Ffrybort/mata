@@ -1,0 +1,28 @@
+@NFTA-explicit
+%States-marked 
+%Alphabet-auto 
+%Initial q0 q1 q2 q3 
+q0 normal (q19 q20 )
+q1 normal (q14 q15 )
+q2 normal (q9 q10 )
+q3 normal (q4 q5 )
+q4 UNDEF (q7 q5 )
+q5 bot2 (q6 q6 )
+q6 bot2 (q6 q6 )
+q6 bot0 ()
+q7 xpxppyNULL (q8 q5 )
+q9 UNDEF (q12 q10 )
+q10 bot2 (q11 q11 )
+q11 bot2 (q11 q11 )
+q11 bot0 ()
+q12 xpxppyNULL (q13 q10 )
+q14 UNDEF (q17 q15 )
+q15 bot2 (q16 q16 )
+q16 bot2 (q16 q16 )
+q16 bot0 ()
+q17 xpxppyNULL (q18 q15 )
+q19 UNDEF (q22 q20 )
+q20 bot2 (q21 q21 )
+q21 bot2 (q21 q21 )
+q21 bot0 ()
+q22 xpxppyNULL (q23 q20 )

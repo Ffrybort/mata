@@ -1,2 +1,2 @@
 vata-inter:
-    cmd: @VATA_CLI_DIR@/vata -r expl -t -n incl $1 $2
+    cmd: @VATA_CLI_DIR@/vata -r expl -o dir=down -t -n incl $1 $2

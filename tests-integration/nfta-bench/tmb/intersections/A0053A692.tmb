@@ -1,0 +1,37 @@
+Ops normal:2 UNDEF:2 bot2:2 bot0:0 
+Automaton A
+States q0 q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 q11 q12 q13 q14 q15 q16 q17 q18 q19 q20 q21 q22 q23 q24 q25 q26 q27 q28 q29 q30 q31 
+Final States q0 q10 q5 q15 
+Transitions
+  normal(q1,q2) -> q0
+  normal(q3,q4) -> q0
+  UNDEF(q29,q2) -> q1
+  bot2(q30,q30) -> q2
+  UNDEF(q31,q4) -> q3
+  bot2(q30,q30) -> q4
+  normal(q6,q7) -> q5
+  normal(q8,q9) -> q5
+  UNDEF(q26,q7) -> q6
+  bot2(q27,q27) -> q7
+  UNDEF(q28,q9) -> q8
+  bot2(q27,q27) -> q9
+  normal(q11,q12) -> q10
+  normal(q13,q14) -> q10
+  UNDEF(q23,q12) -> q11
+  bot2(q24,q24) -> q12
+  UNDEF(q25,q14) -> q13
+  bot2(q24,q24) -> q14
+  normal(q16,q17) -> q15
+  normal(q18,q19) -> q15
+  UNDEF(q20,q17) -> q16
+  bot2(q21,q21) -> q17
+  UNDEF(q22,q19) -> q18
+  bot2(q21,q21) -> q19
+  bot2(q21,q21) -> q21
+  bot0 -> q21
+  bot2(q24,q24) -> q24
+  bot0 -> q24
+  bot2(q27,q27) -> q27
+  bot0 -> q27
+  bot2(q30,q30) -> q30
+  bot0 -> q30
